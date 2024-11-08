@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html class="bg-transparent h-full rounded-[12px]">
   <head>
     <meta charset="utf-8" />
     <title>Tauri + Leptos App</title>
@@ -9,5 +9,45 @@
 
     <link data-trunk rel="tailwind-css" href="/style/tailwind.css" />
   </head>
-  <body class="bg-background"></body>
+  <body
+    class="bg-black bg-opacity-80 h-full rounded-[12px] grid grid-cols-[50px_1fr]"
+  >
+    <div
+      data-tauri-drag-region
+      class="h-full w-full bg-[#222C29] rounded-l-[12px]"
+    >
+      <div class="flex flex-col items-center justify-center gap-2 mt-4">
+        <div
+          class="w-2.5 h-2.5 bg-red-500 rounded-full"
+          id="titlebar-close"
+        ></div>
+
+        <div
+          class="w-2.5 h-2.5 bg-yellow-500 rounded-full"
+          id="titlebar-maximize"
+        ></div>
+
+        <div
+          class="w-2.5 h-2.5 bg-green-500 rounded-full"
+          id="titlebar-minimize"
+        ></div>
+      </div>
+    </div>
+
+    <script>
+      const { getCurrentWindow } = window.__TAURI__.window;
+
+      const appWindow = getCurrentWindow();
+
+      document
+        .getElementById("titlebar-minimize")
+        ?.addEventListener("click", () => appWindow.minimize());
+      document
+        .getElementById("titlebar-maximize")
+        ?.addEventListener("click", () => appWindow.toggleMaximize());
+      document
+        .getElementById("titlebar-close")
+        ?.addEventListener("click", () => appWindow.close());
+    </script>
+  </body>
 </html>
