@@ -1,11 +1,22 @@
 use futures_util::StreamExt;
 use reqwest::Client;
 use tauri::command;
+use tauri::AppHandle;
 use tauri::Manager;
+use tauri::Window;
 use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
 
+#[derive(Clone, PartialEq, Eq, Debug, Deserialize)]
+struct MessageEvent {
+    message: String,
+}
+
 #[command]
-async fn call_ollama_model(prompt: String) -> Result<String, String> {
+async fn call_ollama_model(
+    app: AppHandle,
+    prompt: String,
+    on_event: Channel<MessageEvent>,
+) -> Result<String, String> {
     let client = Client::new();
 
     let response = client
