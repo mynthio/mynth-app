@@ -1,8 +1,8 @@
 [package]
 name = "mynth-app"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "AI client"
+authors = ["Tomasz Szczuciński (50BytesOfJohn)"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -18,8 +18,13 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["macos-private-api"] }
 tauri-plugin-shell = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-
+window-vibrancy = { version = "0.5" }
+reqwest = { version = "0.11", features = ["stream", "json"] }
+tokio = { version = "1", features = ["full"] }
+futures-util = "0.3"
+tauri-plugin-store = "2"
+lazy_static = "1.5"

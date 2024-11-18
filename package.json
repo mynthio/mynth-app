@@ -6,20 +6,30 @@
   "scripts": {
     "start": "vite",
     "dev": "vite",
+    "dev:app": "tauri dev",
     "build": "vite build",
     "serve": "vite preview",
     "tauri": "tauri"
   },
   "license": "MIT",
   "dependencies": {
+    "@solid-primitives/autofocus": "^0.0.111",
+    "@solidjs/router": "^0.15.1",
+    "@tauri-apps/api": "^2.1.1",
+    "@tauri-apps/plugin-shell": "^2",
+    "@tauri-apps/plugin-store": "~2",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
     "solid-js": "^1.7.8",
-    "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-shell": "^2"
+    "tailwind-merge": "^2.5.4"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.15",
     "typescript": "^5.2.2",
-    "vite": "^5.3.1",
-    "vite-plugin-solid": "^2.8.0",
-    "@tauri-apps/cli": "^2"
+    "vite": "^5.4.11",
+    "vite-plugin-solid": "^2.8.0"
   }
 }

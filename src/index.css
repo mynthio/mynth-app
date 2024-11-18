@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0deg 0% 1.18%;
+    --foreground: 150deg 20% 88.24%;
+
+    --dark-green: 168deg 9.09% 10.78%;
+
+    /* MacOS colors */
+    --macos-title-bar-close-red: 3deg 100% 67%;
+    --macos-title-bar-minimize-yellow: 41deg 99% 59%;
+    --macos-title-bar-maximize-green: 128deg 65% 48%;
+
+    --window-radius: 16px;
+  }
+}
+
+@layer base {
+  html {
+    @apply bg-[rgba(12,21,19,0.18)] rounded-window overflow-hidden;
+  }
+
+  body {
+    @apply bg-transparent text-foreground rounded-window overflow-hidden;
+  }
+}
