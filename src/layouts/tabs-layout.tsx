@@ -27,24 +27,32 @@ export default function TabsLayout(props: Props) {
 function Tabs() {
   const location = useLocation();
   const pathname = createMemo(() => location.pathname);
-  const { tabs, remove } = useTabsManager();
+
+  const { tabs, closeTab } = useTabsManager();
 
   return (
-    <nav class="flex items-center gap-1 h-10" q>
-      <For each={tabs()}>
+    <nav class="flex flex-1 items-center gap-1 h-10 overflow-y-scroll">
+      <For each={Array.from(tabs().values())}>
         {(tab) => (
           <div
-            class="h-10 flex items-center overflow-hidden w-60 rounded-lg"
+            class="h-10 flex whitespace-nowrap items-center overflow-clip w-60 rounded-lg"
             classList={{
-              "bg-white/5": pathname() === tab.key,
+              "bg-white/5": pathname() === tab.path,
+            }}
+            onAuxClick={(e) => {
+              e.preventDefault();
+              closeTab(tab.path);
             }}
           >
-            <A href={tab.key} class="flex-0 pl-3 w-full">
+            <A
+              href={tab.path}
+              class="flex flex-0 items-center pl-3 w-full text-ellipsis h-full"
+            >
               {tab.title}
             </A>
             <button
               onClick={() => {
-                remove(tab.key);
+                closeTab(tab.path);
               }}
               class="text-foreground flex-1 px-4 h-full hover:bg-white/5"
             >
@@ -58,14 +66,11 @@ function Tabs() {
 }
 
 function TabsControls() {
-  const { add: push } = useTabsManager();
+  const { openEmptyTab } = useTabsManager();
 
   return (
     <div>
-      <Button
-        onClick={() => push({ path: "/tabs/1", title: "Home", data: {} })}
-        size="icon"
-      >
+      <Button onClick={() => openEmptyTab()} size="icon">
         <PlusIcon />
       </Button>
     </div>

@@ -103,3 +103,17 @@ type ChatConfig = {
   models: [`${ProviderId}:${ModelId}}`];
 };
 ```
+
+When user opens a new tab, we show the new tab page with:
+
+- Possibility to start new chat (textarea autofocused, like new chat page, for quick chatting experience)
+- Button to start image generation chat
+- Recent chat's history to quickly open recent chat
+
+When it comes to chat configuration, we show all the options using current default chat configuration.
+
+Current model and base prompt will be edited in settings page.
+
+By default 1st model added will be default, and then users can change it in settings page. As well as base/system prompt.
+
+Future: We can allow creating predefined chat configurations, that will be shown in new tab page, and can be quickly used for different tasks and models configs / user needs.

@@ -13,6 +13,10 @@ const routes = [
     path: "/settings",
     component: lazy(() => import("./pages/settings")),
   },
+  {
+    path: "/chat/:id",
+    component: lazy(() => import("./pages/chat/chat.page")),
+  },
 ];
 
 render(

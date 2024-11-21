@@ -1,7 +1,8 @@
-import { invoke, Channel } from "@tauri-apps/api/core";
-import { createSignal } from "solid-js";
+import { useBeforeLeave, useParams } from "@solidjs/router";
+
 import { autofocus } from "@solid-primitives/autofocus";
-import { BeforeLeaveEventArgs, useBeforeLeave } from "@solidjs/router";
+import { createEffect, createSignal, onMount } from "solid-js";
+import { Channel, invoke } from "@tauri-apps/api/core";
 
 // Prevent import removal and library tree-shaking
 autofocus;
@@ -13,8 +14,10 @@ type OllamaMessageEvent = {
   };
 };
 
-function HomePage() {
+export default function ChatPage() {
   let form!: HTMLFormElement;
+
+  const params = useParams<{ id: string }>();
 
   const [text, setText] = createSignal("");
 
@@ -26,16 +29,22 @@ function HomePage() {
   };
 
   invoke("reconnect_ollama_stream", {
-    chatId: "1",
+    chatId: params.id,
     newChannel: newOnEvent,
   }).catch(() => {});
 
-  useBeforeLeave((e: BeforeLeaveEventArgs) => {
+  useBeforeLeave(() => {
     form?.reset();
   });
 
+  createEffect(() => {
+    params.id;
+    autofocus(form?.querySelector("textarea") as HTMLTextAreaElement);
+  });
+
   return (
-    <main class="container">
+    <div>
+      <h1>{params.id}</h1>
       <div>{text()}</div>
 
       <form
@@ -63,8 +72,6 @@ function HomePage() {
         <textarea name="prompt" use:autofocus autofocus />
         <button type="submit">Send</button>
       </form>
-    </main>
+    </div>
   );
 }
-
-export default HomePage;
