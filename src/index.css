@@ -4,8 +4,11 @@
 
 @layer base {
   :root {
-    --background: 0deg 0% 1.18%;
+    --background: 180, 5.26%, 11.18%;
     --foreground: 150deg 20% 88.24%;
+
+    --primary: 180, 5.26%, 11.18%;
+    --secondary: 180, 4.35%, 13.53%;
 
     --dark-green: 168deg 9.09% 10.78%;
 
@@ -14,7 +17,7 @@
     --macos-title-bar-minimize-yellow: 41deg 99% 59%;
     --macos-title-bar-maximize-green: 128deg 65% 48%;
 
-    --window-radius: 16px;
+    --window-radius: 11px;
   }
 }
 

@@ -2,14 +2,17 @@ use futures_util::StreamExt;
 use reqwest::Client;
 use serde::Serialize;
 use std::collections::HashMap;
-use tauri::Manager;
-use tauri::{ipc::Channel, AppHandle};
-use window_vibrancy::*;
 use std::sync::Arc;
+use tauri::Manager;
+
+use tauri::{ipc::Channel, AppHandle};
 use tokio::sync::Mutex;
+use window_vibrancy::*;
 
+mod migrations;
+use migrations::get_migrations;
 
-const WINDOW_BORDER_RADIUS: f64 = 16.0;
+const WINDOW_BORDER_RADIUS: f64 = 11.0;
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase", tag = "event", content = "data")]
@@ -34,7 +37,10 @@ impl StreamRegistry {
     }
 
     async fn add_stream(&self, chat_id: &str, channel: Channel<OllamaMessageEvent>) {
-        self.streams.lock().await.insert(chat_id.to_string(), channel);
+        self.streams
+            .lock()
+            .await
+            .insert(chat_id.to_string(), channel);
     }
 
     async fn get_stream(&self, chat_id: &str) -> Option<Channel<OllamaMessageEvent>> {
@@ -48,15 +54,21 @@ impl StreamRegistry {
 
     async fn append_to_history(&self, chat_id: &str, message: &str) {
         let mut history = self.message_history.lock().await;
-        history.entry(chat_id.to_string()).or_insert_with(String::new).push_str(message);
-        println!("History updated for {}: {:?}", chat_id, history.get(chat_id));
+        history
+            .entry(chat_id.to_string())
+            .or_insert_with(String::new)
+            .push_str(message);
+        println!(
+            "History updated for {}: {:?}",
+            chat_id,
+            history.get(chat_id)
+        );
     }
 
     async fn get_history(&self, chat_id: &str) -> Option<String> {
         self.message_history.lock().await.get(chat_id).cloned()
     }
 }
-
 
 // Initialize the StreamRegistry as a global instance
 lazy_static::lazy_static! {
@@ -101,7 +113,9 @@ async fn stream_ollama_messages(
             // Send the message to the channel
             if let Some(channel) = STREAM_REGISTRY.get_stream(&chat_id).await {
                 channel
-                    .send(OllamaMessageEvent::MessageReceived { message: text.clone() })
+                    .send(OllamaMessageEvent::MessageReceived {
+                        message: text.clone(),
+                    })
                     .unwrap();
 
                 // Store the message in history
@@ -122,11 +136,15 @@ async fn reconnect_ollama_stream(
     new_channel: Channel<OllamaMessageEvent>,
 ) -> Result<(), String> {
     if let Some(existing_channel) = STREAM_REGISTRY.get_stream(&chat_id).await {
-        STREAM_REGISTRY.add_stream(&chat_id, new_channel.clone()).await;
+        STREAM_REGISTRY
+            .add_stream(&chat_id, new_channel.clone())
+            .await;
 
         // Send the entire message history to the new channel
         if let Some(history) = STREAM_REGISTRY.get_history(&chat_id).await {
-            new_channel.send(OllamaMessageEvent::MessageReceived { message: history }).unwrap();
+            new_channel
+                .send(OllamaMessageEvent::MessageReceived { message: history })
+                .unwrap();
         }
 
         Ok(())
@@ -138,9 +156,17 @@ async fn reconnect_ollama_stream(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_sql::Builder::default()
+                .add_migrations("sqlite:mynth.db", get_migrations())
+                .build(),
+        )
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![stream_ollama_messages, reconnect_ollama_stream])
+        .invoke_handler(tauri::generate_handler![
+            stream_ollama_messages,
+            reconnect_ollama_stream
+        ])
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
 

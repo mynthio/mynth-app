@@ -24,6 +24,11 @@
       "csp": null
     }
   },
+  "plugins": {
+    "sql": {
+      "preload": ["sqlite:mynth.db"]
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",

@@ -6,6 +6,8 @@ export default {
       colors: {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        primary: "hsl(var(--primary))",
+        secondary: "hsl(var(--secondary))",
         ["dark-green"]: "hsl(var(--dark-green))",
       },
       borderRadius: {
