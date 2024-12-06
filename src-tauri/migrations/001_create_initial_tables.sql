@@ -3,7 +3,9 @@ CREATE TABLE chats (
     name TEXT NOT NULL,
     current_branch_id INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (current_branch_id) REFERENCES branches(id) ON DELETE
+    SET NULL
 );
 CREATE TABLE branches (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -12,7 +14,9 @@ CREATE TABLE branches (
     chat_id INTEGER NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE
+    FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE,
+    FOREIGN KEY (latest_message_id) REFERENCES messages(id) ON DELETE
+    SET NULL
 );
 CREATE TABLE messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,9 +41,3 @@ CREATE TABLE ai_models (
     integration_id INTEGER NOT NULL,
     FOREIGN KEY (integration_id) REFERENCES ai_integrations(id) ON DELETE CASCADE
 );
-ALTER TABLE branches
-ADD FOREIGN KEY (latest_message_id) REFERENCES messages(id) ON DELETE
-SET NULL;
-ALTER TABLE chats
-ADD FOREIGN KEY (current_branch_id) REFERENCES branches(id) ON DELETE
-SET NULL;

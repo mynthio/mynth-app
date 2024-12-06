@@ -1,68 +1,22 @@
-import { invoke, Channel } from "@tauri-apps/api/core";
-import { createSignal } from "solid-js";
+import { invoke } from "@tauri-apps/api/core";
+import { createEffect, createSignal } from "solid-js";
 import { autofocus } from "@solid-primitives/autofocus";
-import { BeforeLeaveEventArgs, useBeforeLeave } from "@solidjs/router";
 
 // Prevent import removal and library tree-shaking
 autofocus;
 
-type OllamaMessageEvent = {
-  event: "messageReceived";
-  data: {
-    message: string;
-  };
-};
-
 function HomePage() {
-  let form!: HTMLFormElement;
-
   const [text, setText] = createSignal("");
 
-  const newOnEvent = new Channel<OllamaMessageEvent>();
-
-  newOnEvent.onmessage = (message) => {
-    console.log(`got download event ${message.data.message}`);
-    setText((prev) => prev + JSON.parse(message.data.message).response);
-  };
-
-  invoke("reconnect_ollama_stream", {
-    chatId: "1",
-    newChannel: newOnEvent,
-  }).catch(() => {});
-
-  useBeforeLeave((e: BeforeLeaveEventArgs) => {
-    form?.reset();
+  createEffect(() => {
+    invoke("fetch_chats").then((chats) => {
+      setText(JSON.stringify(chats));
+    });
   });
 
   return (
     <main class="container">
       <div>{text()}</div>
-
-      <form
-        ref={form}
-        onSubmit={(e) => {
-          e.preventDefault();
-
-          setText("");
-
-          const onEvent = new Channel<OllamaMessageEvent>();
-          onEvent.onmessage = (message) => {
-            console.log(`got download event ${message.data.message}`);
-            setText((prev) => prev + JSON.parse(message.data.message).response);
-          };
-
-          const formValues = new FormData(e.currentTarget);
-
-          invoke("stream_ollama_messages", {
-            onEvent,
-            chatId: "1",
-            prompt: formValues.get("prompt") as string,
-          });
-        }}
-      >
-        <textarea name="prompt" use:autofocus autofocus />
-        <button type="submit">Send</button>
-      </form>
     </main>
   );
 }

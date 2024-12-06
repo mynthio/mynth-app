@@ -1,7 +1,8 @@
-# Tauri + Solid + Typescript
+# Mynth AI APP
 
-This template should help get you started developing with Tauri, Solid and Typescript in Vite.
+Status: Work In Progress - Before first beta release
 
-## Recommended IDE Setup
+## Setup
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+- App directory: `~/Library/Application Support/com.mynth.app`
+- Database: `~/Library/Application Support/com.mynth.app/mynth.db`
