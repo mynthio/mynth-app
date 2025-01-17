@@ -1,12 +1,6 @@
 {
-    "editor.formatOnSave": true,
-    "sqltools.useNodeRuntime": true,
-    "sqltools.connections": [
-        {
-            "previewLimit": 50,
-            "driver": "SQLite",
-            "name": "Mynth APP DB",
-            "database": "/Users/tom/Library/Application Support/com.mynth.app/mynth.db"
-        }
-    ]
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+
+  "editor.tabSize": 2
 }

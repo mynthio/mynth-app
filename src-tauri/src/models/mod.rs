@@ -1,1 +1,2 @@
-pub mod chat; 
+pub mod ai;
+pub mod chat;

@@ -1,8 +1,8 @@
-import { useBeforeLeave, useParams } from "@solidjs/router";
-
 import { autofocus } from "@solid-primitives/autofocus";
-import { createEffect, createSignal, onMount } from "solid-js";
+import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import { Channel, invoke } from "@tauri-apps/api/core";
+import { Menu } from "@tauri-apps/api/menu";
+import { listen } from "@tauri-apps/api/event";
 
 // Prevent import removal and library tree-shaking
 autofocus;
@@ -14,12 +14,42 @@ type OllamaMessageEvent = {
   };
 };
 
-export default function ChatPage() {
+export default function ChatPage(props: { chatId: string }) {
   let form!: HTMLFormElement;
 
-  const params = useParams<{ id: string }>();
-
   const [text, setText] = createSignal("");
+
+  const menuPromise = Menu.new({
+    items: [
+      { id: "copy", text: "Copy" },
+      { id: "delete", text: "Delete Message" },
+    ],
+  });
+
+  onMount(async () => {
+    const unlistenMenuEvents = await listen<string>("menu-event", (event) => {
+      switch (event.payload) {
+        case "copy":
+          console.log("copy triggered");
+          break;
+        case "delete":
+          console.log("delete triggered");
+          break;
+        default:
+          console.log("Unhandled menu event:", event.payload);
+      }
+    });
+
+    onCleanup(() => {
+      unlistenMenuEvents();
+    });
+  });
+
+  const handleContextMenu = async (event: MouseEvent) => {
+    event.preventDefault();
+    const menu = await menuPromise;
+    await menu.popup();
+  };
 
   const newOnEvent = new Channel<OllamaMessageEvent>();
 
@@ -29,23 +59,19 @@ export default function ChatPage() {
   };
 
   invoke("reconnect_ollama_stream", {
-    chatId: params.id,
+    chatId: props.chatId,
     newChannel: newOnEvent,
   }).catch(() => {});
 
-  useBeforeLeave(() => {
-    form?.reset();
-  });
-
   createEffect(() => {
-    params.id;
     autofocus(form?.querySelector("textarea") as HTMLTextAreaElement);
   });
 
   return (
     <div>
-      <h1>{params.id}</h1>
-      <div>{text()}</div>
+      <div>{props.chatId}</div>
+
+      <div></div>
 
       <form
         ref={form}
@@ -64,7 +90,7 @@ export default function ChatPage() {
 
           invoke("stream_ollama_messages", {
             onEvent,
-            chatId: "1",
+            chatId: props.chatId,
             prompt: formValues.get("prompt") as string,
           });
         }}

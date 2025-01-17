@@ -1,25 +1,21 @@
 /* @refresh reload */
 import { render } from "solid-js/web";
-import { Router } from "@solidjs/router";
-import { lazy } from "solid-js";
-import RootLayout from "./layouts/root-layout";
 
-const routes = [
-  {
-    path: "/",
-    component: lazy(() => import("./pages/home")),
-  },
-  {
-    path: "/settings",
-    component: lazy(() => import("./pages/settings")),
-  },
-  {
-    path: "/chat/:id",
-    component: lazy(() => import("./pages/chat/chat.page")),
-  },
-];
+import { enableMapSet } from "immer";
+import { attachDevtoolsOverlay } from "@solid-devtools/overlay";
 
-render(
-  () => <Router root={RootLayout}>{routes}</Router>,
-  document.getElementById("root") as HTMLElement
-);
+attachDevtoolsOverlay();
+
+// FONTS
+
+// https://fontsource.org/fonts/lato
+import "@fontsource/lato/100.css";
+import "@fontsource/lato/300.css";
+import "@fontsource/lato/400.css";
+import "@fontsource/lato/700.css";
+import "overlayscrollbars/styles/overlayscrollbars.css";
+import App from "./App";
+
+enableMapSet();
+
+render(() => <App />, document.getElementById("root") as HTMLElement);

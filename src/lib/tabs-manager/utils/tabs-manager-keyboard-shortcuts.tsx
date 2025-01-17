@@ -1,16 +1,17 @@
 import { createShortcut } from "@solid-primitives/keyboard";
-import { useTabsManager } from "../hooks/use-tabs-manager";
-import { useLocation } from "@solidjs/router";
+
+import { tabsManager } from "../tabs-manager.store";
 
 export default function TabsManagerKeyboardShortcuts() {
-  const location = useLocation();
-
-  const { closeTab, openEmptyTab } = useTabsManager();
-
   createShortcut(
     ["Meta", "T"],
     () => {
-      openEmptyTab();
+      tabsManager.send({
+        type: "addTab",
+        id: "1",
+        title: "New Chat",
+        chatId: "1",
+      });
     },
     { preventDefault: true, requireReset: false }
   );
@@ -18,7 +19,7 @@ export default function TabsManagerKeyboardShortcuts() {
   createShortcut(
     ["Meta", "W"],
     () => {
-      closeTab(location.pathname);
+      tabsManager.send({ type: "closeActiveTab" });
     },
     { preventDefault: true, requireReset: false }
   );
@@ -26,7 +27,15 @@ export default function TabsManagerKeyboardShortcuts() {
   createShortcut(
     ["Meta", "ArrowLeft"],
     () => {
-      closeTab(location.pathname);
+      tabsManager.send({ type: "previousTab" });
+    },
+    { preventDefault: true, requireReset: false }
+  );
+
+  createShortcut(
+    ["Meta", "ArrowRight"],
+    () => {
+      tabsManager.send({ type: "nextTab" });
     },
     { preventDefault: true, requireReset: false }
   );

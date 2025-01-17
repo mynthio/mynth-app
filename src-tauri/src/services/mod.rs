@@ -1,1 +1,2 @@
-pub mod database; 
+pub mod chat_folders;
+pub mod database;
