@@ -35,6 +35,7 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import { openModal, setOpenModal } from "../stores/modals.store";
 import { ModalsRouter } from "../components/modals-router";
+import { viewManager } from "../stores/view-manager.store";
 
 type Props = any;
 
@@ -462,9 +463,7 @@ function WindowSideNavigation() {
         <div class="flex flex-col gap-1 mb-[15px]">
           <button
             class="rounded-md cursor-pointer hover:bg-white/5 text-[#a2a2a2] w-[36px] h-[36px] flex items-center justify-center"
-            onClick={() => {
-              setOpenModal(openModal() === "settings" ? null : "settings");
-            }}
+            onClick={() => viewManager.setView("settings")}
           >
             <BoltIcon width={16} height={16} />
           </button>
