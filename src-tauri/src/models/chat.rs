@@ -7,6 +7,7 @@ pub struct ChatFolder {
     pub id: String,
     pub name: String,
     pub parent_id: Option<String>,
+    pub workspace_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, FromRow)]
@@ -15,6 +16,7 @@ pub struct ChatListItem {
     pub id: String,
     pub name: String,
     pub parent_id: Option<String>,
+    pub workspace_id: Option<String>,
     pub updated_at: Option<chrono::NaiveDateTime>,
 }
 
@@ -25,4 +27,18 @@ pub enum FlatItem {
     Folder(ChatFolder),
     #[serde(rename = "chat")]
     Chat(ChatListItem),
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateChatParams {
+    pub name: Option<String>,
+    pub parent_id: Option<String>,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateFolderParams {
+    pub name: Option<String>,
+    pub parent_id: Option<String>,
 }

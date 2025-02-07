@@ -27,7 +27,7 @@ pub struct AiIntegrationWithModels {
     pub name: String,
     pub base_host: String,
     pub base_path: String,
-    pub api_key: String,
+    pub api_key: Option<String>,
     pub models: Vec<AiModel>,
 }
 

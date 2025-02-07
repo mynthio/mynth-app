@@ -1,14 +1,15 @@
 import { createShortcut } from "@solid-primitives/keyboard";
 
-import { sidebarManager } from "./sidebar-manager.store";
+import {
+  toggleSidebar,
+  toggleSidebarComponent,
+} from "../../stores/sidebar/sidebar-store";
 
 export default function SidebarManagerKeyboardShortcuts() {
   createShortcut(
     ["Meta", "B"],
     () => {
-      sidebarManager.send({
-        type: "toggle",
-      });
+      toggleSidebar();
     },
     { preventDefault: true, requireReset: false }
   );
@@ -16,10 +17,7 @@ export default function SidebarManagerKeyboardShortcuts() {
   createShortcut(
     ["Meta", "E"],
     () => {
-      sidebarManager.send({
-        type: "toggle",
-        content: "chats",
-      });
+      toggleSidebarComponent("chats");
     },
     { preventDefault: true, requireReset: false }
   );
@@ -27,10 +25,7 @@ export default function SidebarManagerKeyboardShortcuts() {
   createShortcut(
     ["Meta", "I"],
     () => {
-      sidebarManager.send({
-        type: "toggle",
-        content: "ai_integrations",
-      });
+      toggleSidebarComponent("ai_integrations");
     },
     { preventDefault: true, requireReset: false }
   );

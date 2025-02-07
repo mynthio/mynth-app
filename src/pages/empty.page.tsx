@@ -1,99 +1,26 @@
-import {
-  createMemo,
-  createSignal,
-  For,
-  Match,
-  onMount,
-  Show,
-  Switch,
-} from "solid-js";
-import { invoke } from "@tauri-apps/api/core";
-import { TauriChatListItem, TauriFlatItem } from "../interfaces/tauri/chat";
-import { TauriChatFolder } from "../interfaces/tauri/chat";
-import { makePersisted } from "@solid-primitives/storage";
-
-interface FlatTreeNode {
-  id: string;
-  name: string;
-  type: "folder" | "chat";
-  isOpen: boolean;
-  parentId: string | null;
-}
-
-const [flatTree, setFlatTree] = createSignal<FlatTreeNode[]>([]);
-const [openedFolders, setOpenedFolders] = makePersisted(
-  createSignal<string[]>([]),
-  {
-    name: "opened-folders",
-  }
-);
-
-const handleOpenFolder = (id: string) =>
-  setOpenedFolders((state) => [...new Set([...state, id])]);
-
-const handleCloseFolder = (id: string) =>
-  setOpenedFolders((state) => state.filter((x) => x !== id));
-
+import logo from "../assets/logo.svg";
 export default function EmptyPage() {
-  onMount(async () => {
-    const flatTree = (await invoke("get_flat_structure")) as TauriFlatItem[];
-    setFlatTree(
-      flatTree.map((node) => ({
-        ...node,
-        isOpen: openedFolders().includes(node.id),
-      }))
-    );
-  });
-
-  return <For each={flatTree()}>{(node) => <TreeNode node={node} />}</For>;
-}
-
-function TreeNode(props: { node: FlatTreeNode }) {
   return (
-    <Switch>
-      <Match when={props.node.type === "folder"}>
-        <FolderNode node={props.node} />
-      </Match>
-      <Match when={props.node.type === "chat"}>
-        <ChatNode node={props.node} />
-      </Match>
-    </Switch>
-  );
-}
+    <div class="w-full h-full flex items-center justify-center">
+      <div class="flex flex-col items-center justify-center gap-[30px]">
+        <img
+          src={logo}
+          alt="logo"
+          width={50}
+          height={50}
+          class="pointer-events-none"
+        />
 
-function FolderNode(props: { node: FlatTreeNode }) {
-  const [isOpen, setIsOpen] = createSignal(props.node.isOpen);
-  const children = createMemo(() =>
-    flatTree().filter((node) => node.parentId === props.node.id)
-  );
+        <p class="text-[#eaf3ec]/70 text-[24px] font-light">
+          Good morning, what would you like to do?
+        </p>
 
-  return (
-    <div>
-      <button
-        class="p-2 rounded-md bg-gray-900"
-        onClick={() => {
-          if (isOpen()) {
-            handleCloseFolder(props.node.id);
-          } else {
-            handleOpenFolder(props.node.id);
-          }
-          setIsOpen(!isOpen());
-        }}
-      >
-        {props.node.name}
-      </button>
-
-      <Show when={isOpen()}>
-        <div class="ml-2">
-          <For fallback={<div>No content</div>} each={children()}>
-            {(node) => <TreeNode node={node} />}
-          </For>
+        <div class="mt-[10px] flex items-center justify-center">
+          <button class="rounded-[2px] bg-gradient-to-tr font-light text-[15px] from-white/5 to-white/0 px-[25px] py-[12px] relative after:absolute after:bg-white/70 after:w-[2px] after:left-1 after:top-1 after:bottom-1 hover:after:top-2 hover:after:bottom-2 after:transition-all active:after:left-2">
+            Start a new chat
+          </button>
         </div>
-      </Show>
+      </div>
     </div>
   );
-}
-
-function ChatNode(props: { node: FlatTreeNode }) {
-  return <div>{props.node.name}</div>;
 }

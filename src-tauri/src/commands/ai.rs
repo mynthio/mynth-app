@@ -8,7 +8,8 @@ pub async fn create_ai_integration(
 ) -> Result<String, String> {
     state
         .db
-        .create_ai_integration(params)
+        .ai
+        .create_integration(params)
         .await
         .map_err(|e| e.to_string())
 }
@@ -20,7 +21,8 @@ pub async fn create_ai_model(
 ) -> Result<String, String> {
     state
         .db
-        .create_ai_model(params)
+        .ai
+        .create_model(params)
         .await
         .map_err(|e| e.to_string())
 }
@@ -31,7 +33,8 @@ pub async fn get_ai_integrations(
 ) -> Result<Vec<AiIntegrationWithModels>, String> {
     state
         .db
-        .fetch_ai_integrations_with_models()
+        .ai
+        .fetch_integrations_with_models()
         .await
         .map_err(|e| e.to_string())
 }

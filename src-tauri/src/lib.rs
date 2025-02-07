@@ -30,11 +30,11 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::chat::fetch_chats,
             commands::chat::get_flat_structure,
-            commands::chat::update_chat_name,
-            commands::chat_folders::update_chat_folder_name,
+            commands::chat::update_chat,
+            commands::chat_folder::update_chat_folder,
             commands::ai::create_ai_integration,
             commands::ai::create_ai_model,
-            commands::ai::get_ai_integrations,
+            commands::ai::get_ai_integrations
         ])
         .setup(|app| {
             let app_dir = app

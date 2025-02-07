@@ -1,17 +1,15 @@
-use crate::models::chat::{ChatFolder, ChatListItem, FlatItem};
+use crate::models::chat::{ChatListItem, FlatItem, UpdateChatParams};
 use crate::AppState;
 
 #[tauri::command]
-pub async fn fetch_chats(state: tauri::State<'_, AppState>) -> Result<Vec<ChatListItem>, String> {
-    state.db.fetch_chats().await.map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub async fn get_folders(state: tauri::State<'_, AppState>) -> Result<Vec<ChatFolder>, String> {
+pub async fn fetch_chats(
+    state: tauri::State<'_, AppState>,
+    workspace_id: Option<String>,
+) -> Result<Vec<ChatListItem>, String> {
     state
         .db
-        .folders
-        .fetch_all()
+        .chats
+        .fetch_chats(workspace_id)
         .await
         .map_err(|e| e.to_string())
 }
@@ -19,23 +17,26 @@ pub async fn get_folders(state: tauri::State<'_, AppState>) -> Result<Vec<ChatFo
 #[tauri::command]
 pub async fn get_flat_structure(
     state: tauri::State<'_, AppState>,
+    workspace_id: Option<String>,
 ) -> Result<Vec<FlatItem>, String> {
     state
         .db
-        .fetch_flat_structure()
+        .chats
+        .fetch_flat_structure(workspace_id)
         .await
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn update_chat_name(
+pub async fn update_chat(
     state: tauri::State<'_, AppState>,
     chat_id: String,
-    new_name: String,
+    params: UpdateChatParams,
 ) -> Result<(), String> {
     state
         .db
-        .update_chat_name(&chat_id, new_name)
+        .chats
+        .update_chat(&chat_id, params)
         .await
         .map_err(|e| e.to_string())
 }

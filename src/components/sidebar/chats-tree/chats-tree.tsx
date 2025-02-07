@@ -1,315 +1,287 @@
-import { ChatTreeItemType } from "../../../lib/chats-manager/enums/chat-tree-item-type.enum";
-import { ChatTreeChat } from "../../../lib/chats-manager/types/chat-tree-chat.type";
-import { ChatTreeFolder } from "../../../lib/chats-manager/types/chat-tree-folder.type";
-
 import {
-  createEffect,
   createMemo,
   createSignal,
   For,
   Match,
   onCleanup,
   onMount,
+  Show,
   Switch,
 } from "solid-js";
-import { ChatTree as ChatTreeType } from "../../../lib/chats-manager/types/chat-tree.type";
-import { useSelector } from "@xstate/store/solid";
-import { chatsTreeStore } from "../../../lib/chats-manager/chats-tree.store";
-
-import { tabsManager } from "../../../lib/tabs-manager/tabs-manager.store";
-import { Editable } from "@ark-ui/solid/editable";
 import { invoke } from "@tauri-apps/api/core";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from "../../ui/context-menu";
-import { dialogStore } from "../../../lib/dialogs/dialogs.store";
-import { useCurrentChatId } from "../../../hooks/use-current-chat-id.hook";
+import { TauriFlatItem } from "../../../interfaces/tauri/chat";
 import { FolderIcon, FolderOpenIcon, MessagesSquareIcon } from "lucide-solid";
+import { makePersisted } from "@solid-primitives/storage";
+import { debounce } from "@solid-primitives/scheduled";
+
 import {
   draggable,
   dropTargetForElements,
 } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import {
-  TauriChatFolder,
-  TauriChatListItem,
-  TauriFlatItem,
-} from "../../../interfaces/tauri/chat";
-import { chatsTreeOpen, toggleFolder } from "./chats-tree-open.store";
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "../../ui/context-menu";
+import { tabsManager } from "../../../lib/tabs-manager/tabs-manager.store";
+import { useCurrentChatId } from "../../../hooks/use-current-chat-id.hook";
+import { cn } from "../../../lib/utils";
 
-function ChatTree() {
-  // createEffect(() => {
-  //   console.log(chatsTreeOpen());
-  // });
-  const tree = useSelector(chatsTreeStore, (state) => state.context.tree);
-
-  return (
-    <>
-      <Branch
-        parentId={null}
-        nodes={tree().filter((item) => item.parentId === null)}
-      />
-    </>
-  );
-}
-
-type BranchProps = {
-  nodes: TauriFlatItem[];
+interface FlatTreeNode {
+  id: string;
+  name: string;
+  type: "folder" | "chat";
+  isOpen: boolean;
   parentId: string | null;
+}
+
+const [flatTree, setFlatTree] = createSignal<FlatTreeNode[]>([]);
+
+const changeParent = (id: string, newParentId: string | null) => {
+  if (id.startsWith("chat")) {
+    invoke("update_chat", {
+      chatId: id,
+      params: {
+        parentId: newParentId,
+      },
+    }).then((res) => console.log("update_chat", res));
+  } else {
+    invoke("update_chat_folder", {
+      folderId: id,
+      params: {
+        parentId: newParentId,
+      },
+    }).then((res) => console.log("update_chat_folder", res));
+  }
+
+  setFlatTree((state) =>
+    state.map((node) => ({
+      ...node,
+      parentId: node.id === id ? newParentId : node.parentId,
+    }))
+  );
 };
 
-function Branch(props: BranchProps) {
+const [openedFolders, setOpenedFolders] = makePersisted(
+  createSignal<string[]>([]),
+  {
+    name: "opened-folders",
+  }
+);
+
+const handleOpenFolder = (id: string) =>
+  setOpenedFolders((state) => [...new Set([...state, id])]);
+
+const handleCloseFolder = (id: string) =>
+  setOpenedFolders((state) => state.filter((x) => x !== id));
+
+export function ChatsTree() {
+  onMount(async () => {
+    const flatTree = (await invoke("get_flat_structure", {
+      workspaceId: "w-default",
+    })) as TauriFlatItem[];
+
+    setFlatTree(
+      flatTree.map((node) => ({
+        ...node,
+        isOpen: openedFolders().includes(node.id),
+      }))
+    );
+  });
+
+  const topLevelList = createMemo(() =>
+    flatTree().filter((node) => node.parentId === null)
+  );
+
+  return <For each={topLevelList()}>{(node) => <TreeNode node={node} />}</For>;
+}
+
+function TreeNode(props: { node: FlatTreeNode }) {
   return (
-    <For each={props.nodes} fallback={null}>
-      {(node) => (
-        <div class={props.parentId === null ? "pl-0" : "pl-2"}>
-          <Switch fallback={"..."}>
-            <Match when={node.type === "folder"}>
-              <FolderNode node={node as TauriChatFolder} />
-            </Match>
-            <Match when={node.type === "chat"}>
-              <ChatNode node={node as TauriChatListItem} />
-            </Match>
-          </Switch>
-        </div>
-      )}
-    </For>
+    <Switch>
+      <Match when={props.node.type === "folder"}>
+        <FolderNode node={props.node} />
+      </Match>
+
+      <Match when={props.node.type === "chat"}>
+        <ChatNode node={props.node} />
+      </Match>
+    </Switch>
   );
 }
 
-type FolderNodeProps = {
-  node: TauriChatFolder;
-};
-
-function FolderNode(props: FolderNodeProps) {
-  let refDraggable: HTMLElement | undefined = undefined;
-  let refDropTarget: HTMLElement | undefined = undefined;
-
-  const tree = useSelector(chatsTreeStore, (state) => state.context.tree);
-
+function FolderNode(props: { node: FlatTreeNode }) {
   const [isHovering, setIsHovering] = createSignal(false);
-  const [isOpen, setIsOpen] = createSignal(props.node.isOpen);
-  // const isOpen = createMemo(() => {
-  //   console.log("Memo for ", props.node.id);
-  //   return chatsTreeOpen()[props.node.id];
-  // });
+  const isOpen = () => openedFolders().includes(props.node.id);
+  const children = createMemo(() =>
+    flatTree().filter((node) => node.parentId === props.node.id)
+  );
+  const openFolderOnHover = debounce(() => {
+    if (isHovering()) {
+      handleOpenFolder(props.node.id);
+    }
+  }, 700);
 
-  let openOnHoverTimeout = 0;
+  let draggableRef: HTMLElement | undefined = undefined;
+  let dropTargetRef: HTMLElement | undefined = undefined;
 
   onMount(() => {
-    console.log("Mounted for ", props.node.id);
-
     const cleanup = combine(
       draggable({
-        element: refDraggable!,
+        element: draggableRef!,
+        getInitialData: () => ({
+          id: props.node.id,
+        }),
       }),
       dropTargetForElements({
-        element: refDropTarget!,
+        element: dropTargetRef!,
         getData: () => ({
-          id: String(props.node.id),
+          id: props.node.id,
         }),
-        onDragEnter: ({ location, self }) => {
-          if (location.current.dropTargets[0]?.data.id === self.data.id) {
+        onDragEnter: ({ location }) => {
+          if (location.current.dropTargets[0]?.data.id === props.node.id) {
             setIsHovering(true);
-            openOnHoverTimeout = setTimeout(() => {
-              chatsTreeStore.send({
-                type: "openFolder",
-                id: props.node.id,
-              });
-              setIsOpen(true);
-            }, 870);
+            openFolderOnHover();
           } else {
             setIsHovering(false);
-            clearTimeout(openOnHoverTimeout);
-          }
-        },
-        onDragStart: ({ location, self }) => {
-          if (location.current.dropTargets[0]?.data.id === self.data.id) {
-            setIsHovering(true);
-            openOnHoverTimeout = setTimeout(() => {
-              chatsTreeStore.send({
-                type: "openFolder",
-                id: props.node.id,
-              });
-              setIsOpen(true);
-            }, 870);
-          } else {
-            setIsHovering(false);
-            clearTimeout(openOnHoverTimeout);
           }
         },
         onDragLeave: () => {
           setIsHovering(false);
-          clearTimeout(openOnHoverTimeout);
         },
-        onDropTargetChange: ({ location, self }) => {
-          console.log("drop target change", location.current.dropTargets);
-          if (location.current.dropTargets[0]?.data.id === self.data.id) {
+        onDropTargetChange: ({ location }) => {
+          if (location.current.dropTargets[0]?.data.id === props.node.id) {
             setIsHovering(true);
-            openOnHoverTimeout = setTimeout(() => {
-              chatsTreeStore.send({
-                type: "openFolder",
-                id: props.node.id,
-              });
-              setIsOpen(true);
-            }, 870);
+            openFolderOnHover();
           } else {
             setIsHovering(false);
-            clearTimeout(openOnHoverTimeout);
           }
         },
-        onDrop: ({ location, self, source }) => {
+        onDrop: ({ source, location }) => {
           setIsHovering(false);
-          clearTimeout(openOnHoverTimeout);
+
+          /**
+           * Prevent setting a parent to child folder
+           */
+          if (
+            location.current.dropTargets.some(
+              (x) =>
+                x.data.id === source.data.id && !x.data.id.startsWith("chat")
+            )
+          ) {
+            return;
+          }
+
+          if (source.data.id !== props.node.id) {
+            changeParent(source.data.id as string, props.node.id);
+          }
         },
       })
     );
 
-    onCleanup(() => {
-      clearTimeout(openOnHoverTimeout);
-      cleanup();
-    });
+    onCleanup(() => cleanup());
   });
 
   return (
     <div
-      ref={refDropTarget}
+      class="rounded-[4px]"
+      ref={dropTargetRef}
       classList={{
-        "bg-emerald-500/5": isHovering(),
+        "bg-[#eaf3ec]/5": isHovering(),
       }}
     >
       <ContextMenu>
         <ContextMenuTrigger
-          ref={refDraggable}
-          class="chat-tree-node flex items-center gap-1 px-2 py-0.5 rounded-sm hover:bg-stone-500/10 w-full"
+          ref={draggableRef}
           onClick={() => {
-            // toggleFolder(props.node.id);
-
-            chatsTreeStore.send({
-              type: "toggleFolder",
-              id: props.node.id,
-            });
+            if (isOpen()) {
+              handleCloseFolder(props.node.id);
+            } else {
+              handleOpenFolder(props.node.id);
+            }
           }}
+          class="w-full px-[6px] my-[2px] py-[2px] text-[14px] rounded-[5px] flex items-center gap-[4px] hover:bg-[#eaf3ec]/5"
         >
           {isOpen() ? <FolderOpenIcon size={10} /> : <FolderIcon size={10} />}
-
-          <Editable.Root
-            onValueCommit={async ({ value }) => {
-              console.log(value);
-              await invoke("update_chat_folder_name", {
-                folderId: props.node.id,
-                newName: value,
-              });
-            }}
-            class="w-full text-left"
-            autoResize
-            value={props.node.name}
-            placeholder="Placeholder"
-            activationMode="dblclick"
-          >
-            <Editable.Area class="w-full">
-              <Editable.Input class="w-full" />
-              <Editable.Preview />
-            </Editable.Area>
-          </Editable.Root>
+          {props.node.name}
         </ContextMenuTrigger>
 
         <ContextMenuContent>
           <ContextMenuItem value="new-chat">New chat</ContextMenuItem>
-          <ContextMenuItem value="new-folder">New folder</ContextMenuItem>
+          <ContextMenuItem
+            onClick={() => {
+              changeParent(props.node.id, null);
+            }}
+            value="move-to-root"
+          >
+            Move to root
+          </ContextMenuItem>
         </ContextMenuContent>
+
+        <Show when={isOpen()}>
+          <div class={cn("relative ml-[14px]")}>
+            <For
+              fallback={
+                <div>
+                  <i>Empty folder</i>
+                </div>
+              }
+              each={children()}
+            >
+              {(node) => <TreeNode node={node} />}
+            </For>
+          </div>
+        </Show>
       </ContextMenu>
-      {isOpen() && (
-        <Branch
-          parentId={props.node.id}
-          nodes={tree().filter((n) => n.parentId === props.node.id)}
-        />
-      )}
     </div>
   );
 }
 
-type ChatNodeProps = {
-  node: TauriChatListItem;
-};
-
-function ChatNode({ node }: ChatNodeProps) {
-  const activeChatId = useCurrentChatId();
-
-  const onClick = () => {
-    tabsManager.send({
-      type: "addTab",
-      id: `chat-${node.id}`,
-      title: node.name,
-      chatId: node.id.toString(),
-    });
-  };
-
-  let ref: HTMLElement | undefined = undefined;
+function ChatNode(props: { node: FlatTreeNode }) {
+  let draggableRef: HTMLElement | undefined = undefined;
+  const currentChatId = useCurrentChatId();
 
   onMount(() => {
     const cleanup = draggable({
-      element: ref!,
+      element: draggableRef!,
+      getInitialData: () => ({
+        id: props.node.id,
+      }),
     });
 
-    onCleanup(() => {
-      cleanup();
-    });
+    onCleanup(() => cleanup());
   });
 
   return (
     <ContextMenu>
       <ContextMenuTrigger
-        ref={ref}
-        class="chat-tree-node flex items-center gap-1 px-2 py-0.5 rounded-sm hover:bg-stone-500/10 w-full"
-        classList={{
-          "bg-stone-500/5": activeChatId() === node.id.toString(),
+        ref={draggableRef}
+        onClick={() => {
+          tabsManager.send({
+            type: "openTab",
+            id: `chat-${props.node.id}`,
+            title: props.node.name,
+            component: "chat",
+          });
         }}
-        onClick={onClick}
+        class="w-full my-[2px] px-[6px] py-[2px] text-[14px] rounded-[5px] flex items-center gap-[4px] hover:bg-[#eaf3ec]/5"
+        classList={{
+          "bg-[#eaf3ec]/5": currentChatId() === props.node.id,
+        }}
       >
         <MessagesSquareIcon size={10} />
-        <Editable.Root
-          onValueCommit={async ({ value }) => {
-            console.log(value);
-            await invoke("update_chat_name", {
-              chatId: node.id,
-              newName: value,
-            });
-          }}
-          class="w-full text-left"
-          autoResize
-          value={node.name}
-          placeholder="Placeholder"
-          activationMode="dblclick"
-        >
-          <Editable.Area class="w-full">
-            <Editable.Input class="w-full" />
-            <Editable.Preview />
-          </Editable.Area>
-        </Editable.Root>
+        {props.node.name}
       </ContextMenuTrigger>
       <ContextMenuContent>
-        <ContextMenuItem value="rename">Rename</ContextMenuItem>
         <ContextMenuItem
-          value="delete"
-          onClick={() =>
-            dialogStore.send({
-              type: "open",
-              dialog: "delete-chat",
-              props: {
-                chatId: node.id,
-              },
-            })
-          }
+          onClick={() => changeParent(props.node.id, null)}
+          value="move-to-root"
         >
-          Delete
+          Move to root
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
   );
 }
-
-export { ChatTree };

@@ -21,7 +21,7 @@ export function ContextMenuContent(props: ContextMenuContentProps) {
     <Menu.Positioner>
       <Menu.Content
         {...props}
-        class="bg-white/10 text-white/80 backdrop-blur-lg rounded-[8px] px-[4px] py-[4px] text-[14px] border border-solid border-white/10 space-y-[5px] min-w-[120px]"
+        class="bg-[#b6b6b6]/10 text-[#eaf3ec] z-[999999] border-[#b6b6b6]/30 backdrop-blur-xl rounded-[7px] px-[4px] py-[4px] text-[13px] border border-solid space-y-[5px] min-w-[120px] shadow-lg shadow-black/25"
       />
     </Menu.Positioner>
   );
@@ -34,7 +34,7 @@ export function ContextMenuItem(props: ContextMenuItemProps) {
   return (
     <Menu.Item
       {...props}
-      class="hover:bg-white/10 px-[8px] py-[2px] rounded-[4px]"
+      class="hover:bg-[#eaf3ec]/10 px-[12px] py-[2px] rounded-[5px]"
     />
   );
 }

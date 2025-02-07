@@ -1,3 +1,13 @@
+-- 🏢 Workspaces
+-- The top-level organization unit where all the magic happens
+CREATE TABLE
+    workspaces (
+        id TEXT PRIMARY KEY NOT NULL, -- workspace-[uuid]
+        name TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
 -- 🌳 Folder Structure
 -- These tables handle the organization of chats into a tree-like structure
 -- Because nobody likes a messy room, right? 
@@ -6,14 +16,16 @@ CREATE TABLE
         id TEXT PRIMARY KEY NOT NULL, -- folder-[uuid]
         name TEXT NOT NULL,
         parent_id TEXT,
+        workspace_id TEXT NOT NULL,
         is_archived BOOLEAN DEFAULT FALSE, -- Taking a disco break! 🏖️
         archived_at TIMESTAMP, -- When did we put this folder in the archive?
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (parent_id) REFERENCES chat_folders (id) ON DELETE CASCADE
+        FOREIGN KEY (parent_id) REFERENCES chat_folders (id) ON DELETE CASCADE,
+        FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE
     );
 
--- �� Chat Management
+-- 💬 Chat Management
 -- The heart of our application! Where all the magic conversations happen
 -- Think of it as a cozy living room where AIs and humans hang out
 CREATE TABLE
@@ -21,13 +33,15 @@ CREATE TABLE
         id TEXT PRIMARY KEY NOT NULL, -- chat-[uuid]
         name TEXT NOT NULL,
         parent_id TEXT,
+        workspace_id TEXT,
         current_branch_id TEXT,
         is_archived BOOLEAN DEFAULT FALSE, -- Time to rest those dancing feet! 🌙
         archived_at TIMESTAMP, -- When did this chat take a break?
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (parent_id) REFERENCES chat_folders (id) ON DELETE CASCADE,
-        FOREIGN KEY (current_branch_id) REFERENCES branches (id) ON DELETE SET NULL
+        FOREIGN KEY (current_branch_id) REFERENCES branches (id) ON DELETE SET NULL,
+        FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE
     );
 
 -- 🌿 Branching Logic
@@ -98,6 +112,10 @@ CREATE INDEX idx_messages_branch_id ON messages (branch_id);
 CREATE INDEX idx_branches_chat_id ON branches (chat_id);
 
 CREATE INDEX idx_chats_parent_id ON chats (parent_id);
+
+CREATE INDEX idx_chats_workspace_id ON chats (workspace_id);
+
+CREATE INDEX idx_folders_workspace_id ON chat_folders (workspace_id);
 
 CREATE INDEX idx_archived_chats ON chats (is_archived, archived_at);
 

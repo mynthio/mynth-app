@@ -2,86 +2,45 @@ import "./../index.css";
 
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import TabsManagerKeyboardShortcuts from "../lib/tabs-manager/utils/tabs-manager-keyboard-shortcuts";
-import { animate, delay, scroll, stagger } from "motion";
-import {
-  createMemo,
-  createResource,
-  createSignal,
-  For,
-  Match,
-  onMount,
-  Show,
-  Switch,
-} from "solid-js";
-import XIcon from "../components/icons/x";
-import PlusIcon from "../components/icons/plus";
-import IconPhSidebar from "~icons/ph/sidebar";
-import IconPhCaretDown from "~icons/ph/caret-down";
+import { animate, stagger } from "motion";
+import { createResource, For, Match, onMount, Show, Switch } from "solid-js";
 import { useSelector } from "@xstate/store/solid";
 import { tabsManager } from "../lib/tabs-manager/tabs-manager.store";
-import { buildChatTree } from "../lib/chats-manager/utils/build-chat-tree.util";
-import { invoke } from "@tauri-apps/api/core";
-import { chatsTreeStore } from "../lib/chats-manager/chats-tree.store";
-import {
-  TauriChatFolder,
-  TauriChatListItem,
-  TauriFlatItem,
-} from "../interfaces/tauri/chat";
-import { ChatTree } from "../components/sidebar/chats-tree/chats-tree";
-import IconPhPlusCircle from "~icons/ph/plus-circle";
-import IconChatsCircle from "~icons/ph/chats-circle";
-import IconStack from "~icons/ph/stack";
-import IconGear from "~icons/ph/gear";
-import IconPlus from "~icons/ph/plus";
-import IconBrain from "~icons/ph/brain";
-import IconX from "~icons/ph/x";
-import IconGitBranch from "~icons/ph/git-branch";
-import IconMagnifyingGlass from "~icons/ph/magnifying-glass";
+import { ChatsTree } from "../components/sidebar/chats-tree/chats-tree";
+
 import { sidebarManager } from "../lib/sidebar-manager/sidebar-manager.store";
 import SidebarManagerKeyboardShortcuts from "../lib/sidebar-manager/sidebar-keyboard-shortcuts";
 import { useCurrentChatId } from "../hooks/use-current-chat-id.hook";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-solid";
 import AiIntegrations from "../components/sidebar/ai-integrations/ai-integrations";
 import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from "../components/ui/context-menu";
+  BlocksIcon,
+  BoltIcon,
+  BotIcon,
+  FolderTreeIcon,
+  GitBranchIcon,
+  ListTreeIcon,
+  Maximize2Icon,
+  MessagesSquareIcon,
+  MinusIcon,
+  PlusIcon,
+  SearchIcon,
+  XIcon,
+  ZapIcon,
+} from "lucide-solid";
+import {
+  sidebarState,
+  toggleSidebarComponent,
+} from "../stores/sidebar/sidebar-store";
+import { invoke } from "@tauri-apps/api/core";
+import { openModal, setOpenModal } from "../stores/modals.store";
+import { ModalsRouter } from "../components/modals-router";
 
 type Props = any;
 
 const window = getCurrentWindow();
 
 export default function RootLayout(props: Props) {
-  onMount(async () => {
-    console.log("mounting");
-
-    const flatTree = (await invoke("get_flat_structure")) as TauriFlatItem[];
-
-    const openFoldersFromStorage = localStorage.getItem(
-      "mynth:chats-tree:open-folders"
-    );
-
-    const openeFolders = openFoldersFromStorage
-      ? new Set(openFoldersFromStorage.split(",").map((x) => Number(x)))
-      : null;
-
-    chatsTreeStore.on("open-folders", (event) => {
-      console.log("toggle folder", event.ids);
-      localStorage.setItem(
-        "mynth:chats-tree:open-folders",
-        event.ids.join(",")
-      );
-    });
-
-    chatsTreeStore.send({
-      type: "setup",
-      tree: flatTree,
-      openFolders: openeFolders,
-    });
-  });
-
   const isSidebarOpen = useSelector(
     sidebarManager,
     (state) => state.context.isOpen
@@ -93,7 +52,7 @@ export default function RootLayout(props: Props) {
       {/* <WindowTopBar /> */}
       <WindowSideNavigation />
 
-      <Show when={isSidebarOpen()}>
+      <Show when={sidebarState.open}>
         <Sidebar />
       </Show>
 
@@ -114,6 +73,8 @@ export default function RootLayout(props: Props) {
           </OverlayScrollbarsComponent>
         </div>
       </div>
+
+      <ModalsRouter />
 
       <TabsManagerKeyboardShortcuts />
       <SidebarManagerKeyboardShortcuts />
@@ -165,7 +126,7 @@ function TabsBar() {
                 tabsManager.send({ type: "closeTab", id: tab.id });
               }}
             >
-              <IconX width={10} height={10} />
+              <XIcon size={10} />
             </button>
           </div>
         )}
@@ -175,18 +136,19 @@ function TabsBar() {
 }
 
 function Sidebar() {
-  const content = useSelector(sidebarManager, (state) => state.context.content);
-
   return (
     <aside class="w-sidebar-width flex-grow-0 flex-shrink-0 h-full text-[#a2a2a2] text-[14px] font-light px-2 motion-preset-slide-right">
       <Switch fallback={<ChatsSidebarContent />}>
-        <Match when={content() === "chats"}>
+        <Match when={sidebarState.component === "chats"}>
           <ChatsSidebarContent />
         </Match>
-        <Match when={content() === "ai_integrations"}>
+        <Match when={sidebarState.component === "workspace"}>
+          <WorkspaceSidebarContent />
+        </Match>
+        <Match when={sidebarState.component === "ai_integrations"}>
           <AiIntegrationsSidebarContent />
         </Match>
-        <Match when={content() === "settings"}>
+        <Match when={sidebarState.component === "settings"}>
           <SettingsSidebarContent />
         </Match>
       </Switch>
@@ -195,41 +157,13 @@ function Sidebar() {
 }
 
 function ChatsSidebarContent() {
-  const title = (
-    <span class="uppercase text-[10px] font-normal text-[#a2a2a2]">
-      my workspace
-    </span>
-  );
+  const [chats] = createResource(async () => {
+    const chats = await invoke("fetch_chats", {
+      workspaceId: null,
+    });
 
-  animate(
-    title!,
-    {
-      y: [-5, 0],
-      opacity: [0, 1],
-    },
-    {
-      type: "spring",
-      stiffness: 100,
-      damping: 10,
-      duration: 0.35,
-    }
-  );
-
-  // const chatsTree = (
-  //   <div class="h-full w-full" id="chats-tree">
-  //     <ChatTree />
-  //   </div>
-  // );
-
-  // const buttonsInTree = document.querySelectorAll("#chats-tree button");
-
-  // animate(
-  //   buttonsInTree,
-  //   {
-  //     y: [-10, 0],
-  //   },
-  //   { type: "spring", stiffness: 300, duration: 300 }
-  // );
+    return chats;
+  });
 
   return (
     <div class="h-full w-full flex flex-col">
@@ -237,14 +171,16 @@ function ChatsSidebarContent() {
         class="h-topbar-height flex flex-1 min-h-topbar-height max-h-topbar-height items-center justify-between px-2"
         data-tauri-drag-region
       >
-        {title}
+        <span class="uppercase text-[10px] font-normal text-[#a2a2a2]">
+          Quick chats
+        </span>
 
         <div class="flex items-center gap-[7px]">
           <button class="cursor-pointer h-[15px] w-[15px]  items-center justify-center flex">
-            <IconPlus width={10} height={10} />
+            <PlusIcon size={10} />
           </button>
           <button class="cursor-pointer h-[15px] w-[15px]  items-center justify-center flex">
-            <IconMagnifyingGlass width={10} height={10} />
+            <SearchIcon size={10} />
           </button>
         </div>
       </div>
@@ -259,7 +195,51 @@ function ChatsSidebarContent() {
           },
         }}
       >
-        <ChatTree />
+        <For each={chats() as any[]}>
+          {(chat) => (
+            <button class="w-full px-[6px] my-[2px] py-[2px] text-[14px] rounded-[5px] flex items-center gap-[4px] hover:bg-[#eaf3ec]/5">
+              <MessagesSquareIcon size={10} />
+              {chat.name}
+            </button>
+          )}
+        </For>
+      </OverlayScrollbarsComponent>
+    </div>
+  );
+}
+
+function WorkspaceSidebarContent() {
+  return (
+    <div class="h-full w-full flex flex-col">
+      <div
+        class="h-topbar-height flex flex-1 min-h-topbar-height max-h-topbar-height items-center justify-between px-2"
+        data-tauri-drag-region
+      >
+        <span class="uppercase text-[10px] font-normal text-[#a2a2a2]">
+          my workspace
+        </span>
+
+        <div class="flex items-center gap-[7px]">
+          <button class="cursor-pointer h-[15px] w-[15px]  items-center justify-center flex">
+            <PlusIcon size={10} />
+          </button>
+          <button class="cursor-pointer h-[15px] w-[15px]  items-center justify-center flex">
+            <SearchIcon size={10} />
+          </button>
+        </div>
+      </div>
+
+      <OverlayScrollbarsComponent
+        defer
+        class="h-full"
+        options={{
+          scrollbars: {
+            theme: "os-theme-light",
+            autoHide: "scroll",
+          },
+        }}
+      >
+        <ChatsTree />
       </OverlayScrollbarsComponent>
     </div>
   );
@@ -294,7 +274,7 @@ function SettingsSidebarContent() {
             });
           }}
         >
-          <IconGear width={10} height={10} />
+          <BoltIcon size={10} />
           App Settings
         </button>
 
@@ -314,7 +294,7 @@ function SettingsSidebarContent() {
             });
           }}
         >
-          <IconStack width={10} height={10} />
+          <BlocksIcon size={10} />
           AI Integrations
         </button>
       </div>
@@ -323,18 +303,6 @@ function SettingsSidebarContent() {
 }
 
 function AiIntegrationsSidebarContent() {
-  const [aiIntegrations] = createResource(async () => {
-    const integrations = await invoke("get_ai_integrations");
-    return integrations;
-  });
-
-  const [ollamaTestData] = createResource(async () => {
-    const data = await fetch("http://localhost:11434/api/tags").then((res) =>
-      res.json()
-    );
-    return data;
-  });
-
   return (
     <>
       <div
@@ -347,10 +315,10 @@ function AiIntegrationsSidebarContent() {
 
         <div class="flex items-center gap-[7px]">
           <button class="cursor-pointer h-[15px] w-[15px]  items-center justify-center flex">
-            <IconPlus width={10} height={10} />
+            <PlusIcon width={10} height={10} />
           </button>
           <button class="cursor-pointer h-[15px] w-[15px]  items-center justify-center flex">
-            <IconMagnifyingGlass width={10} height={10} />
+            <SearchIcon width={10} height={10} />
           </button>
         </div>
       </div>
@@ -390,11 +358,11 @@ function ChatSideNav() {
       <hr class="chat-side-nav-item h-[1px] my-[2px] bg-white/[0.07] w-full border-0 border-none" />
 
       <button class="chat-side-nav-item rounded-md cursor-pointer hover:bg-white/5 text-[#a2a2a2] w-[36px] h-[36px] flex items-center justify-center">
-        <IconBrain width={16} height={16} />
+        <BotIcon width={16} height={16} />
       </button>
 
       <button class="chat-side-nav-item rounded-md cursor-pointer hover:bg-white/5 text-[#a2a2a2] w-[36px] h-[36px] flex items-center justify-center">
-        <IconGitBranch width={16} height={16} />
+        <GitBranchIcon width={16} height={16} />
       </button>
     </div>
   );
@@ -403,42 +371,44 @@ function ChatSideNav() {
 function WindowSideNavigation() {
   const currentChatId = useCurrentChatId();
 
-  const sidebarContent = useSelector(
-    sidebarManager,
-    (state) => state.context.content
-  );
-
-  const isSidebarOpen = useSelector(
-    sidebarManager,
-    (state) => state.context.isOpen
-  );
-
   return (
     <div
       class="w-window-side-nav-width flex-grow-0 flex-shrink-0 relative h-full grid grid-cols-1 grid-rows-[var(--spacing-topbar-height)_1fr] after:content-[''] after:absolute after:top-[10px] after:right-0 after:w-[1px] after:bottom-[10px] after:z-10"
       classList={{
-        "after:bg-white/[0.07]": isSidebarOpen(),
+        "after:bg-white/[0.07]": sidebarState.open,
       }}
     >
-      <div class="flex items-center justify-center gap-[6px] w-full">
+      <div class="flex items-center justify-center gap-[6px] w-full group relative">
         <button
           onClick={() => {
             window.close();
           }}
-          class="bg-[#FF5F57] w-[9px] h-[9px] rounded-full"
-        ></button>
+          class="bg-[#FF5F57] w-[9px] h-[9px] rounded-full flex items-center justify-center z-[9999999999999] "
+        >
+          <XIcon size={6} class="text-[#FF5F57] group-hover:text-stone-700" />
+        </button>
         <button
           onClick={() => {
             window.minimize();
           }}
-          class="bg-[#FDBC2C] w-[9px] h-[9px] rounded-full"
-        ></button>
+          class="bg-[#FDBC2C] w-[9px] h-[9px] rounded-full flex items-center justify-center z-[9999999999999]"
+        >
+          <MinusIcon
+            size={6}
+            class="text-[#FDBC2C] group-hover:text-stone-700"
+          />
+        </button>
         <button
           onClick={() => {
             window.toggleMaximize();
           }}
-          class="bg-[#28C840] w-[9px] h-[9px] rounded-full"
-        ></button>
+          class="bg-[#28C840] w-[9px] h-[9px] rounded-full flex items-center justify-center z-[9999999999999]"
+        >
+          <Maximize2Icon
+            size={6}
+            class="text-[#28C840] group-hover:text-stone-700"
+          />
+        </button>
       </div>
 
       <div
@@ -449,32 +419,41 @@ function WindowSideNavigation() {
           <button
             class="rounded-md cursor-pointer hover:bg-white/5 text-[#a2a2a2] w-[36px] h-[36px] flex items-center justify-center"
             classList={{
-              "bg-[#eaf3ec]/5": sidebarContent() === "chats" && isSidebarOpen(),
+              "bg-[#eaf3ec]/5":
+                sidebarState.component === "chats" && sidebarState.open,
             }}
             onClick={() => {
-              sidebarManager.send({
-                type: "toggle",
-                content: "chats",
-              });
+              toggleSidebarComponent("chats");
             }}
           >
-            <IconChatsCircle width={16} height={16} />
+            <MessagesSquareIcon size={16} />
+          </button>
+
+          <button
+            class="rounded-md cursor-pointer hover:bg-white/5 text-[#a2a2a2] w-[36px] h-[36px] flex items-center justify-center"
+            classList={{
+              "bg-[#eaf3ec]/5":
+                sidebarState.component === "workspace" && sidebarState.open,
+            }}
+            onClick={() => {
+              toggleSidebarComponent("workspace");
+            }}
+          >
+            <ListTreeIcon size={16} />
           </button>
 
           <button
             class="rounded-md cursor-pointer hover:bg-white/5 text-[#a2a2a2] w-[36px] h-[36px] flex items-center justify-center"
             classList={{
               "bg-white/5":
-                sidebarContent() === "ai_integrations" && isSidebarOpen(),
+                sidebarState.component === "ai_integrations" &&
+                sidebarState.open,
             }}
             onClick={() => {
-              sidebarManager.send({
-                type: "toggle",
-                content: "ai_integrations",
-              });
+              toggleSidebarComponent("ai_integrations");
             }}
           >
-            <IconStack width={16} height={16} />
+            <BlocksIcon size={16} />
           </button>
 
           {currentChatId() && <ChatSideNav />}
@@ -484,13 +463,10 @@ function WindowSideNavigation() {
           <button
             class="rounded-md cursor-pointer hover:bg-white/5 text-[#a2a2a2] w-[36px] h-[36px] flex items-center justify-center"
             onClick={() => {
-              sidebarManager.send({
-                type: "toggle",
-                content: "settings",
-              });
+              setOpenModal(openModal() === "settings" ? null : "settings");
             }}
           >
-            <IconGear width={16} height={16} />
+            <BoltIcon width={16} height={16} />
           </button>
         </div>
       </div>

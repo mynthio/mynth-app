@@ -13,9 +13,10 @@ export function useCurrentChatId() {
   createEffect(() => {
     if (!activeTab() || !activeTab().startsWith("chat-")) {
       setCurrentChatId(null);
+      return;
     }
 
-    setCurrentChatId(activeTab().split("-")[1]);
+    setCurrentChatId(activeTab().replace("chat-", ""));
   });
 
   return currentChatId;

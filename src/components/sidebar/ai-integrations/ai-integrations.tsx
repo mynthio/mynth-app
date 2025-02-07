@@ -1,6 +1,6 @@
 import { createResource, createSignal, For } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
-
+import claudeSvg from "../../../assets/claude.svg";
 import IconStack from "~icons/ph/stack";
 import IconBrain from "~icons/ph/brain";
 import {
@@ -9,6 +9,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "../../ui/context-menu";
+import { BlocksIcon, BotIcon, BrainIcon } from "lucide-solid";
 
 export default function AiIntegrations() {
   const [aiIntegrations] = createResource(async () => {
@@ -36,7 +37,7 @@ function Integration(props: { integration: any }) {
         }}
         class="flex items-center gap-1 cursor-pointer px-2 py-0.5 rounded-sm hover:bg-stone-500/10 w-full"
       >
-        <IconStack width={10} height={10} />
+        <BlocksIcon size={10} />
         {props.integration.name}
       </button>
 
@@ -53,7 +54,7 @@ function IntegrationModels(props: { models: any }) {
           <ContextMenu>
             <ContextMenuTrigger class="w-full">
               <button class="flex items-center gap-1 cursor-pointer px-2 py-0.5 rounded-sm hover:bg-stone-500/10 w-full">
-                <IconBrain width={10} height={10} />
+                <BotIcon size={10} />
                 {model.modelId}
               </button>
             </ContextMenuTrigger>

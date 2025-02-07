@@ -2,9 +2,9 @@
 import { render } from "solid-js/web";
 
 import { enableMapSet } from "immer";
-import { attachDevtoolsOverlay } from "@solid-devtools/overlay";
+// import { attachDevtoolsOverlay } from "@solid-devtools/overlay";
 
-attachDevtoolsOverlay();
+// attachDevtoolsOverlay();
 
 // FONTS
 
