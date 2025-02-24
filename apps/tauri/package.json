@@ -1,0 +1,15 @@
+{
+  "name": "@mynth-app/tauri",
+  "version": "0.1.0",
+  "description": "",
+  "type": "module",
+  "scripts": {
+    "dev:app": "tauri dev",
+    "tauri": "tauri"
+  },
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.2.7"
+  }
+}

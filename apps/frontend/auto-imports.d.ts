@@ -6,6 +6,5 @@
 // biome-ignore lint: disable
 export {}
 declare global {
-  const IconPhPlusCircle: typeof import('~icons/ph/plus-circle.jsx')['default']
-  const IconPhSidebar: typeof import('~icons/ph/sidebar.jsx')['default']
+
 }

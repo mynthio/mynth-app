@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "identifier": "com.mynth.macos",
   "build": {
-    "beforeDevCommand": "pnpm dev",
+    "beforeDevCommand": "",
     "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "pnpm build",
     "frontendDist": "../dist"
