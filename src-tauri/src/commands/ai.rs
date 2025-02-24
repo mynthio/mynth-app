@@ -38,3 +38,16 @@ pub async fn get_ai_integrations(
         .await
         .map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub async fn get_ai_integration(
+    state: tauri::State<'_, AppState>,
+    id: String,
+) -> Result<Option<AiIntegrationWithModels>, String> {
+    state
+        .db
+        .ai
+        .get_integration(&id)
+        .await
+        .map_err(|e| e.to_string())
+}

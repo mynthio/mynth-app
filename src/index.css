@@ -3,7 +3,8 @@
 /* TODO: wait for fix for tw v4 @plugin "tailwindcss-motion"; */
 
 @theme {
-  --font-sans: "Lato", sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
 
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
@@ -19,6 +20,8 @@
 
   --spacing-space-1: 7px;
   --spacing-space-2: 14px;
+
+  --color-neutral: oklch(63.56% 0.0061 182.92);
 }
 
 @layer base {

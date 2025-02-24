@@ -368,7 +368,6 @@ function ChatSideNav() {
     </div>
   );
 }
-
 function WindowSideNavigation() {
   const currentChatId = useCurrentChatId();
 

@@ -34,7 +34,8 @@ pub fn run() {
             commands::chat_folder::update_chat_folder,
             commands::ai::create_ai_integration,
             commands::ai::create_ai_model,
-            commands::ai::get_ai_integrations
+            commands::ai::get_ai_integrations,
+            commands::ai::get_ai_integration,
         ])
         .setup(|app| {
             let app_dir = app

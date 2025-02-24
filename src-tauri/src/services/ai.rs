@@ -102,4 +102,53 @@ impl AiService {
 
         Ok(integrations_map.into_values().collect())
     }
+
+    pub async fn get_integration(
+        &self,
+        id: &str,
+    ) -> Result<Option<AiIntegrationWithModels>, sqlx::Error> {
+        let rows = sqlx::query!(
+            r#"
+        SELECT 
+            i.id, i.name, i.base_host, i.base_path, i.api_key,
+            m.id as "model_id_pk?", m.model_id as "model_id?",
+            m.mynth_model_id as "mynth_model_id?", m.integration_id as "integration_id?"
+        FROM ai_integrations i
+        LEFT JOIN ai_models m ON m.integration_id = i.id
+        WHERE i.id = ?
+        "#,
+            id
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        if rows.is_empty() {
+            return Ok(None);
+        }
+
+        let first_row = &rows[0];
+        let mut integration = AiIntegrationWithModels {
+            id: first_row.id.clone(),
+            name: first_row.name.clone(),
+            base_host: first_row.base_host.clone(),
+            base_path: first_row.base_path.clone(),
+            api_key: first_row.api_key.clone(),
+            models: Vec::new(),
+        };
+
+        for row in &rows {
+            if let (Some(model_id_pk), Some(model_id), Some(integration_id)) =
+                (&row.model_id_pk, &row.model_id, &row.integration_id)
+            {
+                integration.models.push(AiModel {
+                    id: model_id_pk.clone(),
+                    model_id: model_id.clone(),
+                    mynth_model_id: row.mynth_model_id.clone(),
+                    integration_id: integration_id.clone(),
+                });
+            }
+        }
+
+        Ok(Some(integration))
+    }
 }
