@@ -1,0 +1,18 @@
+$schema: "https://moonrepo.dev/schemas/project.json"
+
+language: "typescript"
+project:
+  name: "tauri"
+  description: "Tauri app"
+type: "application"
+tasks:
+  build:
+    command: "pnpm tauri build"
+  tauri-dev:
+    command: "cargo tauri dev --no-watch"
+    preset: server
+  dev:
+    command: noop
+    deps:
+      - "frontend:dev"
+      - "~:tauri-dev"

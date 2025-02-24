@@ -3,3 +3,7 @@ dist
 
 # ENV FILES
 .env
+
+# moon
+.moon/cache
+.moon/docker
