@@ -14,8 +14,17 @@ import { useQueryClient } from "@tanstack/solid-query";
 import { GET_CHAT_KEYS } from "../../data/utils/query-keys";
 import { Chat } from "../../types";
 import { useChatBranchNodes } from "../../data/queries/chat-branch-nodes/use-chat-branch-nodes";
-import { Accessor, For, Show } from "solid-js";
+import {
+  Accessor,
+  createEffect,
+  createMemo,
+  For,
+  onMount,
+  Show,
+} from "solid-js";
 import dayjs from "dayjs";
+import { Virtualizer, VList, VListHandle } from "virtua/solid";
+import { createVirtualizer } from "@tanstack/solid-virtual";
 
 export function ChatView() {
   const chat = useChat({
@@ -30,13 +39,13 @@ export function ChatView() {
     <>
       <ChatTitleBar />
 
-      <div class="w-full h-full overflow-y-auto overflow-x-hidden scrollbar scrollbar-track-color-transparent scrollbar-thumb-color-accent/50 scrollbar-rounded scrollbar-w-3px scrollbar-h-3px scrollbar-radius-2 scrollbar-track-radius-4 scrollbar-thumb-radius-4 pt-64px pb-190px">
+      <>
         {/* <pre>{JSON.stringify(chat.data, null, 2)}</pre>
         <pre>{JSON.stringify(branch.data, null, 2)}</pre> */}
         <Show when={branch.data?.id}>
           <Messages branchId={() => branch.data?.id!} />
         </Show>
-      </div>
+      </>
 
       <div class="absolute px-14px py-16px bottom-24px gap-10px inset-x-0 mx-auto flex flex-col justify-between bg-gradient-to-bl backdrop-blur-88px from-[#919C98]/5 via-[#B7C8C2]/5 to-[#677C74]/5 rounded-22px shadow-2xl shadow-[#000]/15 max-w-700px">
         <div
@@ -153,35 +162,71 @@ function ChatBranchesDropdownMenu() {
 }
 
 function Messages({ branchId }: { branchId: Accessor<string> }) {
+  let virtualListRef: VListHandle | null = null;
+
   const nodes = useChatBranchNodes({
     branchId: branchId,
   });
 
+  createEffect(() => {
+    console.log(
+      virtualListRef,
+      nodes.data?.pages.flatMap((page) => page.nodes)
+    );
+    virtualListRef?.scrollToIndex(
+      nodes.data?.pages.flatMap((page) => page.nodes).length - 1,
+      { align: "end" }
+    );
+  }, nodes.data);
+
+  const items = createMemo(
+    () => nodes.data?.pages.flatMap((page) => page.nodes) ?? []
+  );
+
   return (
-    <div class="space-y-24px w-full px-32px">
-      <For each={nodes.data?.pages}>
-        {(page) => (
-          <For each={page.nodes}>
-            {(node) => (
-              <div
-                class="flex items-center"
-                classList={{
-                  "justify-end": node.nodeType.startsWith("user"),
-                }}
-              >
-                <div class="bg-accent/10 rounded-12px p-4px">
-                  {node.nodeType} |{" "}
-                  {dayjs(node.createdAt).format("DD-MM HH:mm")}
-                  <div
-                    innerHTML={node.activeVersion?.content}
-                    class="prose prose-sm px-16px py-12px"
-                  />
-                </div>
-              </div>
-            )}
-          </For>
-        )}
-      </For>
-    </div>
+    <VList
+      ref={(h) => {
+        virtualListRef = h;
+      }}
+      shift
+      data={items()}
+      overscan={8}
+      class="size-full scrollbar scrollbar-track-color-transparent scrollbar-thumb-color-accent/50 scrollbar-rounded scrollbar-w-3px scrollbar-h-3px scrollbar-radius-2 scrollbar-track-radius-4 scrollbar-thumb-radius-4"
+    >
+      {(node) => (
+        <div class="bg-accent/10 rounded-12px p-4px my-10px">
+          {node.id} | {node.nodeType} |{" "}
+          {dayjs(node.createdAt).format("DD-MM HH:mm")}
+          <br />
+          <div innerHTML={node.activeVersion?.content} />
+        </div>
+      )}
+    </VList>
+
+    // <div class="space-y-24px w-full px-32px">
+    //   <For each={nodes.data?.pages}>
+    //     {(page) => (
+    //       <For each={page.nodes}>
+    //         {(node) => (
+    //           <div
+    //             class="flex items-center"
+    //             classList={{
+    //               "justify-end": node.nodeType.startsWith("user"),
+    //             }}
+    //           >
+    //             <div class="bg-accent/10 rounded-12px p-4px">
+    //               {node.nodeType} |{" "}
+    //               {dayjs(node.createdAt).format("DD-MM HH:mm")}
+    //               <div
+    //                 innerHTML={node.activeVersion?.content}
+    //                 class="prose prose-sm px-16px py-12px"
+    //               />
+    //             </div>
+    //           </div>
+    //         )}
+    //       </For>
+    //     )}
+    //   </For>
+    // </div>
   );
 }

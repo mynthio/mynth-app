@@ -28,12 +28,6 @@ pub fn markdown_to_html(markdown: &str) -> String {
         loaded_theme.clone()
     });
 
-    if let Some(syntax) = SYNTAX_SET.find_syntax_by_token("tsx") {
-        println!("Found TSX syntax: {}", syntax.name);
-    } else {
-        println!("No TSX syntax found.");
-    }
-
     let mut sr = SYNTAX_SET.find_syntax_plain_text();
     let mut code = String::new();
     let mut code_block = false;

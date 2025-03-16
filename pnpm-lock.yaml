@@ -137,6 +137,9 @@ importers:
       tailwind-merge:
         specifier: ^3.0.2
         version: 3.0.2
+      virtua:
+        specifier: ^0.40.3
+        version: 0.40.3(solid-js@1.9.5)(vue@3.5.13(typescript@5.8.2))
     devDependencies:
       '@iconify-json/lucide':
         specifier: ^1.2.30
@@ -2104,6 +2107,26 @@ packages:
 
   validate-html-nesting@1.2.2:
     resolution: {integrity: sha512-hGdgQozCsQJMyfK5urgFcWEqsSSrK63Awe0t/IMR0bZ0QMtnuaiHzThW81guu3qx9abLi99NEuiaN6P9gVYsNg==}
+
+  virtua@0.40.3:
+    resolution: {integrity: sha512-rfl6VohBFoT0U64fVdOGag2p0D+YZbki7HQ5bjFZObStWBaWjjataIHFDjl4KuSr3yHBMgGd/+Va7W4Z2Y0LRg==}
+    peerDependencies:
+      react: '>=16.14.0'
+      react-dom: '>=16.14.0'
+      solid-js: '>=1.0'
+      svelte: '>=5.0'
+      vue: '>=3.2'
+    peerDependenciesMeta:
+      react:
+        optional: true
+      react-dom:
+        optional: true
+      solid-js:
+        optional: true
+      svelte:
+        optional: true
+      vue:
+        optional: true
 
   vite-plugin-solid@2.11.6:
     resolution: {integrity: sha512-Sl5CTqJTGyEeOsmdH6BOgalIZlwH3t4/y0RQuFLMGnvWMBvxb4+lq7x3BSiAw6etf0QexfNJW7HSOO/Qf7pigg==}
@@ -4417,6 +4440,11 @@ snapshots:
   uqr@0.1.2: {}
 
   validate-html-nesting@1.2.2: {}
+
+  virtua@0.40.3(solid-js@1.9.5)(vue@3.5.13(typescript@5.8.2)):
+    optionalDependencies:
+      solid-js: 1.9.5
+      vue: 3.5.13(typescript@5.8.2)
 
   vite-plugin-solid@2.11.6(solid-js@1.9.5)(vite@6.2.2(@types/node@22.13.10)(jiti@2.4.2)(lightningcss@1.29.2)(yaml@2.6.0)):
     dependencies:
