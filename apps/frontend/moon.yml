@@ -8,6 +8,10 @@ type: "application"
 tasks:
   build:
     command: "pnpm build"
+    outputs:
+      - "dist/**"
   dev:
     command: "pnpm dev"
     preset: server
+  update-deps:
+    command: "pnpm up --latest"

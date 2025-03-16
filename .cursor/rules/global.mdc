@@ -1,0 +1,9 @@
+---
+description: General guidelines
+globs: 
+alwaysApply: true
+---
+Mynth App is open source project, please follow some general guidelines to make the experience awesome for all contributors.
+
+- Use pnpm as package manager
+- Add clean comments where possible, to inform about decisions or explain code for others (feel free to add a doze of humor to the comments)

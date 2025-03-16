@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                SELECT created_at FROM chat_nodes\n                WHERE id = ?\n                ",
+  "describe": {
+    "columns": [
+      {
+        "name": "created_at",
+        "ordinal": 0,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "fd20b5d8bb5764276f4aeaa19ae88fbd3b06b5c26ea60580e3fb501e00bd5cb1"
+}

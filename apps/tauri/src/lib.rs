@@ -1,10 +1,11 @@
 mod commands;
 mod models;
 mod services;
+mod utils;
 
 use services::database::Database;
 use std::fs;
-use tauri::{menu::Menu, Emitter, Event, Manager};
+use tauri::Manager;
 use window_vibrancy::*;
 
 const WINDOW_BORDER_RADIUS: f64 = 11.0;
@@ -27,15 +28,24 @@ pub fn run() {
     builder
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
+        // .on_menu_event(|app, event| {
+        //     app.emit("menu-event", event).unwrap();
+        // })
         .invoke_handler(tauri::generate_handler![
-            commands::chat::fetch_chats,
-            commands::chat::get_flat_structure,
+            commands::chat::get_chats,
+            commands::chat::get_chat,
             commands::chat::update_chat,
+            commands::chat_branch::get_chat_branches,
+            commands::chat_branch::get_chat_branch,
+            commands::chat_branch::get_chat_branch_nodes,
             commands::chat_folder::update_chat_folder,
+            commands::chat_folder::get_chat_folders,
             commands::ai::create_ai_integration,
             commands::ai::create_ai_model,
             commands::ai::get_ai_integrations,
             commands::ai::get_ai_integration,
+            commands::workspace::get_workspace,
+            commands::workspace::get_workspaces,
         ])
         .setup(|app| {
             let app_dir = app
@@ -48,13 +58,22 @@ pub fn run() {
 
             let db_path = app_dir.join("mynth.db");
 
-            // TODO: Implement proper database migration system
-            // - Automated database creation
-            // - Migration runner for SQL files
-            // - Schema version tracking
-            // - Error handling for failed migrations
+            // Initialize database and run migrations
             let db = tauri::async_runtime::block_on(async {
-                Database::new(db_path.to_str().unwrap()).await.unwrap()
+                // Get the path to the migrations directory
+                let app_handle = app.handle();
+                let resource_path = app_handle
+                    .path()
+                    .resource_dir()
+                    .expect("Failed to get resource directory");
+                let migrations_path = resource_path.join("migrations");
+
+                // Pass the migrations path to the database initialization
+                let db = Database::new(db_path.to_str().unwrap(), Some(migrations_path.as_path()))
+                    .await
+                    .unwrap();
+
+                db
             });
 
             app.manage(AppState { db });

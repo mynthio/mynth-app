@@ -5,10 +5,9 @@
   "version": "0.1.0",
   "identifier": "com.mynth.macos",
   "build": {
-    "beforeDevCommand": "",
     "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "pnpm build",
-    "frontendDist": "../dist"
+    "frontendDist": "../frontend/dist"
   },
   "app": {
     "windows": [
@@ -33,6 +32,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": ["icons/icon.icns"]
+    "icon": ["icons/icon.icns"],
+    "resources": ["migrations/**/*"]
   }
 }

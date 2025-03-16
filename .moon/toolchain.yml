@@ -2,6 +2,6 @@ node:
   version: "21.7.1"
   packageManager: "pnpm"
   pnpm:
-    version: "9.15.2"
+    version: "^10.0.0"
 rust:
-  version: "1.85.0"
+  version: "^1.85.0"

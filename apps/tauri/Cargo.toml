@@ -27,8 +27,18 @@ reqwest = { version = "0.11", features = ["stream", "json"] }
 tokio = { version = "1", features = ["full", "macros", "rt-multi-thread"] }
 tauri-plugin-store = "2"
 # lazy_static = "1.5"
-sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "chrono"] }
+sqlx = { version = "0.8", features = [
+  "runtime-tokio",
+  "sqlite",
+  "chrono",
+  "migrate",
+] }
 tauri-plugin-devtools = "2.0.0"
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.12", features = ["v4", "fast-rng", "serde"] }
 tracing = "0.1.41"
+futures = "0.3.31"
+thiserror = "1.0" # For custom error handling
+# Markdown to HTML conversion
+pulldown-cmark = "0.13.0"
+syntect = "5.2.0"

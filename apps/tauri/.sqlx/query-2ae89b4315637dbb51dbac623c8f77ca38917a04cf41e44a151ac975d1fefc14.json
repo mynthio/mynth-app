@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO ai_integrations (id, name, base_host, base_path, api_key)\n            VALUES (?, ?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "2ae89b4315637dbb51dbac623c8f77ca38917a04cf41e44a151ac975d1fefc14"
+}

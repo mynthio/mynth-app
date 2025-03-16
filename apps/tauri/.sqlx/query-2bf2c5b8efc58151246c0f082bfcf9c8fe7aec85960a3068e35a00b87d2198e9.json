@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                SELECT \n                    id,\n                    name,\n                    parent_id,\n                    workspace_id\n                FROM chat_folders\n                WHERE workspace_id = ? AND \n                      ((?2 IS NULL AND parent_id IS NULL) OR parent_id = ?2)\n                ORDER BY name\n                ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "parent_id",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "workspace_id",
+        "ordinal": 3,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "2bf2c5b8efc58151246c0f082bfcf9c8fe7aec85960a3068e35a00b87d2198e9"
+}

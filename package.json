@@ -5,14 +5,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "moon run tauri:dev"
+    "app": "moon run tauri:dev"
   },
   "license": "MIT",
-  "dependencies": {},
   "devDependencies": {
-    "@moonrepo/cli": "^1.32.6"
+    "@moonrepo/cli": "^1.32.9"
   },
-  "packageManager": "pnpm@9.15.2",
   "engines": {
     "node": "21.7.1"
   }

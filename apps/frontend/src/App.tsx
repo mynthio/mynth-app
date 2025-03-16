@@ -1,5 +1,3 @@
-import { ViewContainer } from "./components/view-container";
+import AppLayout from "./layout/app-layout";
 
-export default function App() {
-  return <ViewContainer />;
-}
+export default AppLayout;

@@ -1,29 +1,60 @@
-use sqlx::Pool;
-use sqlx::Sqlite;
 use std::collections::HashMap;
-use tracing::debug;
-use tracing::info;
+use std::sync::Arc;
+use tracing::{debug, error, info, instrument};
 use uuid::Uuid;
 
+use super::database::DbPool;
 use crate::models::ai::{
     AiIntegrationWithModels, AiModel, CreateAiIntegrationParams, CreateAiModelParams,
 };
 
+// Define a custom error type for better error handling
+#[derive(Debug, thiserror::Error)]
+pub enum AiServiceError {
+    #[error("Database error: {0}")]
+    Database(#[from] sqlx::Error),
+
+    #[error("Integration not found: {0}")]
+    NotFound(String),
+
+    #[error("Invalid parameter: {0}")]
+    InvalidParameter(String),
+}
+
 pub struct AiService {
-    pool: Pool<Sqlite>,
+    pool: Arc<DbPool>,
 }
 
 impl AiService {
-    pub fn new(pool: Pool<Sqlite>) -> Self {
+    pub fn new(pool: Arc<DbPool>) -> Self {
         Self { pool }
     }
 
+    /// Creates a new AI integration in the database
+    ///
+    /// # Arguments
+    /// * `params` - Parameters for the new integration
+    ///
+    /// # Returns
+    /// * `Ok(String)` - The ID of the newly created integration
+    /// * `Err` - If a database error occurs
+    #[instrument(skip(self, params), fields(integration_name = %params.name))]
     pub async fn create_integration(
         &self,
         params: CreateAiIntegrationParams,
-    ) -> Result<String, sqlx::Error> {
+    ) -> Result<String, AiServiceError> {
+        // Validate input parameters
+        if params.name.trim().is_empty() {
+            return Err(AiServiceError::InvalidParameter(
+                "Integration name cannot be empty".to_string(),
+            ));
+        }
+
         let id = format!("ai-{}", Uuid::new_v4());
-        sqlx::query!(
+        info!("Creating AI integration with ID: {}", id);
+
+        // Try to execute the query, with improved error handling
+        match sqlx::query!(
             r#"
             INSERT INTO ai_integrations (id, name, base_host, base_path, api_key)
             VALUES (?, ?, ?, ?, ?)
@@ -34,15 +65,45 @@ impl AiService {
             params.base_path,
             params.api_key
         )
-        .execute(&self.pool)
-        .await?;
-
-        Ok(id)
+        .execute(self.pool.get())
+        .await
+        {
+            Ok(_) => {
+                info!("Successfully created AI integration: {}", id);
+                Ok(id)
+            }
+            Err(e) => {
+                error!("Failed to create AI integration: {}", e);
+                Err(AiServiceError::Database(e))
+            }
+        }
     }
 
-    pub async fn create_model(&self, params: CreateAiModelParams) -> Result<String, sqlx::Error> {
+    /// Creates a new AI model and associates it with an integration
+    ///
+    /// # Arguments
+    /// * `params` - Parameters for the new model
+    ///
+    /// # Returns
+    /// * `Ok(String)` - The ID of the newly created model
+    /// * `Err` - If a database error occurs
+    #[instrument(skip(self, params), fields(integration_id = %params.integration_id))]
+    pub async fn create_model(
+        &self,
+        params: CreateAiModelParams,
+    ) -> Result<String, AiServiceError> {
+        // Validate input parameters
+        if params.model_id.trim().is_empty() {
+            return Err(AiServiceError::InvalidParameter(
+                "Model ID cannot be empty".to_string(),
+            ));
+        }
+
         let id = format!("model-{}", Uuid::new_v4());
-        sqlx::query!(
+        info!("Creating AI model with ID: {}", id);
+
+        // Try to execute the query, with improved error handling
+        match sqlx::query!(
             r#"
             INSERT INTO ai_models (id, model_id, mynth_model_id, integration_id)
             VALUES (?, ?, ?, ?)
@@ -52,16 +113,27 @@ impl AiService {
             params.mynth_model_id,
             params.integration_id,
         )
-        .execute(&self.pool)
-        .await?;
-
-        Ok(id)
+        .execute(self.pool.get())
+        .await
+        {
+            Ok(_) => {
+                info!("Successfully created AI model: {}", id);
+                Ok(id)
+            }
+            Err(e) => {
+                error!("Failed to create AI model: {}", e);
+                Err(AiServiceError::Database(e))
+            }
+        }
     }
 
-    pub async fn fetch_integrations_with_models(
+    #[instrument(skip(self))]
+    pub async fn get_integrations_with_models(
         &self,
-    ) -> Result<Vec<AiIntegrationWithModels>, sqlx::Error> {
-        let rows = sqlx::query!(
+    ) -> Result<Vec<AiIntegrationWithModels>, AiServiceError> {
+        info!("Fetching all AI integrations with models");
+
+        let rows = match sqlx::query!(
             r#"
             SELECT 
                 i.id, i.name, i.base_host, i.base_path, i.api_key,
@@ -70,8 +142,15 @@ impl AiService {
             LEFT JOIN ai_models m ON m.integration_id = i.id
             "#
         )
-        .fetch_all(&self.pool)
-        .await?;
+        .fetch_all(self.pool.get())
+        .await
+        {
+            Ok(rows) => rows,
+            Err(e) => {
+                error!("Failed to fetch AI integrations: {}", e);
+                return Err(AiServiceError::Database(e));
+            }
+        };
 
         debug!("rows: {:?}", rows);
 
@@ -103,11 +182,20 @@ impl AiService {
         Ok(integrations_map.into_values().collect())
     }
 
+    #[instrument(skip(self), fields(integration_id = %id))]
     pub async fn get_integration(
         &self,
         id: &str,
-    ) -> Result<Option<AiIntegrationWithModels>, sqlx::Error> {
-        let rows = sqlx::query!(
+    ) -> Result<Option<AiIntegrationWithModels>, AiServiceError> {
+        info!("Fetching AI integration with ID: {}", id);
+
+        if id.trim().is_empty() {
+            return Err(AiServiceError::InvalidParameter(
+                "Integration ID cannot be empty".to_string(),
+            ));
+        }
+
+        let rows = match sqlx::query!(
             r#"
         SELECT 
             i.id, i.name, i.base_host, i.base_path, i.api_key,
@@ -119,10 +207,18 @@ impl AiService {
         "#,
             id
         )
-        .fetch_all(&self.pool)
-        .await?;
+        .fetch_all(self.pool.get())
+        .await
+        {
+            Ok(rows) => rows,
+            Err(e) => {
+                error!("Failed to fetch AI integration {}: {}", id, e);
+                return Err(AiServiceError::Database(e));
+            }
+        };
 
         if rows.is_empty() {
+            debug!("No integration found with ID: {}", id);
             return Ok(None);
         }
 
@@ -149,6 +245,26 @@ impl AiService {
             }
         }
 
+        info!(
+            "Successfully fetched integration {} with {} models",
+            id,
+            integration.models.len()
+        );
         Ok(Some(integration))
     }
 }
+
+// NOTE: This service has been updated to use the new error handling pattern with AiServiceError.
+// When updating other services, follow the same pattern:
+//
+// 1. Define a custom error enum (e.g., ChatServiceError) with variants for different error types
+// 2. Change return types from Result<T, sqlx::Error> to Result<T, YourServiceError>
+// 3. Add input validation where applicable using the InvalidParameter error variant
+// 4. Use match statements for database operations with proper error handling
+// 5. Add tracing and instrumentation with the #[instrument] attribute
+//
+// This provides several benefits:
+// - More descriptive errors for clients
+// - Input validation at the service layer
+// - Better logging and observability
+// - Easier debugging when issues occur
