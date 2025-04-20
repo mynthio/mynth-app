@@ -1,0 +1,10 @@
+---
+description: 
+globs: **/*.sql
+alwaysApply: false
+---
+ # SQL & Database Migration Guidelines
+
+- During development, add all new tables, indexes, and schema changes to the `001_create_initial_tables.sql` file instead of creating new migration files.
+- Document important schema design decisions and insights in the `docs/DATABASE.md` file to maintain a centralized record of architecture choices.
+- Avoid including raw SQL code in documentation; focus on concepts, relationships, and design decisions instead. Code can change, and readers can always refer to the actual SQL files.

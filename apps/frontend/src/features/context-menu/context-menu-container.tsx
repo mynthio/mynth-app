@@ -4,6 +4,9 @@ import { closeContextMenu, contextMenuState } from ".";
 import { WorkspaceContextMenu } from "./components/workspace-context-menu";
 import { ItemContextMenu } from "./components/item-context-menu";
 import { ChatContextMenu } from "./components/chat-context-menu";
+import { ChatAiModelButtonContextMenu } from "./components/chat-ai-model-button-context-menu";
+import { ChatNodeContextMenu } from "./components/chat-node-context-menu";
+import { ChatFolderContextMenu } from "./components/chat-folder-context-menu";
 import { DropdownMenu, DropdownMenuContent } from "../../ui/dropdown-menu";
 
 /**
@@ -36,6 +39,17 @@ export function ContextMenuContainer() {
           </Match>
           <Match when={contextMenuState()?.type === "chat"}>
             <ChatContextMenu payload={contextMenuState()?.payload!} />
+          </Match>
+          <Match when={contextMenuState()?.type === "chat-ai-model-button"}>
+            <ChatAiModelButtonContextMenu
+              payload={contextMenuState()?.payload!}
+            />
+          </Match>
+          <Match when={contextMenuState()?.type === "chat-node"}>
+            <ChatNodeContextMenu payload={contextMenuState()?.payload!} />
+          </Match>
+          <Match when={contextMenuState()?.type === "chat-folder"}>
+            <ChatFolderContextMenu payload={contextMenuState()?.payload!} />
           </Match>
         </Switch>
       </DropdownMenuContent>

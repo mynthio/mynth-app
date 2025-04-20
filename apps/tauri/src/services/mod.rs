@@ -1,6 +1,14 @@
 pub mod ai;
+pub mod ai_client;
+pub mod api_client;
 pub mod chat;
 pub mod chat_branch;
 pub mod chat_folder;
+pub mod chat_node;
+pub mod chat_node_message;
 pub mod database;
+pub mod message_events;
+pub mod message_generation;
+pub mod metadata_queue;
+pub mod stream_registry;
 pub mod workspace;

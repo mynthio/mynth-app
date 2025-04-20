@@ -13,7 +13,7 @@
     "windows": [
       {
         "theme": "Dark",
-        "shadow": false,
+        "shadow": true,
         "decorations": false,
         "transparent": true,
         "resizable": true,
@@ -23,6 +23,7 @@
         "dragDropEnabled": false
       }
     ],
+    "withGlobalTauri": false,
     "macOSPrivateApi": true,
     "security": {
       "csp": null

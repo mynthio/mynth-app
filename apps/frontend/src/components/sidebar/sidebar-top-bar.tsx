@@ -6,7 +6,10 @@ type TopBarProps = {
 
 export function TopBar(props: TopBarProps) {
   return (
-    <div class="h-top-bar flex items-center justify-between px-8px">
+    <div
+      data-tauri-drag-region
+      class="h-top-bar flex items-center justify-between px-8px"
+    >
       {props.children}
     </div>
   );
@@ -19,9 +22,12 @@ type TopBarTitleProps = {
 
 export function TopBarTitle(props: TopBarTitleProps) {
   return (
-    <div class="flex items-center gap-8px text-11px font-500 uppercase w-full text-muted">
+    <div
+      data-tauri-drag-region
+      class="flex items-center gap-8px text-ui font-400 text-[#97A6A1]"
+    >
       {props.icon ? (
-        <div class={[props.icon, "text-10px flex-shrink-0"].join(" ")} />
+        <div class={[props.icon, "text-12px flex-shrink-0"].join(" ")} />
       ) : null}
       <span class="truncate">{props.children}</span>
     </div>

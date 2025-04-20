@@ -3,6 +3,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "../../../ui/dropdown-menu";
+import { openActionDialog } from "../../actions";
 
 interface ChatContextMenuProps {
   payload: ContextMenuPayload;
@@ -26,7 +27,11 @@ export function ChatContextMenu(props: ChatContextMenuProps) {
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem
-        onSelect={() => console.log("Delete chat", props.payload.id)}
+        onSelect={() => {
+          openActionDialog("delete-chat", {
+            chatId: props.payload.id,
+          });
+        }}
         class="text-red-500"
       >
         Delete

@@ -35,10 +35,16 @@ sqlx = { version = "0.8", features = [
 ] }
 tauri-plugin-devtools = "2.0.0"
 chrono = { version = "0.4", features = ["serde"] }
+# Will be replaced by ULID
 uuid = { version = "1.12", features = ["v4", "fast-rng", "serde"] }
-tracing = "0.1.41"
+# Added ULID for sortable, timestamp-embedded identifiers
+ulid = { version = "1.2", features = ["serde"] }
+tracing = { version = "0.1", features = ["attributes"] }
 futures = "0.3.31"
-thiserror = "1.0" # For custom error handling
+thiserror = "1.0"                                        # For custom error handling
 # Markdown to HTML conversion
 pulldown-cmark = "0.13.0"
 syntect = "5.2.0"
+# MacOS keychain access for secure credential storage
+security-framework = "3.2.0"
+rig-core = "0.11.0"

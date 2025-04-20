@@ -1,0 +1,8 @@
+---
+description: 
+globs: apps/tauri/**/*.rs
+alwaysApply: false
+---
+- Prefer clean code over anything else
+- Aim to keep services as minial and re=usable as possible
+- To verify changes always run `pnpm moon tauri:check` in terminal and verify output

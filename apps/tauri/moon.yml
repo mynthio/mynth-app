@@ -8,11 +8,13 @@ type: "application"
 tasks:
   build:
     command: "pnpm tauri build"
+  check:
+    command: "cargo check"
   tauri-dev:
     command: "cargo tauri dev"
     preset: server
   prepare-database:
-    script: "cargo sqlx database create && cargo sqlx migrate run && cargo sqlx prepare"
+    script: "rm -rf .sqlx && mkdir .sqlx && cargo sqlx database create && cargo sqlx migrate run && cargo sqlx prepare"
   dev:
     command: noop
     deps:

@@ -6,9 +6,6 @@ mod utils;
 use services::database::Database;
 use std::fs;
 use tauri::Manager;
-use window_vibrancy::*;
-
-const WINDOW_BORDER_RADIUS: f64 = 11.0;
 
 // App state now uses our Database type
 struct AppState {
@@ -34,18 +31,29 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::chat::get_chats,
             commands::chat::get_chat,
+            commands::chat::create_chat,
             commands::chat::update_chat,
+            commands::chat::delete_chat,
             commands::chat_branch::get_chat_branches,
             commands::chat_branch::get_chat_branch,
             commands::chat_branch::get_chat_branch_nodes,
+            commands::chat_branch::update_chat_branch,
             commands::chat_folder::update_chat_folder,
             commands::chat_folder::get_chat_folders,
+            commands::chat_folder::delete_chat_folder,
             commands::ai::create_ai_integration,
-            commands::ai::create_ai_model,
             commands::ai::get_ai_integrations,
+            commands::ai::get_ai_models,
             commands::ai::get_ai_integration,
+            commands::ai::delete_ai_integration,
+            commands::api_client::get_providers,
+            commands::api_client::get_provider_models,
             commands::workspace::get_workspace,
             commands::workspace::get_workspaces,
+            commands::message_generation::send_message,
+            commands::message_generation::reconnect,
+            commands::message_generation::unregister_stream,
+            commands::message_generation::regenerate_message,
         ])
         .setup(|app| {
             let app_dir = app
@@ -78,16 +86,16 @@ pub fn run() {
 
             app.manage(AppState { db });
 
-            let window = app.get_webview_window("main").unwrap();
+            // let window = app.get_webview_window("main").unwrap();
 
-            #[cfg(target_os = "macos")]
-            apply_vibrancy(
-                &window,
-                NSVisualEffectMaterial::HudWindow,
-                Some(NSVisualEffectState::Active),
-                Some(WINDOW_BORDER_RADIUS),
-            )
-            .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
+            // #[cfg(target_os = "macos")]
+            // apply_vibrancy(
+            //     &window,
+            //     NSVisualEffectMaterial::HudWindow,
+            //     Some(NSVisualEffectState::Active),
+            //     Some(WINDOW_BORDER_RADIUS),
+            // )
+            // .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
 
             Ok(())
         })

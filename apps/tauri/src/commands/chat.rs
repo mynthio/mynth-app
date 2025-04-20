@@ -51,3 +51,39 @@ pub async fn update_chat(
         .await
         .map_err(|e| e.to_string())
 }
+
+/// Delete a chat and all its associated data
+///
+/// This command deletes a chat and all its related data including:
+/// - Chat branches
+/// - Chat nodes
+/// - Chat node content versions
+///
+/// @param chat_id - The ID of the chat to delete (required)
+/// @returns () on success, or an error message on failure
+#[tauri::command]
+pub async fn delete_chat(state: tauri::State<'_, AppState>, chat_id: String) -> Result<(), String> {
+    info!("Command: delete_chat with ID: {}", chat_id);
+
+    state
+        .db
+        .chats
+        .delete_chat(&chat_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn create_chat(
+    state: tauri::State<'_, crate::AppState>,
+    name: String,
+    workspace_id: String,
+    parent_id: Option<String>,
+) -> Result<String, String> {
+    state
+        .db
+        .chats
+        .create(&name, &workspace_id, parent_id.as_deref())
+        .await
+        .map_err(|e| e.to_string())
+}

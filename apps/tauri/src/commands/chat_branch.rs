@@ -1,5 +1,5 @@
 use crate::models::chat::ChatNodesResponse;
-use crate::models::chat_branch::Branch;
+use crate::models::chat_branch::{Branch, UpdateBranchParams};
 use crate::AppState;
 use tracing::info;
 
@@ -21,6 +21,30 @@ pub async fn get_chat_branch(
         .db
         .chat_branch
         .get_branch(&branch_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Update a chat branch
+///
+/// This command updates a branch with the provided parameters.
+/// Currently supports updating the branch name.
+///
+/// @param branch_id - The ID of the branch to update (required)
+/// @param params - The parameters to update (name)
+/// @returns () on success, or an error message on failure
+#[tauri::command]
+pub async fn update_chat_branch(
+    state: tauri::State<'_, AppState>,
+    branch_id: String,
+    params: UpdateBranchParams,
+) -> Result<(), String> {
+    info!("Command: update_chat_branch with ID: {}", branch_id);
+
+    state
+        .db
+        .chat_branch
+        .update(&branch_id, params)
         .await
         .map_err(|e| e.to_string())
 }

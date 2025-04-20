@@ -4,7 +4,9 @@ use sqlx::Row;
 use sqlx::Sqlite;
 use std::sync::Arc;
 use tracing::{error, info};
+use ulid::Ulid;
 
+use super::chat_branch::ChatBranchService;
 use super::chat_folder::ChatFolderService;
 use super::database::DbPool;
 use crate::models::chat::{
@@ -15,14 +17,16 @@ use crate::utils::markdown::markdown_to_html;
 pub struct ChatService {
     pool: Arc<DbPool>,
     folders: ChatFolderService,
+    branches: ChatBranchService,
 }
 
 impl ChatService {
     pub fn new(pool: Arc<DbPool>, folders: &ChatFolderService) -> Self {
         let pool_clone = Arc::clone(&pool);
         Self {
-            pool,
-            folders: ChatFolderService::new(pool_clone),
+            pool: Arc::clone(&pool),
+            folders: ChatFolderService::new(Arc::clone(&pool)),
+            branches: ChatBranchService::new(pool_clone),
         }
     }
 
@@ -72,7 +76,8 @@ impl ChatService {
             Chat,
             r#"
             SELECT id, name, parent_id, workspace_id, current_branch_id, 
-                   is_archived, archived_at, created_at, updated_at
+                   is_archived, archived_at, updated_at, context_inheritance_mode,
+                   extensions, metadata, model_id
             FROM chats
             WHERE id = ?
             "#,
@@ -90,6 +95,19 @@ impl ChatService {
     }
 
     pub async fn update_chat(&self, chat_id: &str, params: UpdateChatParams) -> sqlx::Result<()> {
+        self.update_chat_with_executor(self.pool.get(), chat_id, params)
+            .await
+    }
+
+    pub async fn update_chat_with_executor<'e, E>(
+        &self,
+        executor: E,
+        chat_id: &str,
+        params: UpdateChatParams,
+    ) -> sqlx::Result<()>
+    where
+        E: sqlx::Executor<'e, Database = Sqlite>,
+    {
         info!("Updating chat with id: {}", chat_id);
 
         let mut updates = Vec::new();
@@ -149,7 +167,7 @@ impl ChatService {
         }
         query = query.bind(chat_id);
 
-        query.execute(self.pool.get()).await?;
+        query.execute(executor).await?;
 
         Ok(())
     }
@@ -169,21 +187,21 @@ impl ChatService {
             // We need to get the created_at timestamp for the cursor node to use for comparison
             let cursor_timestamp = sqlx::query!(
                 r#"
-                SELECT created_at FROM chat_nodes
+                SELECT updated_at FROM chat_nodes
                 WHERE id = ?
                 "#,
                 node_id
             )
             .fetch_optional(self.pool.get())
             .await?
-            .and_then(|row| row.created_at)
+            .and_then(|row| row.updated_at)
             .unwrap_or_else(|| {
                 // If node not found or has no timestamp, use current time as fallback
                 // (effectively returning no results, which is expected behavior)
                 chrono::Utc::now().naive_utc()
             });
 
-            format!("AND chat_nodes.created_at < '{}'", cursor_timestamp)
+            format!("AND chat_nodes.updated_at < '{}'", cursor_timestamp)
         } else {
             String::new()
         };
@@ -197,19 +215,23 @@ impl ChatService {
                 chat_nodes.branch_id,
                 chat_nodes.parent_id,
                 chat_nodes.model_id,
-                chat_nodes.active_version_id,
-                chat_nodes.created_at,
+                chat_nodes.active_message_id,
                 chat_nodes.updated_at,
-                content_versions.id as cv_id,
-                content_versions.content as cv_content,
-                content_versions.version_number as cv_version_number,
-                content_versions.node_id as cv_node_id,
-                content_versions.created_at as cv_created_at
+                chat_node_messages.id as message_id,
+                chat_node_messages.content as message_content,
+                chat_node_messages.version_number as message_version_number,
+                chat_node_messages.node_id as message_node_id,
+                chat_node_messages.status,
+                chat_node_messages.token_count,
+                chat_node_messages.cost,
+                chat_node_messages.api_metadata,
+                chat_node_messages.model_id as message_model_id,
+                (SELECT COUNT(*) FROM chat_node_messages WHERE node_id = chat_nodes.id) as message_count
             FROM chat_nodes
-            LEFT JOIN chat_node_content_versions as content_versions ON chat_nodes.active_version_id = content_versions.id
+            LEFT JOIN chat_node_messages ON chat_nodes.active_message_id = chat_node_messages.id
             WHERE chat_nodes.branch_id = ?
             {}
-            ORDER BY chat_nodes.created_at DESC
+            ORDER BY chat_nodes.updated_at DESC
             LIMIT 21
             "#,
             cursor_condition
@@ -224,19 +246,26 @@ impl ChatService {
         // Manually map rows to ChatNode structs
         let mut nodes = Vec::with_capacity(rows.len());
         for row in rows {
-            // Check if cv_id exists and isn't null
-            let content_version = match row.try_get::<Option<String>, _>("cv_id")? {
-                Some(cv_id) => {
-                    let markdown_content: String = row.get("cv_content");
+            // Check if message_id exists and isn't null
+            let content_version = match row.try_get::<Option<String>, _>("message_id")? {
+                Some(message_id) => {
+                    let markdown_content: String = row.get("message_content");
                     // Convert markdown to HTML
                     let html_content = markdown_to_html(&markdown_content);
 
                     Some(ContentVersion {
-                        id: cv_id,
+                        id: message_id,
                         content: html_content,
-                        version_number: row.get("cv_version_number"),
-                        node_id: row.get("cv_node_id"),
-                        created_at: row.try_get("cv_created_at")?,
+                        version_number: row.get("message_version_number"),
+                        node_id: row.get("message_node_id"),
+                        status: row
+                            .try_get("status")
+                            .unwrap_or_else(|_| "published".to_string()),
+                        token_count: row.try_get("token_count").ok(),
+                        cost: row.try_get("cost").ok(),
+                        api_metadata: row.try_get("api_metadata").ok(),
+                        model_id: row.try_get("message_model_id").ok(),
+                        extensions: Default::default(),
                     })
                 }
                 None => None,
@@ -247,11 +276,13 @@ impl ChatService {
                 node_type: row.get("node_type"),
                 branch_id: row.get("branch_id"),
                 parent_id: row.try_get("parent_id")?,
-                model_id: row.try_get("model_id")?,
-                active_version_id: row.try_get("active_version_id")?,
-                created_at: row.try_get("created_at")?,
+                active_message_id: row.try_get("active_message_id")?,
+                active_tool_use_id: None,
                 updated_at: row.try_get("updated_at")?,
-                active_version: content_version,
+                extensions: Default::default(),
+                active_message: content_version,
+                message_count: row.try_get("message_count")?,
+                active_tool_use: None,
             };
 
             nodes.push(node);
@@ -273,5 +304,121 @@ impl ChatService {
         );
 
         Ok(ChatNodesResponse { nodes, has_more })
+    }
+
+    pub async fn delete_chat(&self, chat_id: &str) -> sqlx::Result<()> {
+        info!("Deleting chat with id: {}", chat_id);
+
+        let query = r#"
+        PRAGMA foreign_keys = OFF;
+        BEGIN TRANSACTION;
+
+        DELETE FROM chat_node_messages 
+        WHERE node_id IN (
+            SELECT id FROM chat_nodes 
+            WHERE branch_id IN (
+                SELECT id FROM chat_branches 
+                WHERE chat_id = ?
+            )
+        );
+        DELETE FROM chat_nodes 
+        WHERE branch_id IN (
+            SELECT id FROM chat_branches 
+            WHERE chat_id = ?
+        );
+        DELETE FROM chat_branches 
+        WHERE chat_id = ?;
+        DELETE FROM model_settings 
+        WHERE chat_id = ?;
+        DELETE FROM variables 
+        WHERE chat_id = ?;
+        DELETE FROM context_assignments 
+        WHERE chat_id = ?;
+        DELETE FROM chats 
+        WHERE id = ?;
+
+        COMMIT;
+        PRAGMA foreign_keys = ON;
+    "#;
+
+        sqlx::query(query)
+            .bind(chat_id)
+            .bind(chat_id)
+            .bind(chat_id)
+            .bind(chat_id)
+            .bind(chat_id)
+            .bind(chat_id)
+            .bind(chat_id)
+            .execute(self.pool.get())
+            .await?;
+
+        info!("Successfully deleted chat with id: {}", chat_id);
+        Ok(())
+    }
+
+    pub async fn create(
+        &self,
+        name: &str,
+        workspace_id: &str,
+        parent_id: Option<&str>,
+    ) -> sqlx::Result<String> {
+        let mut tx = self.pool.get().begin().await?;
+
+        // Create the chat
+        let chat_id = self
+            .create_with_executor(&mut *tx, name, workspace_id, parent_id)
+            .await?;
+
+        // Create the default branch
+        let branch_id = self
+            .branches
+            .create_with_executor(&mut *tx, &chat_id, "default", None)
+            .await?;
+
+        // Update the chat with the default branch
+        self.update_chat_with_executor(
+            &mut *tx,
+            &chat_id,
+            UpdateChatParams {
+                current_branch_id: Some(branch_id),
+                ..Default::default()
+            },
+        )
+        .await?;
+
+        tx.commit().await?;
+
+        Ok(chat_id)
+    }
+
+    pub async fn create_with_executor<'e, E>(
+        &self,
+        executor: E,
+        name: &str,
+        workspace_id: &str,
+        parent_id: Option<&str>,
+    ) -> sqlx::Result<String>
+    where
+        E: sqlx::Executor<'e, Database = Sqlite>,
+    {
+        let chat_id = Ulid::new().to_string();
+
+        sqlx::query!(
+            r#"
+            INSERT INTO chats (
+                id, name, workspace_id, parent_id, 
+                updated_at, is_archived, archived_at
+            ) 
+            VALUES (?, ?, ?, ?, datetime('now'), 0, NULL)
+            "#,
+            chat_id,
+            name,
+            workspace_id,
+            parent_id,
+        )
+        .execute(executor)
+        .await?;
+
+        Ok(chat_id)
     }
 }

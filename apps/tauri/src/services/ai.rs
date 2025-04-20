@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::{debug, error, info, instrument};
-use uuid::Uuid;
+use ulid::Ulid;
 
 use super::database::DbPool;
 use crate::models::ai::{
-    AiIntegrationWithModels, AiModel, CreateAiIntegrationParams, CreateAiModelParams,
+    AiIntegration, AiIntegrationWithModels, AiModel, CreateAiIntegrationParams, CreateAiModelInput,
 };
+use crate::utils::keychain;
 
 // Define a custom error type for better error handling
 #[derive(Debug, thiserror::Error)]
@@ -30,14 +31,14 @@ impl AiService {
         Self { pool }
     }
 
-    /// Creates a new AI integration in the database
+    /// Creates a new AI integration and optionally associated models in the database within a transaction
     ///
     /// # Arguments
-    /// * `params` - Parameters for the new integration
+    /// * `params` - Parameters for the new integration, including optional models
     ///
     /// # Returns
     /// * `Ok(String)` - The ID of the newly created integration
-    /// * `Err` - If a database error occurs
+    /// * `Err` - If a validation or database error occurs
     #[instrument(skip(self, params), fields(integration_name = %params.name))]
     pub async fn create_integration(
         &self,
@@ -50,78 +51,140 @@ impl AiService {
             ));
         }
 
-        let id = format!("ai-{}", Uuid::new_v4());
-        info!("Creating AI integration with ID: {}", id);
+        let integration_id = Ulid::new().to_string();
+        info!(
+            "Attempting to create AI integration with ID: {}",
+            integration_id
+        );
 
-        // Try to execute the query, with improved error handling
+        // Generate a ULID for keychain reference and store actual API key in keychain
+        let api_key_id = Ulid::new().to_string();
+        if let Err(e) =
+            keychain::store_api_key(&api_key_id, params.api_key.as_deref().unwrap_or(""))
+        {
+            error!("Failed to store API key in keychain: {}", e);
+            return Err(AiServiceError::InvalidParameter(format!(
+                "Failed to securely store API key: {}",
+                e
+            )));
+        }
+
+        let mut tx = match self.pool.get().begin().await {
+            Ok(tx) => tx,
+            Err(e) => {
+                error!("Failed to begin transaction: {}", e);
+                return Err(AiServiceError::Database(e));
+            }
+        };
+
+        // Insert the integration with api_key_id instead of actual API key
         match sqlx::query!(
             r#"
-            INSERT INTO ai_integrations (id, name, base_host, base_path, api_key)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO ai_integrations (id, name, host, path, api_key_id, is_enabled, origin, updated_at)
+            VALUES (?, ?, ?, ?, ?, true, 'user', CURRENT_TIMESTAMP)
             "#,
-            id,
+            integration_id,
             params.name,
             params.base_host,
             params.base_path,
-            params.api_key
+            api_key_id
         )
-        .execute(self.pool.get())
+        .execute(&mut *tx)
         .await
         {
             Ok(_) => {
-                info!("Successfully created AI integration: {}", id);
-                Ok(id)
+                info!("Successfully inserted integration record: {}", integration_id);
             }
             Err(e) => {
-                error!("Failed to create AI integration: {}", e);
-                Err(AiServiceError::Database(e))
+                error!("Failed to insert integration record {}: {}", integration_id, e);
+                // Clean up keychain entry if database insert fails
+                if let Err(key_err) = keychain::delete_api_key(&api_key_id) {
+                    error!("Failed to clean up keychain entry: {}", key_err);
+                }
+                if let Err(rollback_err) = tx.rollback().await {
+                    error!("Failed to rollback transaction: {}", rollback_err);
+                }
+                return Err(AiServiceError::Database(e));
+            }
+        };
+
+        // Insert models if provided
+        if let Some(models) = params.models {
+            info!(
+                "Inserting {} models for integration: {}",
+                models.len(),
+                integration_id
+            );
+            for model_input in models {
+                if model_input.model_id.trim().is_empty() {
+                    error!(
+                        "Model ID cannot be empty for integration: {}",
+                        integration_id
+                    );
+                    if let Err(rollback_err) = tx.rollback().await {
+                        error!("Failed to rollback transaction: {}", rollback_err);
+                    }
+                    return Err(AiServiceError::InvalidParameter(
+                        "Model ID cannot be empty".to_string(),
+                    ));
+                }
+
+                let model_pk_id = Ulid::new().to_string();
+                info!(
+                    "Creating AI model with PK ID: {} for integration: {}",
+                    model_pk_id, integration_id
+                );
+
+                match sqlx::query!(
+                    r#"
+                    INSERT INTO ai_models (id, model_id, mynth_model_id, origin, capabilities, tags, integration_id, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    "#,
+                    model_pk_id, // Use the generated ULID for the primary key
+                    model_input.model_id,
+                    model_input.mynth_model_id,
+                    model_input.origin,
+                    model_input.capabilities,
+                    model_input.tags,
+                    integration_id, // Link to the integration created above
+                )
+                .execute(&mut *tx)
+                .await
+                {
+                    Ok(_) => {
+                        info!("Successfully inserted model: {} for integration: {}", model_pk_id, integration_id);
+                    }
+                    Err(e) => {
+                        error!(
+                            "Failed to insert model record {} for integration {}: {}",
+                            model_pk_id,
+                            integration_id,
+                            e
+                        );
+                        if let Err(rollback_err) = tx.rollback().await {
+                             error!("Failed to rollback transaction: {}", rollback_err);
+                        }
+                        return Err(AiServiceError::Database(e));
+                    }
+                }
             }
         }
-    }
 
-    /// Creates a new AI model and associates it with an integration
-    ///
-    /// # Arguments
-    /// * `params` - Parameters for the new model
-    ///
-    /// # Returns
-    /// * `Ok(String)` - The ID of the newly created model
-    /// * `Err` - If a database error occurs
-    #[instrument(skip(self, params), fields(integration_id = %params.integration_id))]
-    pub async fn create_model(
-        &self,
-        params: CreateAiModelParams,
-    ) -> Result<String, AiServiceError> {
-        // Validate input parameters
-        if params.model_id.trim().is_empty() {
-            return Err(AiServiceError::InvalidParameter(
-                "Model ID cannot be empty".to_string(),
-            ));
-        }
-
-        let id = format!("model-{}", Uuid::new_v4());
-        info!("Creating AI model with ID: {}", id);
-
-        // Try to execute the query, with improved error handling
-        match sqlx::query!(
-            r#"
-            INSERT INTO ai_models (id, model_id, mynth_model_id, integration_id)
-            VALUES (?, ?, ?, ?)
-            "#,
-            id,
-            params.model_id,
-            params.mynth_model_id,
-            params.integration_id,
-        )
-        .execute(self.pool.get())
-        .await
-        {
+        // Commit the transaction
+        match tx.commit().await {
             Ok(_) => {
-                info!("Successfully created AI model: {}", id);
-                Ok(id)
+                info!(
+                    "Successfully committed transaction for integration: {}",
+                    integration_id
+                );
+                Ok(integration_id)
             }
             Err(e) => {
-                error!("Failed to create AI model: {}", e);
+                error!(
+                    "Failed to commit transaction for integration {}: {}",
+                    integration_id, e
+                );
+                // No need to rollback here, commit failure implies rollback
                 Err(AiServiceError::Database(e))
             }
         }
@@ -136,8 +199,14 @@ impl AiService {
         let rows = match sqlx::query!(
             r#"
             SELECT 
-                i.id, i.name, i.base_host, i.base_path, i.api_key,
-                m.id as model_id_pk, m.model_id, m.mynth_model_id, m.integration_id
+                i.id, i.name, i.host, i.path, i.api_key_id,
+                i.is_enabled, i.origin, i.marketplace_integration_id,
+                i.mynth_id, i.settings,
+                i.updated_at,
+                m.id as model_id_pk, m.model_id, m.mynth_model_id, 
+                m.origin as model_origin, m.capabilities, m.tags,
+                m.notes, m.context_size, m.cost_per_input_token, m.cost_per_output_token,
+                m.integration_id, m.updated_at as model_updated_at
             FROM ai_integrations i
             LEFT JOIN ai_models m ON m.integration_id = i.id
             "#
@@ -163,9 +232,15 @@ impl AiService {
                     .or_insert_with(|| AiIntegrationWithModels {
                         id: row.id,
                         name: row.name,
-                        base_host: row.base_host,
-                        base_path: row.base_path,
-                        api_key: row.api_key,
+                        host: row.host,
+                        path: row.path,
+                        api_key_id: row.api_key_id,
+                        is_enabled: row.is_enabled,
+                        origin: row.origin,
+                        marketplace_integration_id: row.marketplace_integration_id,
+                        mynth_id: row.mynth_id,
+                        settings: row.settings,
+                        updated_at: row.updated_at,
                         models: Vec::new(),
                     });
 
@@ -174,7 +249,15 @@ impl AiService {
                     id: model_id_pk,
                     model_id: row.model_id.unwrap(),
                     mynth_model_id: row.mynth_model_id,
+                    origin: row.model_origin.unwrap_or_else(|| "unknown".to_string()),
+                    capabilities: row.capabilities,
+                    tags: row.tags,
+                    notes: row.notes,
+                    context_size: row.context_size,
+                    cost_per_input_token: row.cost_per_input_token,
+                    cost_per_output_token: row.cost_per_output_token,
                     integration_id: row.integration_id.unwrap(),
+                    updated_at: row.model_updated_at,
                 });
             }
         }
@@ -183,10 +266,7 @@ impl AiService {
     }
 
     #[instrument(skip(self), fields(integration_id = %id))]
-    pub async fn get_integration(
-        &self,
-        id: &str,
-    ) -> Result<Option<AiIntegrationWithModels>, AiServiceError> {
+    pub async fn get_integration(&self, id: &str) -> Result<Option<AiIntegration>, AiServiceError> {
         info!("Fetching AI integration with ID: {}", id);
 
         if id.trim().is_empty() {
@@ -195,62 +275,238 @@ impl AiService {
             ));
         }
 
-        let rows = match sqlx::query!(
+        let integration = match sqlx::query_as!(
+            AiIntegration,
             r#"
-        SELECT 
-            i.id, i.name, i.base_host, i.base_path, i.api_key,
-            m.id as "model_id_pk?", m.model_id as "model_id?",
-            m.mynth_model_id as "mynth_model_id?", m.integration_id as "integration_id?"
-        FROM ai_integrations i
-        LEFT JOIN ai_models m ON m.integration_id = i.id
-        WHERE i.id = ?
-        "#,
+            SELECT 
+                id, name, host, path, api_key_id,
+                is_enabled, origin, marketplace_integration_id,
+                mynth_id, settings,
+                updated_at
+            FROM ai_integrations
+            WHERE id = ?
+            "#,
             id
         )
-        .fetch_all(self.pool.get())
+        .fetch_optional(self.pool.get())
         .await
         {
-            Ok(rows) => rows,
+            Ok(integration) => integration,
             Err(e) => {
                 error!("Failed to fetch AI integration {}: {}", id, e);
                 return Err(AiServiceError::Database(e));
             }
         };
 
-        if rows.is_empty() {
-            debug!("No integration found with ID: {}", id);
-            return Ok(None);
-        }
+        info!(
+            "Successfully fetched integration: {}",
+            if integration.is_some() {
+                "found"
+            } else {
+                "not found"
+            }
+        );
+        Ok(integration)
+    }
 
-        let first_row = &rows[0];
-        let mut integration = AiIntegrationWithModels {
-            id: first_row.id.clone(),
-            name: first_row.name.clone(),
-            base_host: first_row.base_host.clone(),
-            base_path: first_row.base_path.clone(),
-            api_key: first_row.api_key.clone(),
-            models: Vec::new(),
+    #[instrument(skip(self))]
+    pub async fn get_integrations(&self) -> Result<Vec<AiIntegration>, AiServiceError> {
+        info!("Fetching all AI integrations");
+
+        let rows = match sqlx::query_as!(
+            AiIntegration,
+            r#"
+            SELECT 
+                id, name, host, path, api_key_id,
+                is_enabled, origin, marketplace_integration_id,
+                mynth_id, settings,
+                updated_at
+            FROM ai_integrations
+            "#
+        )
+        .fetch_all(self.pool.get())
+        .await
+        {
+            Ok(rows) => rows,
+            Err(e) => {
+                error!("Failed to fetch AI integrations: {}", e);
+                return Err(AiServiceError::Database(e));
+            }
         };
 
-        for row in &rows {
-            if let (Some(model_id_pk), Some(model_id), Some(integration_id)) =
-                (&row.model_id_pk, &row.model_id, &row.integration_id)
-            {
-                integration.models.push(AiModel {
-                    id: model_id_pk.clone(),
-                    model_id: model_id.clone(),
-                    mynth_model_id: row.mynth_model_id.clone(),
-                    integration_id: integration_id.clone(),
-                });
-            }
+        info!("Successfully fetched {} integrations", rows.len());
+        Ok(rows)
+    }
+
+    /// Deletes an AI integration and all associated models in the database within a transaction
+    ///
+    /// # Arguments
+    /// * `id` - The ID of the integration to delete
+    ///
+    /// # Returns
+    /// * `Ok(bool)` - Whether the integration was found and deleted
+    /// * `Err` - If a validation or database error occurs
+    #[instrument(skip(self), fields(integration_id = %id))]
+    pub async fn delete_integration(&self, id: &str) -> Result<bool, AiServiceError> {
+        info!("Attempting to delete AI integration with ID: {}", id);
+
+        // Validate input parameters
+        if id.trim().is_empty() {
+            return Err(AiServiceError::InvalidParameter(
+                "Integration ID cannot be empty".to_string(),
+            ));
         }
 
-        info!(
-            "Successfully fetched integration {} with {} models",
-            id,
-            integration.models.len()
-        );
-        Ok(Some(integration))
+        // Get the integration first to retrieve the api_key_id
+        let integration = match self.get_integration(id).await? {
+            Some(integration) => integration,
+            None => {
+                return Ok(false); // Integration not found
+            }
+        };
+
+        // Start a transaction
+        let mut tx = match self.pool.get().begin().await {
+            Ok(tx) => tx,
+            Err(e) => {
+                error!("Failed to begin transaction: {}", e);
+                return Err(AiServiceError::Database(e));
+            }
+        };
+
+        // First delete associated models, then the integration
+        match sqlx::query!(r#"DELETE FROM ai_models WHERE integration_id = ?"#, id)
+            .execute(&mut *tx)
+            .await
+        {
+            Ok(result) => {
+                info!(
+                    "Deleted {} models for integration: {}",
+                    result.rows_affected(),
+                    id
+                );
+            }
+            Err(e) => {
+                error!("Failed to delete models for integration {}: {}", id, e);
+                if let Err(rollback_err) = tx.rollback().await {
+                    error!("Failed to rollback transaction: {}", rollback_err);
+                }
+                return Err(AiServiceError::Database(e));
+            }
+        };
+
+        // Now delete the integration
+        let result = match sqlx::query!(r#"DELETE FROM ai_integrations WHERE id = ?"#, id)
+            .execute(&mut *tx)
+            .await
+        {
+            Ok(result) => result,
+            Err(e) => {
+                error!("Failed to delete integration {}: {}", id, e);
+                if let Err(rollback_err) = tx.rollback().await {
+                    error!("Failed to rollback transaction: {}", rollback_err);
+                }
+                return Err(AiServiceError::Database(e));
+            }
+        };
+
+        // Commit the transaction
+        match tx.commit().await {
+            Ok(_) => {
+                let found = result.rows_affected() > 0;
+                if found {
+                    // Delete API key from keychain
+                    if let Err(e) =
+                        keychain::delete_api_key(integration.api_key_id.as_deref().unwrap_or(""))
+                    {
+                        error!("Failed to delete API key from keychain: {}", e);
+                        // Continue despite keychain deletion error
+                    }
+                    info!("Successfully deleted integration: {}", id);
+                } else {
+                    info!("Integration not found for deletion: {}", id);
+                }
+                Ok(found)
+            }
+            Err(e) => {
+                error!(
+                    "Failed to commit transaction for deleting integration {}: {}",
+                    id, e
+                );
+                Err(AiServiceError::Database(e))
+            }
+        }
+    }
+
+    /// Retrieves AI models from the database, optionally filtered by integration ID
+    ///
+    /// # Arguments
+    /// * `integration_id` - Optional ID to filter models by a specific integration
+    ///
+    /// # Returns
+    /// * `Ok(Vec<AiModel>)` - The list of AI models
+    /// * `Err` - If a database error occurs
+    #[instrument(skip(self), fields(integration_id = ?integration_id))]
+    pub async fn get_models(
+        &self,
+        integration_id: Option<&str>,
+    ) -> Result<Vec<AiModel>, AiServiceError> {
+        match integration_id {
+            Some(id) => {
+                info!("Fetching AI models for integration ID: {}", id);
+
+                if id.trim().is_empty() {
+                    return Err(AiServiceError::InvalidParameter(
+                        "Integration ID cannot be empty".to_string(),
+                    ));
+                }
+
+                let models = sqlx::query_as!(
+                    AiModel,
+                    r#"
+                    SELECT 
+                        id, model_id, mynth_model_id, origin,
+                        capabilities, tags, notes, context_size, 
+                        cost_per_input_token, cost_per_output_token,
+                        integration_id, updated_at
+                    FROM ai_models
+                    WHERE integration_id = ?
+                    "#,
+                    id
+                )
+                .fetch_all(self.pool.get())
+                .await
+                .map_err(AiServiceError::Database)?;
+
+                info!(
+                    "Successfully fetched {} models for integration {}",
+                    models.len(),
+                    id
+                );
+                Ok(models)
+            }
+            None => {
+                info!("Fetching all AI models");
+
+                let models = sqlx::query_as!(
+                    AiModel,
+                    r#"
+                    SELECT 
+                        id, model_id, mynth_model_id, origin,
+                        capabilities, tags, notes, context_size, 
+                        cost_per_input_token, cost_per_output_token,
+                        integration_id, updated_at
+                    FROM ai_models
+                    "#
+                )
+                .fetch_all(self.pool.get())
+                .await
+                .map_err(AiServiceError::Database)?;
+
+                info!("Successfully fetched {} models", models.len());
+                Ok(models)
+            }
+        }
     }
 }
 

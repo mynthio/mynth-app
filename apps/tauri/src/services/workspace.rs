@@ -2,7 +2,7 @@ use super::database::DbPool;
 use crate::models::workspace::Workspace;
 use std::sync::Arc;
 use tracing::{debug, instrument};
-use uuid::Uuid;
+use ulid::Ulid;
 
 #[derive(Debug)]
 #[allow(dead_code)]
@@ -40,7 +40,7 @@ impl WorkspaceService {
         sqlx::query_as!(
             Workspace,
             r#"
-            SELECT id, name, created_at, updated_at
+            SELECT id, name, updated_at
             FROM workspaces
             WHERE id = ?
             "#,
@@ -63,7 +63,7 @@ impl WorkspaceService {
         sqlx::query_as!(
             Workspace,
             r#"
-            SELECT id, name, created_at, updated_at
+            SELECT id, name, updated_at
             FROM workspaces
             ORDER BY name
             "#
@@ -82,13 +82,13 @@ impl WorkspaceService {
     /// * `Err` - If a database error occurs
     #[instrument(skip(self), fields(workspace_name = %params.name))]
     pub async fn create_workspace(&self, params: CreateWorkspaceParams) -> sqlx::Result<String> {
-        let id = format!("ws-{}", Uuid::new_v4());
+        let id = Ulid::new().to_string();
         debug!("Creating workspace with ID: {}", id);
 
         sqlx::query!(
             r#"
-            INSERT INTO workspaces (id, name, created_at, updated_at)
-            VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            INSERT INTO workspaces (id, name, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
             "#,
             id,
             params.name

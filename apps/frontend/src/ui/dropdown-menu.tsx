@@ -4,7 +4,7 @@ import { ComponentProps } from "solid-js";
 interface DropdownMenu extends ComponentProps<typeof KobalteDropdownMenu> {}
 
 export function DropdownMenu(props: DropdownMenu) {
-  return <KobalteDropdownMenu {...props} />;
+  return <KobalteDropdownMenu {...props} preventScroll={false} />;
 }
 
 interface DropdownMenuContent
@@ -15,7 +15,7 @@ export function DropdownMenuContent(props: DropdownMenuContent) {
     <KobalteDropdownMenu.Portal>
       <KobalteDropdownMenu.Content
         {...props}
-        class="min-w-220px bg-[#889894]/10 backdrop-blur-32px rounded-12px p-5px border border-[#889894]/15"
+        class="min-w-220px bg-background/10 z-100 backdrop-blur-32px rounded-12px p-5px border border-[#889894]/15 shadow-xl"
       />
       ;
     </KobalteDropdownMenu.Portal>

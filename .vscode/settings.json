@@ -4,5 +4,15 @@
 
   "editor.tabSize": 2,
 
-  "rust-analyzer.linkedProjects": ["apps/tauri/Cargo.toml"]
+  "rust-analyzer.linkedProjects": ["apps/tauri/Cargo.toml"],
+  "rust-analyzer.check.workspace": true,
+  "rust-analyzer.server.extraEnv": {
+    "DATABASE_URL": "sqlite:.sqlx/database.db"
+  },
+  "rust-analyzer.cargo.extraEnv": {
+    "DATABASE_URL": "sqlite:.sqlx/database.db"
+  },
+  "rust-analyzer.check.extraEnv": {
+    "DATABASE_URL": "sqlite:.sqlx/database.db"
+  }
 }

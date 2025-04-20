@@ -13,6 +13,7 @@ import {
 } from "solid-js";
 import { makePersisted } from "@solid-primitives/storage";
 import { navigationStore } from "../../../../stores/navigation.store";
+import { openContextMenu } from "../../../context-menu";
 
 // const WORKSPACE_ID = "w-default";
 const WORKSPACE_ID = "workspace-b430f600-e05b-4197-accc-d47870528557";
@@ -245,6 +246,7 @@ function TreeFolder(props: TreeFolderProps) {
       <button
         class="flex items-center gap-2 truncate py-2px w-full hover:bg-accent/10 rounded-sm px-1"
         onClick={() => ctx.toggleFolder(props.folder.id)}
+        onContextMenu={openContextMenu("chat-folder", { id: props.folder.id })}
       >
         <div
           class="text-11px"

@@ -9,7 +9,7 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@moonrepo/cli": "^1.32.9"
+    "@moonrepo/cli": "^1.35.0"
   },
   "engines": {
     "node": "21.7.1"

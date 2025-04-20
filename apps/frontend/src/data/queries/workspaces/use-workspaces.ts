@@ -6,5 +6,8 @@ export function useWorkspaces() {
   return createQuery(() => ({
     queryKey: GET_WORKSPACES_KEYS,
     queryFn: () => getWorkspaces(),
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   }));
 }

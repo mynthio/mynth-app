@@ -76,12 +76,9 @@ export interface Branch {
  * Represents a content version of a chat node
  * Maps to ContentVersion struct in Rust backend
  */
-export interface ContentVersion {
+export interface Message {
   id: string;
   content: string;
-  versionNumber: number;
-  nodeId: string;
-  createdAt?: DateTime;
 }
 
 /**
@@ -103,10 +100,10 @@ export interface ChatNode {
   branchId: string;
   parentId?: string;
   modelId?: string;
-  activeVersionId?: string;
-  createdAt?: DateTime;
+  activeMessageId?: string;
   updatedAt?: DateTime;
-  activeVersion?: ContentVersion;
+  activeMessage?: Message;
+  messageCount?: number;
 }
 
 /**
@@ -131,4 +128,13 @@ export interface ChatBranch {
   branchedFromNodeAt?: DateTime;
   createdAt?: DateTime;
   updatedAt?: DateTime;
+}
+
+/**
+ * Represents a pair of user message and assistant message nodes
+ * Maps to ChatMessagePair struct in Rust backend
+ */
+export interface ChatMessagePair {
+  userNode: ChatNode;
+  assistantNode: ChatNode;
 }

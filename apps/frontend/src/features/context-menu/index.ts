@@ -1,7 +1,13 @@
 import { createSignal } from "solid-js";
 
 // Define the types of context menus we can have
-export type CONTEXT_MENU_TYPE = "item" | "workspace" | "chat";
+export type CONTEXT_MENU_TYPE =
+  | "item"
+  | "workspace"
+  | "chat"
+  | "chat-ai-model-button"
+  | "chat-node"
+  | "chat-folder";
 
 // Generic type for context menu payloads
 export type ContextMenuPayload = {

@@ -23,11 +23,23 @@ interface DialogContentProps
 export function DialogContent(props: DialogContentProps) {
   return (
     <CorvuDialog.Portal>
-      <CorvuDialog.Overlay class="fixed inset-0 z-50 bg-background/70 backdrop-blur-2px data-[open]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[open]:fade-in-0 data-[closed]:animate-duration-[300ms] data-[open]:animate-duration-[300ms]" />
+      <CorvuDialog.Overlay
+        class="
+        fixed inset-0 z-50 bg-background/80 backdrop-blur-5px  rounded-window
+
+        data-[open]:animate-in data-[open]:fade-in-0 data-[open]:animate-duration-[200ms]
+        data-[closed]:animate-out data-[closed]:fade-out-0 data-[closed]:animate-duration-[200ms]"
+      />
+
       <div class="fixed z-50 pointer-events-none top-0 left-0 right-0 bottom-0 flex items-center justify-center">
         <CorvuDialog.Content
           {...props}
-          class="max-w-560px rounded-lg border-2 border-accent/10 bg-[#000408] px-6 py-5 data-[open]:animate-in data-[open]:zoom-in-90 data-[open]:slide-in-b-10 data-[open]:fade-in-0 data-[closed]:animate-out data-[closed]:slide-out-b-10 data-[closed]:zoom-out-90 data-[closed]:fade-out-0 data-[closed]:animate-duration-[300ms] data-[open]:animate-duration-[300ms]"
+          class="
+            max-w-560px min-w-400px min-h-200px rounded-lg border-2 border-[#212623]
+            bg-gradient-to-br from-[#191B1C] via-[#1A1F1C] to-[#232827]
+            p-24px
+            data-[open]:animate-in data-[open]:zoom-in-95 data-[open]:fade-in-0 data-[open]:animate-duration-[300ms]
+            data-[closed]:animate-out data-[closed]:zoom-out-95 data-[closed]:fade-out-0 data-[closed]:animate-duration-[200ms]"
         />
       </div>
     </CorvuDialog.Portal>

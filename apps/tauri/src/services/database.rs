@@ -2,6 +2,9 @@ use super::ai::AiService;
 use super::chat::ChatService;
 use super::chat_branch::ChatBranchService;
 use super::chat_folder::ChatFolderService;
+use super::chat_node::ChatNodeService;
+use super::message_generation::MessageGenerationService;
+use super::metadata_queue::MetadataQueue;
 use super::workspace::WorkspaceService;
 use sqlx::{
     sqlite::{SqliteConnectOptions, SqlitePoolOptions},
@@ -31,6 +34,9 @@ pub struct Database {
     pub chat_branch: ChatBranchService,
     pub ai: AiService,
     pub workspaces: WorkspaceService,
+    pub chat_node: ChatNodeService,
+    pub message_generation: MessageGenerationService,
+    pub metadata_queue: MetadataQueue,
     // Wrapped in Arc to enable shared ownership without cloning the pool itself
     pool: Arc<DbPool>,
 }
@@ -84,6 +90,10 @@ impl Database {
         let ai = AiService::new(Arc::clone(&pool));
         let workspaces = WorkspaceService::new(Arc::clone(&pool));
         let chat_branch = ChatBranchService::new(Arc::clone(&pool));
+        let chat_node = ChatNodeService::new(Arc::clone(&pool));
+        let message_generation =
+            MessageGenerationService::new(Arc::clone(&pool), chat_node.clone());
+        let metadata_queue = MetadataQueue::new(Arc::clone(&pool));
 
         info!("Database services initialized successfully");
 
@@ -93,6 +103,9 @@ impl Database {
             chat_branch,
             ai,
             workspaces,
+            chat_node,
+            message_generation,
+            metadata_queue,
             pool,
         })
     }

@@ -10,8 +10,16 @@ pub struct Branch {
     pub name: Option<String>,
     pub chat_id: String,
     pub parent_id: Option<String>,
+    pub model_id: Option<String>,
     pub branched_from_node_id: Option<String>,
     pub branched_from_node_at: Option<chrono::NaiveDateTime>,
-    pub created_at: Option<chrono::NaiveDateTime>,
     pub updated_at: Option<chrono::NaiveDateTime>,
+}
+
+/// Parameters for updating a chat branch
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateBranchParams {
+    pub name: Option<String>,
+    pub model_id: Option<String>,
 }

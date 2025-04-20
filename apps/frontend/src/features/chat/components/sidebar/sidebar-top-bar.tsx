@@ -7,6 +7,11 @@ import {
 } from "../../../../components/sidebar/sidebar-top-bar";
 import { navigationStore } from "../../../../stores/navigation.store";
 import { useWorkspace } from "../../../../data/queries/workspaces/use-workspace";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "../../../../ui/tooltip";
 
 type SidebarTopBarProps = {
   currentView: Accessor<"activity" | "tree">;
@@ -22,16 +27,36 @@ export function SidebarTopBar(props: SidebarTopBarProps) {
     <TopBar>
       <TopBarTitle icon="i-lucide:layers">{workspace.data?.name}</TopBarTitle>
       <TopBarControls>
-        <TopBarControlButton
-          icon="i-lucide:activity"
-          isActive={props.currentView() === "activity"}
-          onClick={() => props.setCurrentView("activity")}
-        />
-        <TopBarControlButton
-          icon="i-lucide:list-tree"
-          isActive={props.currentView() === "tree"}
-          onClick={() => props.setCurrentView("tree")}
-        />
+        <Tooltip
+          hoverableContent={false}
+          floatingOptions={{
+            offset: 10,
+          }}
+        >
+          <TooltipTrigger>
+            <TopBarControlButton
+              icon="i-lucide:activity"
+              isActive={props.currentView() === "activity"}
+              onClick={() => props.setCurrentView("activity")}
+            />
+          </TooltipTrigger>
+          <TooltipContent>Activity View</TooltipContent>
+        </Tooltip>
+        <Tooltip
+          hoverableContent={false}
+          floatingOptions={{
+            offset: 10,
+          }}
+        >
+          <TooltipTrigger>
+            <TopBarControlButton
+              icon="i-lucide:list-tree"
+              isActive={props.currentView() === "tree"}
+              onClick={() => props.setCurrentView("tree")}
+            />
+          </TooltipTrigger>
+          <TooltipContent>Tree View</TooltipContent>
+        </Tooltip>
       </TopBarControls>
     </TopBar>
   );
