@@ -1,7 +1,7 @@
 import { createSignal } from "solid-js";
 
 // Define the types of context menus we can have
-export type CONTEXT_MENU_TYPE =
+type CONTEXT_MENU_TYPE =
   | "item"
   | "workspace"
   | "chat"
@@ -16,7 +16,7 @@ export type ContextMenuPayload = {
 };
 
 // Context menu state type
-export type ContextMenuState = {
+type ContextMenuState = {
   type: CONTEXT_MENU_TYPE;
   payload: ContextMenuPayload;
   position: { x: number; y: number };

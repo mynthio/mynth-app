@@ -34,6 +34,6 @@ export interface AIModel {
 /**
  * Represents an AI integration with its related models
  */
-export interface AIIntegrationWithModels extends AIIntegration {
+interface AIIntegrationWithModels extends AIIntegration {
   models: AIModel[];
 }

@@ -38,7 +38,7 @@ type TopBarControlsProps = {
   children: JSX.Element;
 };
 
-export function TopBarControls(props: TopBarControlsProps) {
+function TopBarControls(props: TopBarControlsProps) {
   return (
     <div class="flex items-center flex-shrink-0 gap-3px">{props.children}</div>
   );
@@ -50,7 +50,7 @@ type TopBarControlButtonProps = {
   onClick: () => void;
 };
 
-export function TopBarControlButton(props: TopBarControlButtonProps) {
+function TopBarControlButton(props: TopBarControlButtonProps) {
   return (
     <button
       onClick={props.onClick}

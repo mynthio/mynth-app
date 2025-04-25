@@ -8,7 +8,7 @@ use tracing::{debug, error, info};
 use crate::models::chat::ChatMessagePair;
 use crate::models::node_type::NodeType;
 use crate::services::ai_client::{AIClient, AIConfig};
-use crate::services::chat_node::ChatNodeService;
+use crate::services::chat_node::{ChatNodeService, GetAllChatNodesParams, UpdateChatNodeParams};
 use crate::services::chat_node_message::ChatNodeMessageService;
 use crate::services::database::DbPool;
 use crate::services::message_events::MessageEvent;
@@ -142,48 +142,131 @@ impl MessageGenerationService {
     /// Regenerate a response for an existing message
     pub async fn regenerate_message(
         &self,
-        branch_id: &str,
-        user_node_id: &str,
-        message: &str,
+        node_id: &str,
         channel: Channel<MessageEvent>,
     ) -> sqlx::Result<()> {
-        info!("Regenerating response for branch ID: {}", branch_id);
-        debug!("User message content for regeneration: {}", message);
-        debug!("User node ID: {}", user_node_id);
-        debug!("Channel ID: {:?}", channel.id());
+        info!("Regenerating response for node ID: {}", node_id);
+
+        let chat_node = self.chat_node_service.get_node(node_id).await?;
+        let branch_id = chat_node.branch_id.clone();
 
         // Prevent regeneration if an active stream exists for this branch
-        if self.registry.get_stream(branch_id).await.is_some() {
+        if self.registry.get_stream(&branch_id).await.is_some() {
             debug!(
                 "Active stream exists for branch ID: {}, skipping regeneration",
                 branch_id
             );
+
             return Ok(());
         }
 
+        let mut tx = self.pool.get().begin().await?;
+
+        let next_version_number = self
+            .message_service
+            .get_next_version_number_with_executor(&mut *tx, &chat_node.id)
+            .await?;
+
         // Create a new version for the assistant node message and set as active
-        let assistant_node_id = self
-            .chat_node_service
-            .create_node(
-                branch_id,
-                NodeType::AssistantMessage.as_str(),
-                "", // Empty content initially
-                Some(user_node_id),
+        let new_message = self
+            .message_service
+            .create_with_executor(
+                &mut *tx,
+                &chat_node.id,
+                "",
+                next_version_number,
+                "generating",
             )
             .await?;
 
-        info!(
-            "Created new assistant node for regeneration with ID: {}",
-            assistant_node_id
-        );
+        // Clone before potential move
+        let new_message_clone = new_message.clone();
+
+        self.chat_node_service
+            .update_with_executor(
+                &mut *tx,
+                node_id,
+                UpdateChatNodeParams {
+                    active_message_id: Some(new_message),
+                    ..Default::default()
+                },
+            )
+            .await?;
+
+        tx.commit().await?;
 
         // Add stream to registry
         debug!("Adding stream to registry for branch ID: {}", branch_id);
-        self.registry.add_stream(branch_id, channel.clone()).await;
+        self.registry.add_stream(&branch_id, channel.clone()).await;
 
-        // Start generating AI response in a separate task
-        self.generate_ai_response(branch_id, message, user_node_id, &assistant_node_id)
-            .await;
+        // Clone necessary services and values before spawning task
+        let chat_node_service = self.chat_node_service.clone();
+        let ai_client = self.ai_client.clone();
+        let node_id_clone = chat_node.id.clone();
+        let new_message_clone = new_message_clone;
+        let stream_registry_clone = self.registry.clone();
+        let message_service_clone = self.message_service.clone();
+
+        tokio::spawn(async move {
+            let nodes = chat_node_service
+                .get_all(GetAllChatNodesParams {
+                    older_than: Some(node_id_clone.clone()),
+                    branch_id: Some(branch_id.clone()),
+                })
+                .await
+                .unwrap();
+
+            let mut chat_history = vec![];
+
+            for node in &nodes {
+                let node_type: String = node.node_type.clone();
+                let content: String = node.active_message.as_ref().unwrap().content.clone();
+                let node_type = NodeType::from(node_type);
+
+                // Skip nodes that don't have a role defined (notes)
+                if let Some(role) = node_type.to_role() {
+                    chat_history.push(crate::services::ai_client::ChatMessage {
+                        role: role.to_string(),
+                        content: content,
+                    });
+                }
+            }
+
+            let last_user_message = chat_history.pop().unwrap();
+
+            let mut stream = ai_client
+                .generate_chat_stream(&last_user_message.content, chat_history)
+                .await
+                .unwrap();
+
+            let mut full_response = String::new();
+
+            while let Some(result) = stream.next().await {
+                let json = serde_json::from_str::<serde_json::Value>(&result.unwrap()).unwrap();
+                let response_text = json["text"].as_str().unwrap_or("");
+                full_response.push_str(response_text);
+
+                if let Some(stream_channel) = stream_registry_clone.get_stream(&branch_id).await {
+                    let html_response = markdown_to_html(&full_response);
+
+                    // Send message to the branch-specific channel only
+                    stream_channel.send(MessageEvent::MessageReceived {
+                        message: html_response,
+                        node_id: node_id_clone.clone(),
+                        message_id: new_message_clone.clone(),
+                    });
+                }
+            }
+
+            stream_registry_clone.remove_stream(&branch_id).await;
+
+            debug!("Full response: {}", full_response);
+
+            // Update the message content and status to "done"
+            message_service_clone
+                .update(&new_message_clone, &full_response)
+                .await;
+        });
 
         Ok(())
     }
@@ -247,48 +330,38 @@ impl MessageGenerationService {
         let message_service_clone = self.message_service.clone();
         let ai_client_clone = self.ai_client.clone();
         let assistant_node_id_clone = assistant_node_id.to_string();
-
+        let user_node_id_clone = user_node_id.to_string();
         tokio::spawn(async move {
-            // Fetch message history for the branch
-            info!("Fetching message history for branch: {}", branch_id_clone);
-
             // Prepare chat history using the new helper
-            let chat_messages = Self::prepare_chat_history(
-                &chat_node_service_clone,
-                &branch_id_clone,
-                &message_clone,
-            )
-            .await;
-
-            // Log the prepared chat history for debugging
-            let history_summary = chat_messages
-                .iter()
-                .enumerate()
-                .map(|(i, msg)| {
-                    format!("{}: {} (length: {} chars)", i, msg.role, msg.content.len())
+            let nodes = chat_node_service_clone
+                .get_all(GetAllChatNodesParams {
+                    older_than: Some(user_node_id_clone.clone()),
+                    branch_id: Some(branch_id_clone.clone()),
                 })
-                .collect::<Vec<_>>()
-                .join("\n");
+                .await
+                .unwrap();
 
-            // Estimate total tokens (rough estimate is ~4 chars per token)
-            let total_chars: usize = chat_messages.iter().map(|msg| msg.content.len()).sum();
-            let estimated_tokens = total_chars / 4;
+            let mut chat_history = vec![];
 
-            debug!(
-                "Prepared {} messages for chat history with approximately {} tokens:\n{}",
-                chat_messages.len(),
-                estimated_tokens,
-                history_summary
-            );
+            for node in &nodes {
+                let node_type: String = node.node_type.clone();
+                let content: String = node.active_message.as_ref().unwrap().content.clone();
+                let node_type = NodeType::from(node_type);
 
-            // Flag to determine whether to send incremental HTML updates
-            let send_incremental_updates = true;
-            debug!("Incremental updates setting: {}", send_incremental_updates);
+                // Skip nodes that don't have a role defined (notes)
+                if let Some(role) = node_type.to_role() {
+                    chat_history.push(crate::services::ai_client::ChatMessage {
+                        role: role.to_string(),
+                        content: content,
+                    });
+                }
+            }
 
-            debug!("Calling AI client to generate stream with chat history");
-            match ai_client_clone.generate_chat_stream(chat_messages).await {
+            match ai_client_clone
+                .generate_chat_stream(&message_clone, chat_history)
+                .await
+            {
                 Ok(mut stream) => {
-                    debug!("Successfully created AI stream");
                     let mut full_response = String::new();
                     let mut chunk_count = 0;
 
@@ -296,18 +369,12 @@ impl MessageGenerationService {
                         match result {
                             Ok(json_str) => {
                                 chunk_count += 1;
-                                debug!("Received chunk #{}: {}", chunk_count, json_str);
 
                                 if let Ok(json) =
                                     serde_json::from_str::<serde_json::Value>(&json_str)
                                 {
                                     let response_text = json["text"].as_str().unwrap_or("");
                                     let is_done = json["done"].as_bool().unwrap_or(false);
-
-                                    debug!(
-                                        "Parsed JSON - text: '{}', done: {}",
-                                        response_text, is_done
-                                    );
 
                                     // Only send actual response text (not empty completion messages)
                                     if !response_text.is_empty() {
@@ -337,19 +404,11 @@ impl MessageGenerationService {
                                                 );
                                                 break;
                                             }
-                                            debug!(
-                                                "Sent incremental update to channel for branch: {}",
-                                                branch_id_clone
-                                            );
 
                                             // Store the message in history (original markdown)
                                             registry_clone
                                                 .append_to_history(&branch_id_clone, response_text)
                                                 .await;
-                                            debug!(
-                                                "Appended chunk to history for branch: {}",
-                                                branch_id_clone
-                                            );
                                         }
                                     }
 
@@ -511,18 +570,6 @@ impl MessageGenerationService {
             }
         }
 
-        // Add the current user message if it's not already in history
-        let current_msg = crate::services::ai_client::ChatMessage {
-            role: "user".to_string(),
-            content: message.to_string(),
-        };
-        if chat_messages.is_empty()
-            || chat_messages.last().map_or(true, |last_msg| {
-                !(last_msg.role == "user" && last_msg.content == message)
-            })
-        {
-            chat_messages.push(current_msg);
-        }
         chat_messages
     }
 }

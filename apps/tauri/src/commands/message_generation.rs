@@ -108,19 +108,14 @@ pub async fn unregister_stream(
 #[tauri::command]
 pub async fn regenerate_message(
     state: tauri::State<'_, AppState>,
-    branch_id: String,
-    user_node_id: String,
-    message: String,
-    on_event: Channel<MessageEvent>,
+    node_id: String,
+    channel: Channel<MessageEvent>,
 ) -> Result<(), String> {
-    info!(
-        "Command: regenerate_message with branch ID: {}, user_node_id: {}, message: {}",
-        branch_id, user_node_id, message
-    );
+    info!("Command: regenerate_message with node ID: {}", node_id);
     state
         .db
         .message_generation
-        .regenerate_message(&branch_id, &user_node_id, &message, on_event)
+        .regenerate_message(&node_id, channel)
         .await
         .map_err(|e| e.to_string())
 }

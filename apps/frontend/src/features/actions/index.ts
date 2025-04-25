@@ -16,6 +16,10 @@ import {
   MODEL_SELECTOR_EVENT_ID,
   ModelSelectorDialogProps,
 } from "./components/model-selector.dialog";
+import {
+  BULK_DELETE_CHATS_EVENT_ID,
+  BulkDeleteChatsDialogProps,
+} from "./components/bulk-delete-chats.dialog";
 
 type ModelSelectorPayload = {
   id: MODEL_SELECTOR_EVENT_ID;
@@ -37,15 +41,21 @@ type DeleteChatFolderPayload = {
   payload: DeleteChatFolderDialogProps;
 };
 
+type BulkDeleteChatsPayload = {
+  id: BULK_DELETE_CHATS_EVENT_ID;
+  payload: BulkDeleteChatsDialogProps;
+};
+
 type EventBusPayload =
   | ModelSelectorPayload
   | DeleteWorkspacePayload
   | DeleteChatPayload
-  | DeleteChatFolderPayload;
+  | DeleteChatFolderPayload
+  | BulkDeleteChatsPayload;
 
 const { listen, emit } = createEventBus<EventBusPayload>();
 
-export { listen, emit };
+;
 
 type ActionsDialogState = {
   isOpen: boolean;

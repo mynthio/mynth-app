@@ -87,3 +87,17 @@ pub async fn create_chat(
         .await
         .map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub async fn switch_active_message_version(
+    state: tauri::State<'_, crate::AppState>,
+    node_id: String,
+    version_number: i64,
+) -> Result<Option<crate::models::chat::ContentVersion>, String> {
+    state
+        .db
+        .chat_node
+        .switch_active_message_version(node_id, version_number)
+        .await
+        .map_err(|e| format!("Failed to switch active message version: {}", e))
+}

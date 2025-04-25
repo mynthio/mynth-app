@@ -1,8 +1,7 @@
 use futures::{Stream, StreamExt};
-use rig::completion::{CompletionRequest, Message as RigMessage};
+use rig::completion::Message as RigMessage;
 use rig::providers::ollama;
-use rig::streaming::{StreamingChat, StreamingChoice, StreamingPrompt};
-use serde_json::Value;
+use rig::streaming::StreamingChat;
 use std::clone::Clone;
 use std::error::Error;
 use std::pin::Pin;
@@ -47,23 +46,21 @@ impl AIClient {
         &self,
         prompt: &str,
     ) -> Result<impl Stream<Item = Result<String, String>>, Box<dyn Error + Send + Sync>> {
-        let messages = vec![ChatMessage {
-            role: "user".to_string(),
-            content: prompt.to_string(),
-        }];
+        let messages = vec![];
 
-        self.generate_chat_stream(messages).await
+        self.generate_chat_stream(prompt, messages).await
     }
 
     /// Generate text using chat completions API with multiple messages
     pub async fn generate_chat_stream(
         &self,
+        prompt: &str,
         messages: Vec<ChatMessage>,
     ) -> Result<impl Stream<Item = Result<String, String>>, Box<dyn Error + Send + Sync>> {
         // Create ollama client
         let ollama_client = ollama::Client::new()
             .agent(&self.config.model)
-            .temperature(self.config.temperature)
+            // .temperature(self.config.temperature)
             // .additional_params(serde_json::json!({
             //     "format": {
             //             "type": "object",
@@ -94,7 +91,7 @@ impl AIClient {
             })
             .collect();
 
-        let stream_result = ollama_client.stream_chat("", rig_messages).await;
+        let stream_result = ollama_client.stream_chat(prompt, rig_messages).await;
 
         match stream_result {
             Ok(stream) => {

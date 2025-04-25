@@ -43,9 +43,88 @@ export function ChatContent() {
     <ChatSettingsContextProvider>
       <ChatContextProvider branchId={() => chat.data?.currentBranchId!}>
         <Content />
+        <KbdShortcuts />
       </ChatContextProvider>
     </ChatSettingsContextProvider>
   );
+}
+
+function KbdShortcuts() {
+  const chatContext = useContext(ChatContext);
+  const chatSettings = useChatSettings();
+
+  const node = createMemo(() => {
+    return chatContext.state.nodes[chatContext.state.nodes.length - 1];
+  });
+
+  createShortcut(
+    ["Meta", "ArrowRight"],
+    () => {
+      invoke("switch_active_message_version", {
+        nodeId: node().id,
+        versionNumber: node().activeMessage?.versionNumber! + 1,
+      }).then((response) => {
+        console.log(response);
+        chatContext.updateNode(node().id, (node) => ({
+          ...node,
+          activeMessageId: response.id,
+          activeMessage: response,
+        }));
+      });
+    },
+    { preventDefault: true, requireReset: false }
+  );
+
+  createShortcut(
+    ["Meta", "ArrowLeft"],
+    () => {
+      invoke("switch_active_message_version", {
+        nodeId: node().id,
+        versionNumber: node().activeMessage?.versionNumber! - 1,
+      }).then((response) => {
+        console.log(response);
+        chatContext.updateNode(node().id, (node) => ({
+          ...node,
+          activeMessageId: response.id,
+          activeMessage: response,
+        }));
+      });
+    },
+    { preventDefault: true, requireReset: false }
+  );
+
+  createShortcut(
+    ["Meta", "R"],
+    () => {
+      const channel = new Channel();
+      channel.onmessage = (event) => {
+        const { nodeId, message, messageId } = event!.data || {};
+
+        chatContext.updateNode(nodeId, (node) => ({
+          ...node,
+          activeMessageId: messageId,
+          activeMessage: {
+            ...node.activeMessage!,
+            content: message,
+            id: messageId,
+            versionNumber: node.messageCount ?? 1,
+          },
+        }));
+      };
+
+      invoke("regenerate_message", {
+        nodeId: node().id,
+        channel: channel,
+      }).then(() => {
+        chatContext.updateNode(node().id, (node) => ({
+          ...node,
+          messageCount: (node.messageCount ?? 0) + 1,
+        }));
+      });
+    },
+    { preventDefault: true, requireReset: false }
+  );
+  return null;
 }
 
 function Content() {
@@ -108,16 +187,102 @@ function Nodes() {
 }
 
 function Footer() {
+  const chatContext = useContext(ChatContext);
   const chatSettings = useChatSettings();
   const promptMode = createMemo(() => chatSettings.prompt().mode);
+
+  const node = createMemo(() => {
+    return chatContext.state.nodes[chatContext.state.nodes.length - 1];
+  });
 
   return (
     <div
       classList={{
-        "h-140px": promptMode() === "floating",
+        "h-200px": promptMode() === "floating",
         "py-24px": promptMode() !== "floating",
       }}
     >
+      <div
+        class="flex items-center gap-8px mt-10px absolute top-0px left-0 right-0 mx-auto inset-x-0 bg-elements-background w-auto w-max
+        rounded-default py-8px px-16px
+        text-ui
+        "
+      >
+        <button
+          disabled={node().activeMessage?.versionNumber! <= 1}
+          class="disabled:opacity-50 disabled:cursor-default"
+          onClick={() => {
+            invoke("switch_active_message_version", {
+              nodeId: node().id,
+              versionNumber: node().activeMessage?.versionNumber! - 1,
+            }).then((response) => {
+              console.log(response);
+              chatContext.updateNode(node().id, (node) => ({
+                ...node,
+                activeMessageId: response.id,
+                activeMessage: response,
+              }));
+            });
+          }}
+        >
+          <div class="i-lucide:arrow-left" />
+        </button>
+        {node().activeMessage?.versionNumber} / {node().messageCount}
+        <button
+          class="disabled:opacity-50 disabled:cursor-default"
+          disabled={
+            node().activeMessage?.versionNumber! >= node().messageCount!
+          }
+          onClick={() => {
+            invoke("switch_active_message_version", {
+              nodeId: node().id,
+              versionNumber: node().activeMessage?.versionNumber! + 1,
+            }).then((response) => {
+              console.log(response);
+              chatContext.updateNode(node().id, (node) => ({
+                ...node,
+                activeMessageId: response.id,
+                activeMessage: response,
+              }));
+            });
+          }}
+        >
+          <div class="i-lucide:arrow-right" />
+        </button>
+        <div class="w-1px h-10px bg-[#323535] mx-8px" />
+        <button
+          class="flex items-center gap-2px"
+          onClick={() => {
+            const channel = new Channel();
+            channel.onmessage = (event) => {
+              const { nodeId, message, messageId } = event!.data || {};
+
+              chatContext.updateNode(nodeId, (node) => ({
+                ...node,
+                activeMessageId: messageId,
+                activeMessage: {
+                  ...node.activeMessage!,
+                  content: message,
+                  id: messageId,
+                  versionNumber: node.messageCount ?? 1,
+                },
+              }));
+            };
+
+            invoke("regenerate_message", {
+              nodeId: node().id,
+              channel: channel,
+            }).then(() => {
+              chatContext.updateNode(node().id, (node) => ({
+                ...node,
+                messageCount: (node.messageCount ?? 0) + 1,
+              }));
+            });
+          }}
+        >
+          <div class="i-lucide:refresh-cw text-ui-icon-small" />
+        </button>
+      </div>
       <Show when={promptMode() !== "floating"}>
         <Prompter />
       </Show>
@@ -147,6 +312,36 @@ function NodeWrapper({
 }
 
 function AssistantNode({ node }: { node: ChatNode }) {
+  const chatContext = useContext(ChatContext);
+
+  const messagesCount = createMemo(() => node.messageCount);
+
+  return (
+    <Card variant="ghost">
+      <div class="flex items-center gap-5px group">
+        <img
+          width={28}
+          height={28}
+          draggable={false}
+          src={mynthLogo}
+          class="pointer-events-none select-none"
+        />
+
+        <span class="text-ui-small">Assistant</span>
+
+        <div class="flex items-center gap-2px group-hover:opacity-100 opacity-0 transition-opacity">
+          <div class="flex items-center gap-2px">
+            <div class="i-lucide:message-circle text-18px" />
+            <span class="text-ui-small">{messagesCount()}</span>
+          </div>
+        </div>
+      </div>
+      <AssistantNodeContent node={node} />
+    </Card>
+  );
+}
+
+function AssistantNodeContent({ node }: { node: ChatNode }) {
   const contentDiv = document.createElement("div");
   contentDiv.className =
     "prose select-text cursor-auto w-full relative selection:bg-accent/15 max-w-800px";
@@ -185,29 +380,7 @@ function AssistantNode({ node }: { node: ChatNode }) {
     pre.parentNode?.replaceChild(wrapper, pre);
   });
 
-  return (
-    <Card variant="ghost">
-      <div class="flex items-center gap-5px group">
-        <img
-          width={28}
-          height={28}
-          draggable={false}
-          src={mynthLogo}
-          class="pointer-events-none select-none"
-        />
-
-        <span class="text-ui-small">Assistant</span>
-
-        <div class="flex items-center gap-2px group-hover:opacity-100 opacity-0 transition-opacity">
-          <div class="flex items-center gap-2px">
-            <div class="i-lucide:message-circle text-18px" />
-            <span class="text-ui-small">{node.messageCount}</span>
-          </div>
-        </div>
-      </div>
-      <div class="px-12px">{contentDiv}</div>
-    </Card>
-  );
+  return <div class="px-12px">{contentDiv}</div>;
 }
 
 function UserNode({ node }: { node: ChatNode }) {
@@ -239,7 +412,9 @@ function Prompter() {
 
   const onSubmit = async () => {
     if (message().trim() === "") return;
-    await chatContext.sendMessage(message().trim());
+    await chatContext.sendMessage(message().trim()).then(() => {
+      setMessage("");
+    });
   };
 
   return (

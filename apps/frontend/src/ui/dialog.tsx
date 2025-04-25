@@ -13,7 +13,7 @@ export function Dialog(props: DialogProps) {
 interface DialogTriggerProps
   extends ComponentProps<typeof CorvuDialog.Trigger> {}
 
-export function DialogTrigger(props: DialogTriggerProps) {
+function DialogTrigger(props: DialogTriggerProps) {
   return <CorvuDialog.Trigger {...props} />;
 }
 

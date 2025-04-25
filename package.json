@@ -1,15 +1,15 @@
 {
-  "name": "mynth-app",
-  "version": "0.0.001",
+  "name": "@mynth-app/app",
+  "version": "0.0.1",
   "description": "",
   "private": true,
   "type": "module",
   "scripts": {
-    "app": "moon run tauri:dev"
+    "dev": "moon run root:dev"
   },
   "license": "MIT",
   "devDependencies": {
-    "@moonrepo/cli": "^1.35.0"
+    "@moonrepo/cli": "^1.35.1"
   },
   "engines": {
     "node": "21.7.1"

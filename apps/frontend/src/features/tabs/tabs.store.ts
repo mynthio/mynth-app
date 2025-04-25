@@ -92,10 +92,10 @@ const switchTo = (id: string) => {
 };
 
 export {
-  EMPTY_TAB_ID,
+  
   type ChatTab,
   type EmptyTab,
-  type Tab,
+  
   state,
   push,
   pushEmpty,

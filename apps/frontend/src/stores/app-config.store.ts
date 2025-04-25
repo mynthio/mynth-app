@@ -1,7 +1,7 @@
 import { createStore } from "solid-js/store";
 import { load } from "@tauri-apps/plugin-store";
 
-export interface AppConfig {
+interface AppConfig {
   window: {
     showTrafficLights: boolean;
   };

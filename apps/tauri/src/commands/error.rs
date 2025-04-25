@@ -29,7 +29,6 @@ impl From<AiServiceError> for CommandError {
             AiServiceError::Database(db_err) => CommandError::Database(db_err.to_string()),
             // Use the generic error's message for Internal
             // You might want more specific mapping if AiServiceError grows more variants
-            other_err => CommandError::Internal(other_err.to_string()),
         }
     }
 }

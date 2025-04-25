@@ -5,7 +5,11 @@ import { appConfig } from "../stores/app-config.store";
 import { navigationStore } from "../stores/navigation.store";
 import { Content } from "./content/content";
 import { Sidebar } from "./components/sidebar";
-import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQueryClient,
+} from "@tanstack/solid-query";
 import { SolidQueryDevtools } from "@tanstack/solid-query-devtools";
 import mynthLogo from "../assets/mynth-logo.png";
 import { Tabs } from "../features/tabs/tabs";
@@ -19,6 +23,9 @@ import {
 } from "../ui/dropdown-menu";
 import { Show } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
+import { GET_CHAT_KEYS } from "../data/utils/query-keys";
+import { GET_CHATS_KEYS } from "../data/utils/query-keys";
+import { useWorkspace } from "../data/queries/workspaces/use-workspace";
 
 const client = new QueryClient({
   defaultOptions: {
@@ -42,7 +49,7 @@ const client = new QueryClient({
 export default function AppLayout() {
   return (
     <QueryClientProvider client={client}>
-      <div class="size-full flex flex-col gap-5px">
+      <div class="size-full flex flex-col gap-4px">
         <TopBar />
         <div class="flex w-full h-full flex-1 gap-5px">
           <Sidebar />
@@ -57,6 +64,12 @@ export default function AppLayout() {
 }
 
 function TopBar() {
+  const queryClient = useQueryClient();
+
+  const workspace = useWorkspace({
+    workspaceId: () => navigationStore.workspace.id,
+  });
+
   return (
     <div class="flex items-center gap-5px">
       <div
@@ -68,41 +81,34 @@ function TopBar() {
         {appConfig.window.showTrafficLights ? (
           <MacOsWindowControls />
         ) : (
-          <DropdownMenu>
-            <DropdownMenuTrigger>
-              <button class="w-button h-button flex-shrink-0 flex items-center justify-center cursor-default">
-                <img
-                  draggable={false}
-                  src={mynthLogo}
-                  class="w-36px pointer-events-none select-none animate-in animate-fade-in"
-                />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem>Settings</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Switch to traffic lights</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Minimize</DropdownMenuItem>
-              <DropdownMenuItem>Maximize</DropdownMenuItem>
-              <DropdownMenuItem>Fullscreen</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Quit</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div class="w-navigation-sidebar flex justify-center flex-shrink-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger>
+                <button class="rounded-12px uppercase text-ui-small bg-gradient-to-br bg-gradient-from-[#29322E] bg-gradient-to-[#12473E] size-38px font-500 flex items-center justify-center">
+                  {workspace.data?.name[0]}
+                  {workspace.data?.name[1]}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem>Settings</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>Switch to traffic lights</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>Minimize</DropdownMenuItem>
+                <DropdownMenuItem>Maximize</DropdownMenuItem>
+                <DropdownMenuItem>Fullscreen</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>Quit</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         )}
 
-        <div class="flex items-center gap-5px w-full">
-          <Show
-            when={navigationStore.sidebar.isOpen}
-            fallback={
-              <button class="rounded-default bg-window-elements-background h-button w-button flex items-center justify-center">
-                <div class="i-lucide:search text-ui-icon text-muted" />
-              </button>
-            }
-          >
-            <div class="rounded-default bg-window-elements-background h-button w-full flex-1 flex items-center text-muted text-ui-small px-16px">
-              Search
+        <div class="flex items-center justify-between gap-5px w-full">
+          <Show when={navigationStore.sidebar.isOpen}>
+            <div class="flex items-center gap-6px">
+              <div class="i-lucide:messages-square text-ui-icon" />
+              <span class="uppercase text-ui-small font-600">Chats</span>
             </div>
           </Show>
           <DropdownMenu>
@@ -117,6 +123,13 @@ function TopBar() {
                   invoke("create_chat", {
                     name: "New chat",
                     workspaceId: "w-default",
+                  }).then(() => {
+                    // Invalidate chats queries to refresh the list
+                    queryClient.invalidateQueries({
+                      queryKey: GET_CHATS_KEYS({
+                        workspaceId: () => navigationStore.workspace.id,
+                      }),
+                    });
                   });
                 }}
               >

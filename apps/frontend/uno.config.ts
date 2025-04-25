@@ -25,8 +25,10 @@ export default defineConfig({
       body: "oklch(81.06% 0.0133 172.27)",
       // background: "oklch(18% 0.003 157.77)",
       accent: "oklch(59.91% 0.0107 196.87)",
-      muted: "oklch(62.46% 0.0184 173.82)",
+
+      muted: "oklch(0.71 0.0184 173.82)",
       active: "oklch(90.4% 0.0334 172.77)",
+      selected: "oklch(0.84 0.0046 179.71)",
 
       window: "oklch(0.2 0.0031 196.91)",
       "window-elements-background": "oklch(0.22 0.003 196.94)",
@@ -35,7 +37,7 @@ export default defineConfig({
       "elements-background-soft": "oklch(0.27 0.0058 196.82)",
     },
     width: {
-      "navigation-sidebar": "60px",
+      "navigation-sidebar": "44px",
       sidebar: "410px",
       button: "32px",
     },
@@ -44,7 +46,7 @@ export default defineConfig({
       button: "32px",
     },
     borderRadius: {
-      default: "9px",
+      default: "10px",
       window: "11px",
     },
   },

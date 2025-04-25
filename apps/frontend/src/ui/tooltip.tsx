@@ -1,7 +1,7 @@
 import CorvuTooltip from "@corvu/tooltip";
 import { ComponentProps } from "solid-js";
 
-export const useTooltip = CorvuTooltip.useContext;
+const useTooltip = CorvuTooltip.useContext;
 
 interface TooltipProps extends ComponentProps<typeof CorvuTooltip> {}
 
@@ -38,7 +38,7 @@ export function TooltipContent(props: TooltipContentProps) {
 }
 
 // Default configuration for tooltips
-export const defaultTooltipProps = {
+const defaultTooltipProps = {
   placement: "top" as const,
   openDelay: 200,
   floatingOptions: {

@@ -17,6 +17,10 @@ import {
   ModelSelectorDialog,
   ModelSelectorDialogProps,
 } from "./components/model-selector.dialog";
+import {
+  BulkDeleteChatsDialog,
+  BulkDeleteChatsDialogProps,
+} from "./components/bulk-delete-chats.dialog";
 
 export function ActionsDialog() {
   return (
@@ -50,6 +54,11 @@ export function ActionsDialog() {
           <Match when={actionsDialogState()?.type === "model-selector"}>
             <ModelSelectorDialog
               {...(actionsDialogState()?.payload as ModelSelectorDialogProps)}
+            />
+          </Match>
+          <Match when={actionsDialogState()?.type === "bulk-delete-chats"}>
+            <BulkDeleteChatsDialog
+              {...(actionsDialogState()?.payload as BulkDeleteChatsDialogProps)}
             />
           </Match>
         </Switch>

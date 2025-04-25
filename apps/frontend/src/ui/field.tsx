@@ -1,6 +1,6 @@
 import { JSX, splitProps } from "solid-js";
 
-export interface FieldRootProps {
+interface FieldRootProps {
   /** The layout direction of the field */
   layout?: "horizontal" | "vertical";
   /** Optional CSS class for the container */
@@ -30,7 +30,7 @@ export function Field(props: FieldRootProps) {
   );
 }
 
-export interface FieldMetaProps {
+interface FieldMetaProps {
   class?: string;
   children: JSX.Element;
 }
@@ -43,7 +43,7 @@ export function FieldMeta(props: FieldMetaProps) {
   );
 }
 
-export interface FieldTitleProps {
+interface FieldTitleProps {
   class?: string;
   children: JSX.Element;
 }
@@ -56,7 +56,7 @@ export function FieldTitle(props: FieldTitleProps) {
   );
 }
 
-export interface FieldDescriptionProps {
+interface FieldDescriptionProps {
   class?: string;
   children: JSX.Element;
 }
@@ -69,7 +69,7 @@ export function FieldDescription(props: FieldDescriptionProps) {
   );
 }
 
-export interface FieldInputProps {
+interface FieldInputProps {
   class?: string;
   children: JSX.Element;
 }
@@ -78,12 +78,12 @@ export function FieldInput(props: FieldInputProps) {
   return <div class={`${props.class ?? ""}`}>{props.children}</div>;
 }
 
-export interface FieldErrorProps {
+interface FieldErrorProps {
   class?: string;
   children: JSX.Element;
 }
 
-export function FieldError(props: FieldErrorProps) {
+function FieldError(props: FieldErrorProps) {
   return (
     <span class={`text-12px text-red-500 ${props.class ?? ""}`}>
       {props.children}

@@ -34,11 +34,7 @@ impl StreamRegistry {
     pub async fn get_stream(&self, branch_id: &str) -> Option<Channel<MessageEvent>> {
         let streams = self.streams.lock().await;
         let stream = streams.get(branch_id).cloned();
-        debug!(
-            "Stream for branch ID {} found: {}",
-            branch_id,
-            stream.is_some()
-        );
+
         stream
     }
 

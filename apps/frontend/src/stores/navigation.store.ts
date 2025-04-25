@@ -24,7 +24,7 @@ interface Sidebar {
   isOpen: boolean;
 }
 
-export type NavigationStore = {
+type NavigationStore = {
   workspace: Workspace;
   content: Content;
   sidebar: Sidebar;

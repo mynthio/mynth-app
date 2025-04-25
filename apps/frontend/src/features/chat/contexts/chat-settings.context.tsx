@@ -26,7 +26,7 @@ type ChatSettingsContext = {
   setPromptMode: (mode: PromptMode) => void;
 };
 
-export const ChatSettingsContext = createContext<ChatSettingsContext>({
+const ChatSettingsContext = createContext<ChatSettingsContext>({
   prompt: () => ({
     mode: "floating" as const,
     height: 0,

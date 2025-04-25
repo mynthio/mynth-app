@@ -54,6 +54,7 @@ pub fn run() {
             commands::message_generation::reconnect,
             commands::message_generation::unregister_stream,
             commands::message_generation::regenerate_message,
+            commands::chat::switch_active_message_version,
         ])
         .setup(|app| {
             let app_dir = app

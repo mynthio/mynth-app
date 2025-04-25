@@ -2,5 +2,5 @@ packages:
   - apps/**/*
   - packages/**/*
   - scripts/**/*
-onlyBuiltDependencies:
-  - '@moonrepo/cli'
+ignoredBuiltDependencies:
+  - esbuild

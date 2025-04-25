@@ -15,7 +15,7 @@ export interface Workspace {
  * Parameters for updating a workspace
  * Maps to UpdateWorkspaceParams in Rust backend
  */
-export interface UpdateWorkspaceParams {
+interface UpdateWorkspaceParams {
   name?: string;
 }
 
@@ -23,6 +23,6 @@ export interface UpdateWorkspaceParams {
  * Parameters for creating a workspace
  * Maps to CreateWorkspaceParams in Rust backend
  */
-export interface CreateWorkspaceParams {
+interface CreateWorkspaceParams {
   name: string;
 }

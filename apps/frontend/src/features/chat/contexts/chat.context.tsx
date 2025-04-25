@@ -11,6 +11,7 @@ import { getChatBranchNodes } from "../../../data/api/chat-branch-nodes/get-chat
 import { ChatNode } from "../../../types";
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { sendMessage as sendMessageApi } from "../../../data/api/message-generation/send-message";
+
 type ChatContextState = {
   branchId: string;
   isFetching: boolean;
@@ -25,6 +26,7 @@ type ChatContext = {
   fetchNext: () => void;
   pushNode: (args: ChatNode[]) => void;
   updateLatestNode: (updater: (node: ChatNode) => ChatNode) => void;
+  updateNode: (nodeId: string, updater: (node: ChatNode) => ChatNode) => void;
   setIsGenerating: (isGenerating: boolean) => void;
   sendMessage: (message: string) => Promise<void>;
 };
@@ -41,6 +43,7 @@ export const ChatContext = createContext<ChatContext>({
   fetchNext: () => {},
   pushNode: () => {},
   updateLatestNode: () => {},
+  updateNode: () => {},
   setIsGenerating: () => {},
   sendMessage: () => Promise.resolve(),
 });
@@ -211,6 +214,22 @@ export function ChatContextProvider(props: ChatContextProviderProps) {
     pushNode([newNodes.userNode, newNodes.assistantNode]);
   };
 
+  const updateNode = (
+    nodeId: string,
+    updater: (node: ChatNode) => ChatNode
+  ) => {
+    const currentNodes = state.nodes;
+    if (currentNodes.length === 0) return;
+
+    const updatedNode = updater(
+      currentNodes.find((node) => node.id === nodeId)!
+    );
+    setState(
+      "nodes",
+      currentNodes.map((node) => (node.id === nodeId ? updatedNode : node))
+    );
+  };
+
   const value = {
     state,
     fetchNext,
@@ -218,6 +237,7 @@ export function ChatContextProvider(props: ChatContextProviderProps) {
     updateLatestNode,
     setIsGenerating,
     sendMessage,
+    updateNode,
   };
 
   return (

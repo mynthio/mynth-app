@@ -15,7 +15,7 @@ export interface ChatFolder {
  * Represents a chat list item (summarized chat) in the application
  * Maps to ChatListItem struct in Rust backend
  */
-export interface ChatListItem {
+interface ChatListItem {
   id: string;
   name: string;
   parentId?: string;
@@ -27,7 +27,7 @@ export interface ChatListItem {
  * Parameters for updating a chat
  * Maps to UpdateChatParams in Rust backend
  */
-export interface UpdateChatParams {
+interface UpdateChatParams {
   name?: string;
   parentId?: string;
 }
@@ -36,7 +36,7 @@ export interface UpdateChatParams {
  * Parameters for updating a chat folder
  * Maps to UpdateFolderParams in Rust backend
  */
-export interface UpdateFolderParams {
+interface UpdateFolderParams {
   name?: string;
   parentId?: string;
 }
@@ -76,15 +76,16 @@ export interface Branch {
  * Represents a content version of a chat node
  * Maps to ContentVersion struct in Rust backend
  */
-export interface Message {
+interface Message {
   id: string;
   content: string;
+  versionNumber: number;
 }
 
 /**
  * Type of chat node
  */
-export type NodeType =
+type NodeType =
   | "user_message"
   | "assistant_message"
   | "user_note"

@@ -29,14 +29,14 @@ export function Switch(props: ComponentProps<typeof KobalteSwitch>) {
 
 interface SwitchLabelProps extends ComponentProps<typeof KobalteSwitch.Label> {}
 
-export function SwitchLabel(props: SwitchLabelProps) {
+function SwitchLabel(props: SwitchLabelProps) {
   return <KobalteSwitch.Label class="text-14px font-400" {...props} />;
 }
 
 interface SwitchDescriptionProps
   extends ComponentProps<typeof KobalteSwitch.Description> {}
 
-export function SwitchDescription(props: SwitchDescriptionProps) {
+function SwitchDescription(props: SwitchDescriptionProps) {
   return (
     <KobalteSwitch.Description class="text-12px text-[#7C8B82]" {...props} />
   );
@@ -45,13 +45,13 @@ export function SwitchDescription(props: SwitchDescriptionProps) {
 interface SwitchErrorMessageProps
   extends ComponentProps<typeof KobalteSwitch.ErrorMessage> {}
 
-export function SwitchErrorMessage(props: SwitchErrorMessageProps) {
+function SwitchErrorMessage(props: SwitchErrorMessageProps) {
   return (
     <KobalteSwitch.ErrorMessage class="text-12px text-red-500" {...props} />
   );
 }
 
 // Default configuration for switches
-export const defaultSwitchProps = {
+const defaultSwitchProps = {
   // Add any default props here if needed
 };

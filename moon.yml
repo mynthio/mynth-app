@@ -1,0 +1,13 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+tasks:
+  dev:
+    description: Start app in development mode
+    command: noop
+    deps:
+      - "frontend:dev"
+      - "tauri:dev"
+    options:
+      runDepsInParallel: true
+      runInCI: false
+      persistent: true

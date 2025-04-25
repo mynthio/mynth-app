@@ -8,6 +8,7 @@ use super::chat_node_message::ChatNodeMessageService;
 use super::database::DbPool;
 use crate::models::chat::ChatNodeType;
 use crate::models::node_type::NodeType;
+use crate::utils::markdown::markdown_to_html;
 use std::str::FromStr;
 
 /// Parameters for updating a chat node
@@ -16,6 +17,13 @@ pub struct UpdateChatNodeParams {
     pub node_type: Option<String>,
     pub parent_id: Option<String>,
     pub active_message_id: Option<String>,
+}
+
+/// Parameters for getting all chat nodes
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct GetAllChatNodesParams {
+    pub older_than: Option<String>,
+    pub branch_id: Option<String>,
 }
 
 /// Service responsible for chat node operations
@@ -530,5 +538,162 @@ impl ChatNodeService {
                 panic!("Database error: {:?}", err);
             }
         }
+    }
+
+    /// Get all chat nodes with optional filtering
+    ///
+    /// If older_than is provided, returns only nodes older than the given ID
+    /// Results are sorted from oldest to newest by their ULID
+    pub async fn get_all(
+        &self,
+        params: GetAllChatNodesParams,
+    ) -> sqlx::Result<Vec<crate::models::chat::ChatNode>> {
+        info!("Fetching chat nodes with params: {:?}", params);
+
+        let mut query = sqlx::QueryBuilder::new(
+            r#"
+            SELECT 
+                chat_nodes.id,
+                chat_nodes.node_type,
+                chat_nodes.branch_id,
+                chat_nodes.parent_id,
+                chat_nodes.active_message_id,
+                chat_nodes.updated_at,
+                content_versions.id as cv_id,
+                content_versions.content as cv_content,
+                content_versions.version_number as cv_version_number,
+                content_versions.node_id as cv_node_id,
+                content_versions.status,
+                content_versions.token_count as cv_token_count,
+                content_versions.cost as cv_cost,
+                content_versions.api_metadata as cv_api_metadata,
+                content_versions.model_id as cv_model_id,
+                (SELECT COUNT(*) FROM chat_node_messages WHERE node_id = chat_nodes.id) as message_count
+            FROM chat_nodes
+            LEFT JOIN chat_node_messages as content_versions ON chat_nodes.active_message_id = content_versions.id
+            "#,
+        );
+
+        // Build WHERE clause based on params
+        let mut has_where = false;
+
+        // Add branch_id filter if provided
+        if let Some(branch_id) = &params.branch_id {
+            query.push(" WHERE chat_nodes.branch_id = ");
+            query.push_bind(branch_id);
+            has_where = true;
+        }
+
+        // Add older_than filter if provided
+        if let Some(older_than) = &params.older_than {
+            if has_where {
+                query.push(" AND chat_nodes.id < ");
+            } else {
+                query.push(" WHERE chat_nodes.id < ");
+            }
+            query.push_bind(older_than);
+        }
+
+        // Add ORDER BY clause for sorting by ULID (oldest to newest)
+        query.push(" ORDER BY chat_nodes.id ASC");
+
+        // Build and execute the query
+        let rows = query.build().fetch_all(self.pool.get()).await?;
+
+        // Map the rows to ChatNode objects
+        let nodes = rows
+            .iter()
+            .map(|row| crate::models::chat::ChatNode {
+                id: row.get("id"),
+                node_type: row.get("node_type"),
+                branch_id: row.get("branch_id"),
+                parent_id: row.get("parent_id"),
+                active_message_id: row.get("active_message_id"),
+                active_tool_use_id: None,
+                updated_at: row.get("updated_at"),
+                extensions: Default::default(),
+                active_message: if row
+                    .try_get::<Option<String>, _>("cv_id")
+                    .ok()
+                    .flatten()
+                    .is_some()
+                {
+                    Some(crate::models::chat::ContentVersion {
+                        id: row.get("cv_id"),
+                        content: row.get("cv_content"),
+                        version_number: row.get::<i64, _>("cv_version_number") as i32,
+                        status: row.get("status"),
+                        node_id: row.get("cv_node_id"),
+                        token_count: row.try_get("cv_token_count").ok(),
+                        cost: row.try_get("cv_cost").ok(),
+                        api_metadata: row.try_get("cv_api_metadata").ok(),
+                        model_id: row.try_get("cv_model_id").ok(),
+                        extensions: Default::default(),
+                    })
+                } else {
+                    None
+                },
+                message_count: row.try_get("message_count").ok(),
+                active_tool_use: None,
+            })
+            .collect();
+
+        Ok(nodes)
+    }
+
+    /// Switch the active message version for a chat node
+    ///
+    /// This function:
+    /// 1. Finds the message for the given node and version
+    /// 2. Updates the chat node's active_message_id
+    /// 3. Returns the new message data
+    pub async fn switch_active_message_version(
+        &self,
+        node_id: String,
+        version_number: i64,
+    ) -> sqlx::Result<Option<crate::models::chat::ContentVersion>> {
+        // Find the message for the node and version
+        let row = sqlx::query(
+            r#"
+            SELECT * FROM chat_node_messages
+            WHERE node_id = ? AND version_number = ?
+            "#,
+        )
+        .bind(&node_id)
+        .bind(version_number)
+        .fetch_optional(self.pool.get())
+        .await?;
+
+        let row = match row {
+            Some(row) => row,
+            None => return Ok(None),
+        };
+
+        let message_id: String = row.get("id");
+
+        // Update the chat node's active_message_id
+        self.update(
+            &node_id,
+            UpdateChatNodeParams {
+                active_message_id: Some(message_id.clone()),
+                ..Default::default()
+            },
+        )
+        .await?;
+
+        // Return the new message data as ContentVersion
+        let content_version = crate::models::chat::ContentVersion {
+            id: row.get("id"),
+            content: markdown_to_html(row.get("content")),
+            version_number: row.get::<i64, _>("version_number") as i32,
+            status: row.get("status"),
+            node_id: row.get("node_id"),
+            token_count: row.try_get("token_count").ok(),
+            cost: row.try_get("cost").ok(),
+            api_metadata: row.try_get("api_metadata").ok(),
+            model_id: row.try_get("model_id").ok(),
+            extensions: Default::default(),
+        };
+        Ok(Some(content_version))
     }
 }
