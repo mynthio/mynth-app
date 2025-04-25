@@ -1,5 +1,6 @@
 import { MacOsWindowControls } from "../components/macos/macos-window-controls";
 import { ActionsDialog } from "../features/actions/actions-dialog";
+import { DialogsDialog } from "../features/dialogs/dialogs-dialog";
 import { ContextMenuContainer } from "../features/context-menu/context-menu-container";
 import { appConfig } from "../stores/app-config.store";
 import { navigationStore } from "../stores/navigation.store";
@@ -57,6 +58,7 @@ export default function AppLayout() {
         </div>
       </div>
       <ActionsDialog />
+      <DialogsDialog />
       <ContextMenuContainer />
       <SolidQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>

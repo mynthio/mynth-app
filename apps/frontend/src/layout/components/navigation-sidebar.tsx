@@ -2,6 +2,7 @@ import { Show } from "solid-js";
 import { useWorkspace } from "../../data/queries/workspaces/use-workspace";
 import { navigationStore } from "../../stores/navigation.store";
 import { appConfig } from "../../stores/app-config.store";
+import { openDialog } from "../../features/dialogs";
 
 export function NavigationSidebar() {
   const workspace = useWorkspace({
@@ -20,7 +21,12 @@ export function NavigationSidebar() {
       </div>
 
       <div class="flex flex-col items-center gap-4px">
-        <button class="rounded-default text-muted size-34px flex items-center justify-center cursor-default">
+        <button
+          class="rounded-default text-muted size-34px flex items-center justify-center cursor-default"
+          onClick={() => {
+            openDialog({ id: "app-settings", payload: {} });
+          }}
+        >
           <div class="i-lucide:bolt text-15px text-muted" />
         </button>
       </div>
