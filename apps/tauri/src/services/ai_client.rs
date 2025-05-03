@@ -1,28 +1,9 @@
 use futures::{Stream, StreamExt};
-use rig::completion::Message as RigMessage;
-use rig::providers::ollama;
-use rig::streaming::StreamingChat;
-use std::clone::Clone;
+use reqwest::Client;
+use serde::de::DeserializeOwned;
+use serde_json::json;
 use std::error::Error;
 use std::pin::Pin;
-
-/// Configuration for AI model generation
-#[derive(Clone, Debug)]
-pub struct AIConfig {
-    pub api_url: String,
-    pub model: String,
-    pub temperature: f64,
-}
-
-impl Default for AIConfig {
-    fn default() -> Self {
-        Self {
-            api_url: "http://localhost:11434".to_string(),
-            model: "gemma3:1b".to_string(),
-            temperature: 0.5,
-        }
-    }
-}
 
 /// Message for chat completions
 #[derive(Clone, Debug, serde::Serialize)]
@@ -31,115 +12,100 @@ pub struct ChatMessage {
     pub content: String,
 }
 
-/// AI client for text generation
+/// AI client for text generation (stateless, config is per-request)
 pub struct AIClient {
-    config: AIConfig,
+    pub http_client: Client,
+}
+
+/// Errors that can occur during streaming.
+#[derive(Debug)]
+pub enum StreamingError {
+    ReqwestError(reqwest::Error),
+    JsonError(serde_json::Error),
+    HttpError(u16),
+}
+
+impl std::fmt::Display for StreamingError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            StreamingError::ReqwestError(e) => write!(f, "Request error: {}", e),
+            StreamingError::JsonError(e) => write!(f, "JSON parsing error: {}", e),
+            StreamingError::HttpError(code) => write!(f, "HTTP error: {}", code),
+        }
+    }
+}
+
+impl Error for StreamingError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            StreamingError::ReqwestError(e) => Some(e),
+            StreamingError::JsonError(e) => Some(e),
+            StreamingError::HttpError(_) => None,
+        }
+    }
 }
 
 impl AIClient {
-    pub fn new(config: AIConfig) -> Self {
-        Self { config }
-    }
-
-    /// Generate text from the AI model with a streaming response
-    pub async fn generate_stream(
-        &self,
-        prompt: &str,
-    ) -> Result<impl Stream<Item = Result<String, String>>, Box<dyn Error + Send + Sync>> {
-        let messages = vec![];
-
-        self.generate_chat_stream(prompt, messages).await
-    }
-
-    /// Generate text using chat completions API with multiple messages
-    pub async fn generate_chat_stream(
-        &self,
-        prompt: &str,
-        messages: Vec<ChatMessage>,
-    ) -> Result<impl Stream<Item = Result<String, String>>, Box<dyn Error + Send + Sync>> {
-        // Create ollama client
-        let ollama_client = ollama::Client::new()
-            .agent(&self.config.model)
-            // .temperature(self.config.temperature)
-            // .additional_params(serde_json::json!({
-            //     "format": {
-            //             "type": "object",
-            //             "properties": {
-            //                 "title": {
-            //                     "type": "string",
-            //                     "maxLength": 256
-            //                 }
-            //         }
-            //     }
-            // }))
-            .build();
-
-        // Convert our ChatMessage format to rig Message format
-        let rig_messages: Vec<RigMessage> = messages
-            .iter()
-            .map(|msg| {
-                let role = msg.role.as_str();
-                let content = msg.content.clone();
-
-                // Revert to PascalCase tuple variants for the enum
-                match role {
-                    "user" => RigMessage::user(content),
-                    "assistant" => RigMessage::assistant(content),
-                    // Fallback or handle unknown roles appropriately
-                    _ => RigMessage::user(content), // Defaulting to user
-                }
-            })
-            .collect();
-
-        let stream_result = ollama_client.stream_chat(prompt, rig_messages).await;
-
-        match stream_result {
-            Ok(stream) => {
-                // Convert rig's stream to our expected stream format
-                let mapped_stream = stream.map(move |chunk| {
-                    match chunk {
-                        Ok(choice) => {
-                            // Extract content from StreamingChoice
-                            let content = choice.to_string();
-
-                            // Create a custom response format for the stream
-                            serde_json::to_string(&serde_json::json!({
-                                "text": content,
-                                "done": false
-                            }))
-                            .map_err(|e| e.to_string())
-                        }
-                        Err(e) => Err(e.to_string()),
-                    }
-                });
-
-                // Add a final message with done=true
-                let mapped_stream_with_done = mapped_stream.chain(futures::stream::once(async {
-                    serde_json::to_string(&serde_json::json!({
-                        "text": "",
-                        "done": true
-                    }))
-                    .map_err(|e| e.to_string())
-                }));
-
-                Ok(Box::pin(mapped_stream_with_done)
-                    as Pin<
-                        Box<dyn Stream<Item = Result<String, String>> + Send>,
-                    >)
-            }
-            Err(e) => {
-                // Map the rig error to a boxed dyn Error
-                Err(Box::new(e) as Box<dyn Error + Send + Sync>)
-            }
-        }
-    }
-}
-
-// Allow cloning AIClient for use in async tasks
-impl Clone for AIClient {
-    fn clone(&self) -> Self {
+    pub fn new() -> Self {
         Self {
-            config: self.config.clone(),
+            http_client: Client::new(),
         }
     }
+
+    /// Generate text using chat completions API with message history only, using reqwest for streaming
+    /// - url: full URL including path
+    /// - model: model id/name
+    /// - messages: chat history
+    pub async fn generate_chat_stream<T>(
+        &self,
+        url: String,
+        model: String,
+        messages: Vec<ChatMessage>,
+    ) -> Result<impl StreamExt<Item = Result<T, StreamingError>>, StreamingError>
+    where
+        T: DeserializeOwned,
+    {
+        // Prepare the request body
+        let body = json!({
+            "model": model,
+            "messages": messages,
+            "stream": true,
+            // Add more fields as needed for your API
+        });
+
+        // Make the streaming POST request
+        let response = self
+            .http_client
+            .post(&url)
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| StreamingError::ReqwestError(e))?;
+
+        // Ensure the response is successful (2xx)
+        if !response.status().is_success() {
+            return Err(StreamingError::HttpError(response.status().as_u16()));
+        }
+
+        // Get the streaming body
+        let stream = response.bytes_stream();
+
+        // Map the byte stream to deserialized objects
+        let stream = stream.map(|chunk| {
+            chunk
+                .map_err(StreamingError::ReqwestError)
+                .and_then(|bytes| {
+                    // Parse the chunk as JSON
+                    serde_json::from_slice::<T>(&bytes).map_err(StreamingError::JsonError)
+                })
+        });
+
+        Ok(stream)
+    }
 }
+
+// Comments for contributors:
+// - AIClient is now stateless regarding model/provider config. Pass url/model/messages per request.
+// - The response is streamed as JSON objects with `text` and `done` fields for compatibility.
+// - If your backend uses a different streaming format, adjust the chunk parsing logic accordingly.
+// - Enjoy hacking! (And don't forget to run `pnpm moon tauri:check` after changes.)

@@ -1,8 +1,6 @@
 pub mod ai;
 pub mod chat;
 pub mod chat_branch;
-pub mod context_assignments;
-pub mod contexts;
 pub mod mcp;
 pub mod model_settings;
 pub mod node_type;

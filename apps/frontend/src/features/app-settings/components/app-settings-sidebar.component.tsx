@@ -3,18 +3,9 @@ import {
   useAppSettings,
   StaticSettingsItem,
   DynamicSettingsItemType,
-} from "./app-settings.context";
-
-// Mock data for dynamic items - replace with actual data fetching later
-const mockWorkspaces = [
-  { id: "ws1", name: "Workspace Alpha" },
-  { id: "ws2", name: "Workspace Beta" },
-];
-
-const mockAiIntegrations = [
-  { id: "ai1", name: "Integration X" },
-  { id: "ai2", name: "Integration Y" },
-];
+} from "../app-settings.context";
+import { useWorkspaces } from "../../../data/queries/workspaces/use-workspaces";
+import { useAiIntegrations } from "../../../data/queries/ai-integrations/use-ai-integrations";
 
 export const AppSettingsSidebar: Component = () => {
   const { activeItem, setActiveItem } = useAppSettings();
@@ -51,20 +42,23 @@ export const AppSettingsSidebar: Component = () => {
     return false;
   };
 
+  const worksapces = useWorkspaces();
+  const aiIntegrations = useAiIntegrations();
+
   return (
-    <nav class="flex flex-col p-4 border-r border-gray-200 w-64 h-full bg-gray-50">
-      <h3 class="text-lg font-semibold mb-4">Settings</h3>
+    <nav class="flex flex-col px-4 border-r-2px border-elements-background-soft w-320px h-full">
+      <h3 class="text-ui font-600 mb-16px">Settings</h3>
 
       {/* Static Items */}
-      <ul class="mb-6">
+      <ul class="mb-22px">
         <For each={staticItems}>
           {(item) => (
             <li class="mb-1">
               <button
                 onClick={() => handleItemClick("static", item.key)}
-                class={`w-full text-left px-3 py-1 rounded hover:bg-gray-200 ${
+                class={`w-full text-muted text-left text-ui px-16px h-button rounded-11px hover:bg-elements-background ${
                   isItemActive("static", item.key)
-                    ? "bg-blue-100 text-blue-700 font-medium"
+                    ? "bg-elements-background-soft text-selected"
                     : ""
                 }`}
               >
@@ -76,16 +70,16 @@ export const AppSettingsSidebar: Component = () => {
       </ul>
 
       {/* Dynamic Workspaces */}
-      <h4 class="text-md font-semibold mb-2">Workspaces</h4>
-      <ul class="mb-6">
-        <For each={mockWorkspaces}>
+      <h4 class="text-ui font-semibold mb-16px">Workspaces</h4>
+      <ul class="mb-22px">
+        <For each={worksapces?.data}>
           {(workspace) => (
             <li class="mb-1">
               <button
                 onClick={() => handleItemClick("workspace", workspace.id)}
-                class={`w-full text-left px-3 py-1 rounded hover:bg-gray-200 ${
+                class={`w-full text-muted text-left text-ui px-16px h-button rounded-11px hover:bg-elements-background ${
                   isItemActive("workspace", workspace.id)
-                    ? "bg-blue-100 text-blue-700 font-medium"
+                    ? "bg-elements-background-soft text-selected"
                     : ""
                 }`}
               >
@@ -97,26 +91,38 @@ export const AppSettingsSidebar: Component = () => {
       </ul>
 
       {/* Dynamic AI Integrations */}
-      <h4 class="text-md font-semibold mb-2">AI Integrations</h4>
-      <ul>
-        <For each={mockAiIntegrations}>
+      <h4 class="text-ui font-semibold mb-16px">AI Integrations</h4>
+      <ul class="mb-22px">
+        <For each={aiIntegrations?.data}>
           {(integration) => (
             <li class="mb-1">
               <button
                 onClick={() =>
                   handleItemClick("ai-integration", integration.id)
                 }
-                class={`w-full text-left px-3 py-1 rounded hover:bg-gray-200 ${
+                class={`w-full text-muted text-left text-ui px-16px h-button rounded-11px hover:bg-elements-background ${
                   isItemActive("ai-integration", integration.id)
-                    ? "bg-blue-100 text-blue-700 font-medium"
+                    ? "bg-elements-background-soft text-selected"
                     : ""
                 }`}
               >
-                {integration.name}
+                {integration.displayName}
               </button>
             </li>
           )}
         </For>
+        <li class="mb-1">
+          <button
+            onClick={() => handleItemClick("static", "add-ai-integration")}
+            class={`w-full text-muted text-left text-ui px-16px h-button rounded-11px hover:bg-elements-background ${
+              isItemActive("static", "add-ai-integration")
+                ? "bg-elements-background-soft text-selected"
+                : ""
+            }`}
+          >
+            Add AI Integration
+          </button>
+        </li>
       </ul>
     </nav>
   );

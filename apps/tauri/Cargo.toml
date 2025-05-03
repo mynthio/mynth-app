@@ -48,3 +48,4 @@ syntect = "5.2.0"
 # MacOS keychain access for secure credential storage
 security-framework = "3.2.0"
 rig-core = "0.11.0"
+anyhow = "1.0"

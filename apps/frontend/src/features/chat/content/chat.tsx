@@ -30,6 +30,9 @@ import {
   ChatSettingsContextProvider,
   useChatSettings,
 } from "../contexts/chat-settings.context";
+import { openDialog } from "../../dialogs";
+import { useChatBranch } from "../../../data/queries/chat-branches/use-chat-branch";
+import { useAiModels } from "../../../data/queries/ai-models/use-ai-models";
 export function ChatContent() {
   const tab = createMemo(() => {
     return state.tabs.find((t) => t.id === state.currentTab);
@@ -402,6 +405,10 @@ function Prompter() {
   const chatSettings = useChatSettings();
   const promptMode = createMemo(() => chatSettings.prompt().mode);
 
+  const branch = useChatBranch({
+    branchId: () => chatContext.state.branchId,
+  });
+
   createShortcut(
     ["Meta", "Enter"],
     () => {
@@ -440,7 +447,35 @@ function Prompter() {
         />
       </TextField>
       <div class="flex items-center justify-between">
-        <div></div>
+        <div class="flex items-center gap-2px">
+          <button
+            class="text-muted text-13px size-24px hover:bg-elements-background-soft flex items-center justify-center rounded-8px"
+            onClick={() => {
+              openDialog({
+                id: "chat-model-selection",
+                payload: {
+                  branchId: chatContext.state.branchId,
+                },
+              });
+            }}
+          >
+            <div class="i-lucide:brain" />
+          </button>
+
+          <button
+            class="text-muted text-13px size-24px hover:bg-elements-background-soft flex items-center justify-center rounded-8px"
+            onClick={() => {
+              openDialog({
+                id: "chat-system-prompt-dialog",
+                payload: {
+                  branchId: chatContext.state.branchId,
+                },
+              });
+            }}
+          >
+            <div class="i-lucide:bot" />
+          </button>
+        </div>
         <div class="flex items-center gap-8px">
           <Tooltip
             placement="top"

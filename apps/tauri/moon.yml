@@ -1,6 +1,7 @@
-$schema: "https://moonrepo.dev/schemas/project.json"
+$schema: 'https://moonrepo.dev/schemas/project.json'
 
-language: "typescript"
+language: rust
+
 project:
   name: "tauri"
   description: "Tauri app"

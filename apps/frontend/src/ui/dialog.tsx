@@ -25,7 +25,7 @@ export function DialogContent(props: DialogContentProps) {
     <CorvuDialog.Portal>
       <CorvuDialog.Overlay
         class="
-        fixed inset-0 z-50 bg-background/80 backdrop-blur-5px  rounded-window
+        fixed inset-0 z-50 bg-elements-background/85 backdrop-blur-7px  rounded-window
 
         data-[open]:animate-in data-[open]:fade-in-0 data-[open]:animate-duration-[200ms]
         data-[closed]:animate-out data-[closed]:fade-out-0 data-[closed]:animate-duration-[200ms]"
@@ -35,8 +35,8 @@ export function DialogContent(props: DialogContentProps) {
         <CorvuDialog.Content
           {...props}
           class={`
-            max-w-560px min-w-400px min-h-200px rounded-lg border-2 border-[#212623]
-            bg-gradient-to-br from-[#191B1C] via-[#1A1F1C] to-[#232827]
+            max-w-560px min-w-400px min-h-200px rounded-14px border-2 border-elements-background
+            bg-background
             p-24px
             data-[open]:animate-in data-[open]:zoom-in-95 data-[open]:fade-in-0 data-[open]:animate-duration-[300ms]
             data-[closed]:animate-out data-[closed]:zoom-out-95 data-[closed]:fade-out-0 data-[closed]:animate-duration-[200ms] ${props.class}`}

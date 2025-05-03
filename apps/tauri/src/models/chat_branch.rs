@@ -11,6 +11,12 @@ pub struct Branch {
     pub chat_id: String,
     pub parent_id: Option<String>,
     pub model_id: Option<String>,
+    /// Flexible context for this branch (e.g., system prompt, docs, files in future)
+    /// Can be used for system prompt, docs, or anything else. More flexible than 'system_prompt'.
+    pub context: Option<String>,
+    /// How context is inherited: 'inherit', 'override', 'none', or 'workspace' (inherit from workspace)
+    /// 'workspace' means inherit from workspace.
+    pub context_inheritance_mode: String,
     pub branched_from_node_id: Option<String>,
     pub branched_from_node_at: Option<chrono::NaiveDateTime>,
     pub updated_at: Option<chrono::NaiveDateTime>,

@@ -41,6 +41,11 @@ pub struct ChatFolder {
     pub name: String,
     pub parent_id: Option<String>,
     pub workspace_id: String,
+    /// Flexible context for this folder (e.g., system prompt, docs, files in future)
+    /// Can be used for system prompt, docs, or anything else. More flexible than 'system_prompt'.
+    pub context: Option<String>,
+    /// How context is inherited: 'inherit', 'override', 'none', or 'workspace' (inherit from workspace)
+    /// 'workspace' means inherit from workspace.
     pub context_inheritance_mode: String,
     pub is_archived: bool,
     pub archived_at: Option<NaiveDateTime>,
@@ -83,6 +88,11 @@ pub struct Chat {
     pub workspace_id: Option<String>,
     pub current_branch_id: Option<String>,
     pub model_id: Option<String>,
+    /// Flexible context for this chat (e.g., system prompt, docs, files in future)
+    /// Can be used for system prompt, docs, or anything else. More flexible than 'system_prompt'.
+    pub context: Option<String>,
+    /// How context is inherited: 'inherit', 'override', 'none', or 'workspace' (inherit from workspace)
+    /// 'workspace' means inherit from workspace.
     pub context_inheritance_mode: String,
     pub is_archived: bool,
     pub archived_at: Option<NaiveDateTime>,

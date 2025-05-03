@@ -3,5 +3,5 @@ import { ChatNodesResponse } from "../../../types";
 
 export const getProviderModels = async (providerId: string) => {
   console.debug("[api|getProviderModels]");
-  return invoke<ChatNodesResponse>("get_provider_models", { providerId });
+  return invoke<any>("get_provider_models", { providerId });
 };

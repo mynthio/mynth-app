@@ -46,6 +46,7 @@ pub fn run() {
             commands::ai::get_ai_models,
             commands::ai::get_ai_integration,
             commands::ai::delete_ai_integration,
+            commands::ai::set_ai_integration_api_key,
             commands::api_client::get_providers,
             commands::api_client::get_provider_models,
             commands::workspace::get_workspace,

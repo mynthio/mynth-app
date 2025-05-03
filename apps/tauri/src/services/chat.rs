@@ -76,7 +76,7 @@ impl ChatService {
             Chat,
             r#"
             SELECT id, name, parent_id, workspace_id, current_branch_id, 
-                   is_archived, archived_at, updated_at, context_inheritance_mode,
+                   is_archived, archived_at, updated_at, context, context_inheritance_mode,
                    extensions, metadata, model_id
             FROM chats
             WHERE id = ?

@@ -4,11 +4,29 @@ import {
   APP_SETTINGS_DIALOG_EVENT_ID,
   AppSettingsDialogProps,
 } from "./components/app-settings.dialog";
+import {
+  CHAT_SYSTEM_PROMPT_DIALOG_EVENT_ID,
+  ChatSystemPromptDialogProps,
+} from "./components/chat-system-prompt-dialog";
+import {
+  CHAT_MODEL_SELECTION_DIALOG_EVENT_ID,
+  ChatModelSelectionDialogProps,
+} from "./components/chat-model-selection-dialog";
 
 // Define payload types for each dialog
 type AppSettingsDialogPayload = {
   id: typeof APP_SETTINGS_DIALOG_EVENT_ID;
   payload: AppSettingsDialogProps;
+};
+
+type ChatSystemPromptDialogPayload = {
+  id: typeof CHAT_SYSTEM_PROMPT_DIALOG_EVENT_ID;
+  payload: ChatSystemPromptDialogProps;
+};
+
+type ChatModelSelectionDialogPayload = {
+  id: typeof CHAT_MODEL_SELECTION_DIALOG_EVENT_ID;
+  payload: ChatModelSelectionDialogProps;
 };
 
 // Add other dialog payload types here as needed
@@ -19,7 +37,9 @@ type AppSettingsDialogPayload = {
 
 // Union type for all possible event payloads
 type EventBusPayload =
-  | AppSettingsDialogPayload;
+  | AppSettingsDialogPayload
+  | ChatSystemPromptDialogPayload
+  | ChatModelSelectionDialogPayload;
 // | OtherDialogPayload;
 
 // Create the event bus
@@ -33,9 +53,7 @@ type DialogState = {
 };
 
 // Create the signal for the dialog state
-const [dialogsState, setDialogsState] = createSignal<DialogState | null>(
-  null
-);
+const [dialogsState, setDialogsState] = createSignal<DialogState | null>(null);
 
 // Subscribe to the event bus to open dialogs
 dialogEventBus.listen((event) => {
@@ -63,3 +81,11 @@ export function closeDialog() {
 
 // Export the state signal
 export { dialogsState };
+
+// Export the type and component for the ChatSystemPromptDialog
+export type { ChatSystemPromptDialogProps } from "./components/chat-system-prompt-dialog";
+export { ChatSystemPromptDialog } from "./components/chat-system-prompt-dialog";
+
+// Export the type and component for the ChatModelSelectionDialog
+export type { ChatModelSelectionDialogProps } from "./components/chat-model-selection-dialog";
+export { ChatModelSelectionDialog } from "./components/chat-model-selection-dialog";

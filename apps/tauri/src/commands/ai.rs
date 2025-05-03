@@ -1,5 +1,7 @@
 use super::error::CommandError;
-use crate::models::ai::{AiIntegration, CreateAiIntegrationParams};
+use crate::models::ai::{
+    AiIntegration, CreateAiIntegrationParams, UpdateAiIntegrationApiKeyParams,
+};
 use crate::services::ai::AiServiceError;
 use crate::AppState;
 use tracing::{error, info};
@@ -107,5 +109,37 @@ pub async fn get_ai_models(
         .map_err(|e| {
             error!("Service error in get_ai_models: {:?}", e);
             CommandError::from(e)
+        })
+}
+
+#[tauri::command]
+pub async fn set_ai_integration_api_key(
+    state: tauri::State<'_, AppState>,
+    params: UpdateAiIntegrationApiKeyParams,
+) -> Result<(), String> {
+    info!(
+        "Command: set_ai_integration_api_key for ID: {}",
+        params.integration_id
+    );
+
+    state
+        .db
+        .ai
+        .set_api_key(&params.integration_id, &params.api_key)
+        .await
+        .map_err(|e| match e {
+            AiServiceError::InvalidParameter(msg) => {
+                error!("Invalid parameter: {}", msg);
+                format!("Invalid input: {}", msg)
+            }
+            AiServiceError::NotFound(msg) => {
+                error!("Not found: {}", msg);
+                format!("Not found: {}", msg)
+            }
+            AiServiceError::Database(err) => {
+                error!("Database error: {}", err);
+                format!("Database error occurred: {}", err)
+            }
+            _ => e.to_string(),
         })
 }

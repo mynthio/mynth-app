@@ -6,7 +6,11 @@ import {
   JSX,
 } from "solid-js";
 
-export type StaticSettingsItem = "general" | "chats" | "look-and-feel";
+export type StaticSettingsItem =
+  | "general"
+  | "chats"
+  | "look-and-feel"
+  | "add-ai-integration";
 export type DynamicSettingsItemType = "workspace" | "ai-integration";
 
 export type ActiveSettingsItem =

@@ -40,7 +40,7 @@ impl WorkspaceService {
         sqlx::query_as!(
             Workspace,
             r#"
-            SELECT id, name, updated_at
+            SELECT id, name, updated_at, context, context_inheritance_mode
             FROM workspaces
             WHERE id = ?
             "#,
@@ -63,7 +63,7 @@ impl WorkspaceService {
         sqlx::query_as!(
             Workspace,
             r#"
-            SELECT id, name, updated_at
+            SELECT id, name, updated_at, context, context_inheritance_mode
             FROM workspaces
             ORDER BY name
             "#

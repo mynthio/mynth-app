@@ -61,16 +61,28 @@ const pop = (id: string) => {
 
 const push = (tab: Tab) => {
   if (tab.type === "chat") {
+    // If a chat tab with the same chatId already exists, just switch to it
     if (
       state.tabs.find(
+        // @ts-expect-error
         (t) => t.type === "chat" && t.data.chatId === tab.data.chatId
       )
     ) {
       setState("currentTab", tab.id);
       return;
     }
+    // If the current tab is the empty tab, replace it with the new chat tab
+    if (
+      state.tabs.length === 1 &&
+      state.tabs[0].type === "empty" &&
+      state.currentTab === EMPTY_TAB_ID
+    ) {
+      setState("tabs", [tab]);
+      setState("currentTab", tab.id);
+      return;
+    }
   }
-
+  // Otherwise, just add the new tab and switch to it
   setState("tabs", (tabs) => [...tabs, tab]);
   setState("currentTab", tab.id);
 };
@@ -92,10 +104,8 @@ const switchTo = (id: string) => {
 };
 
 export {
-  
   type ChatTab,
   type EmptyTab,
-  
   state,
   push,
   pushEmpty,
