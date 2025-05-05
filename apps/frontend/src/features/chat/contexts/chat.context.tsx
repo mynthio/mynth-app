@@ -1,43 +1,46 @@
+import { createStore } from 'solid-js/store'
+
 import {
   Accessor,
+  JSX,
   createContext,
   createEffect,
   createMemo,
-  JSX,
   onCleanup,
-} from "solid-js";
-import { createStore } from "solid-js/store";
-import { getChatBranchNodes } from "../../../data/api/chat-branch-nodes/get-chat-branch-nodes";
-import { ChatNode } from "../../../types";
-import { Channel, invoke } from "@tauri-apps/api/core";
-import { sendMessage as sendMessageApi } from "../../../data/api/message-generation/send-message";
+} from 'solid-js'
+
+import { Channel, invoke } from '@tauri-apps/api/core'
+
+import { getChatBranchNodes } from '../../../data/api/chat-branch-nodes/get-chat-branch-nodes'
+import { sendMessage as sendMessageApi } from '../../../data/api/message-generation/send-message'
+import { ChatNode } from '../../../types'
 
 type ChatContextState = {
-  branchId: string;
-  isFetching: boolean;
-  noMoreNodes: boolean;
-  nodes: ChatNode[];
-  lastNodeId: string;
-  isGenerating: boolean;
-};
+  branchId: string
+  isFetching: boolean
+  noMoreNodes: boolean
+  nodes: ChatNode[]
+  lastNodeId: string
+  isGenerating: boolean
+}
 
 type ChatContext = {
-  state: ChatContextState;
-  fetchNext: () => void;
-  pushNode: (args: ChatNode[]) => void;
-  updateLatestNode: (updater: (node: ChatNode) => ChatNode) => void;
-  updateNode: (nodeId: string, updater: (node: ChatNode) => ChatNode) => void;
-  setIsGenerating: (isGenerating: boolean) => void;
-  sendMessage: (message: string) => Promise<void>;
-};
+  state: ChatContextState
+  fetchNext: () => void
+  pushNode: (args: ChatNode[]) => void
+  updateLatestNode: (updater: (node: ChatNode) => ChatNode) => void
+  updateNode: (nodeId: string, updater: (node: ChatNode) => ChatNode) => void
+  setIsGenerating: (isGenerating: boolean) => void
+  sendMessage: (message: string) => Promise<void>
+}
 
 export const ChatContext = createContext<ChatContext>({
   state: {
-    branchId: "",
+    branchId: '',
     isFetching: false,
     noMoreNodes: false,
     nodes: [],
-    lastNodeId: "",
+    lastNodeId: '',
     isGenerating: false,
   },
   fetchNext: () => {},
@@ -46,24 +49,24 @@ export const ChatContext = createContext<ChatContext>({
   updateNode: () => {},
   setIsGenerating: () => {},
   sendMessage: () => Promise.resolve(),
-});
+})
 
 type ChatContextProviderProps = {
-  branchId: Accessor<string>;
-  children: JSX.Element;
-};
+  branchId: Accessor<string>
+  children: JSX.Element
+}
 
 export function ChatContextProvider(props: ChatContextProviderProps) {
   const [state, setState] = createStore<ChatContextState>({
-    branchId: "",
+    branchId: '',
     nodes: [],
     isFetching: false,
     noMoreNodes: false,
-    lastNodeId: "",
+    lastNodeId: '',
     isGenerating: false,
-  });
+  })
 
-  const branchId = createMemo(() => props.branchId());
+  const branchId = createMemo(() => props.branchId())
 
   // Update the branchId when the prop changes
   createEffect(() => {
@@ -73,23 +76,23 @@ export function ChatContextProvider(props: ChatContextProviderProps) {
       isFetching: false,
       noMoreNodes: false,
       isGenerating: false,
-      lastNodeId: "",
-    });
-  });
+      lastNodeId: '',
+    })
+  })
 
   // Handle re-connect
   createEffect(async () => {
-    if (!branchId()) return;
-    const _branchId = branchId();
+    if (!branchId()) return
+    const _branchId = branchId()
 
-    const channel = new Channel<any>();
+    const channel = new Channel<any>()
     channel.onmessage = (event) => {
-      console.log("EVENT", event);
-      if (event.event === "generationComplete") {
-        return;
+      console.log('EVENT', event)
+      if (event.event === 'generationComplete') {
+        return
       }
 
-      setState("isGenerating", true);
+      setState('isGenerating', true)
 
       updateLatestNode((node) =>
         node.id !== event.data.nodeId
@@ -101,46 +104,46 @@ export function ChatContextProvider(props: ChatContextProviderProps) {
                 content: event.data.message,
               },
             }
-      );
-    };
+      )
+    }
 
-    const isStreaming = await invoke("reconnect", {
+    const isStreaming = await invoke('reconnect', {
       branchId,
       onEvent: channel,
-    });
+    })
 
-    if (isStreaming === "NoActiveStream") {
-      setState("isGenerating", false);
-      return;
+    if (isStreaming === 'NoActiveStream') {
+      setState('isGenerating', false)
+      return
     }
 
     onCleanup(() => {
-      invoke("unregister_stream", {
+      invoke('unregister_stream', {
         branchId: _branchId,
-      });
-    });
-  });
+      })
+    })
+  })
 
   // Fetch the initial nodes when the branchId changes
   // Will happen when user switches chats or branches in single chat
   createEffect(() => {
-    if (!props.branchId()) return;
-    const branchId = props.branchId();
-    setState("isFetching", true);
+    if (!props.branchId()) return
+    const branchId = props.branchId()
+    setState('isFetching', true)
     getChatBranchNodes(branchId)
       .then((res) => {
         // console.log("FETCH INITIAL RESPONSE", res);
-        setState("lastNodeId", res.nodes[0]?.id);
-        setState("nodes", res.nodes);
-        setState("noMoreNodes", !res.hasMore);
+        setState('lastNodeId', res.nodes[0]?.id)
+        setState('nodes', res.nodes)
+        setState('noMoreNodes', !res.hasMore)
       })
       .finally(() => {
-        setState("isFetching", false);
-      });
-  });
+        setState('isFetching', false)
+      })
+  })
 
   const fetchNext = () => {
-    if (state.noMoreNodes) return;
+    if (state.noMoreNodes) return
 
     if (
       state.isFetching ||
@@ -148,52 +151,52 @@ export function ChatContextProvider(props: ChatContextProviderProps) {
       !state.branchId ||
       !state.lastNodeId
     )
-      return;
-    setState("isFetching", true);
+      return
+    setState('isFetching', true)
     getChatBranchNodes(state.branchId, state.lastNodeId)
       .then((res) => {
-        console.log("FETCH NEXT RESPONSE", res);
+        console.log('FETCH NEXT RESPONSE', res)
 
         if (res.nodes.length > 0) {
-          setState("nodes", [...res.nodes, ...state.nodes]);
+          setState('nodes', [...res.nodes, ...state.nodes])
         }
 
         if (!res.hasMore) {
-          setState("noMoreNodes", true);
+          setState('noMoreNodes', true)
         }
       })
       .finally(() => {
-        setState("isFetching", false);
-      });
-  };
+        setState('isFetching', false)
+      })
+  }
 
   const pushNode = (args: ChatNode[]) => {
-    setState("nodes", [...state.nodes, ...args]);
-  };
+    setState('nodes', [...state.nodes, ...args])
+  }
 
   const updateLatestNode = (updater: (node: ChatNode) => ChatNode) => {
-    const currentNodes = state.nodes;
-    if (currentNodes.length === 0) return;
+    const currentNodes = state.nodes
+    if (currentNodes.length === 0) return
 
-    const latestNode = currentNodes[currentNodes.length - 1];
-    const updatedNode = updater(latestNode);
+    const latestNode = currentNodes[currentNodes.length - 1]
+    const updatedNode = updater(latestNode)
 
-    setState("nodes", [...currentNodes.slice(0, -1), updatedNode]);
-  };
+    setState('nodes', [...currentNodes.slice(0, -1), updatedNode])
+  }
 
   const setIsGenerating = (isGenerating: boolean) => {
-    setState("isGenerating", isGenerating);
-  };
+    setState('isGenerating', isGenerating)
+  }
 
   const sendMessage = async (message: string) => {
-    if (state.isGenerating) return;
-    setState("isGenerating", true);
+    if (state.isGenerating) return
+    setState('isGenerating', true)
 
-    const channel = new Channel<any>();
+    const channel = new Channel<any>()
     channel.onmessage = (event) => {
-      console.log("EVENT", event);
-      if (event.event === "generationComplete") {
-        return setState("isGenerating", false);
+      console.log('EVENT', event)
+      if (event.event === 'generationComplete') {
+        return setState('isGenerating', false)
       }
 
       updateLatestNode((node) =>
@@ -206,29 +209,29 @@ export function ChatContextProvider(props: ChatContextProviderProps) {
                 content: event.data.message,
               },
             }
-      );
-    };
+      )
+    }
 
-    const newNodes = await sendMessageApi(state.branchId, message, channel);
+    const newNodes = await sendMessageApi(state.branchId, message, channel)
 
-    pushNode([newNodes.userNode, newNodes.assistantNode]);
-  };
+    pushNode([newNodes.userNode, newNodes.assistantNode])
+  }
 
   const updateNode = (
     nodeId: string,
     updater: (node: ChatNode) => ChatNode
   ) => {
-    const currentNodes = state.nodes;
-    if (currentNodes.length === 0) return;
+    const currentNodes = state.nodes
+    if (currentNodes.length === 0) return
 
     const updatedNode = updater(
       currentNodes.find((node) => node.id === nodeId)!
-    );
+    )
     setState(
-      "nodes",
+      'nodes',
       currentNodes.map((node) => (node.id === nodeId ? updatedNode : node))
-    );
-  };
+    )
+  }
 
   const value = {
     state,
@@ -238,9 +241,9 @@ export function ChatContextProvider(props: ChatContextProviderProps) {
     setIsGenerating,
     sendMessage,
     updateNode,
-  };
+  }
 
   return (
     <ChatContext.Provider value={value}>{props.children}</ChatContext.Provider>
-  );
+  )
 }

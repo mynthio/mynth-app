@@ -11,7 +11,7 @@ CREATE TABLE
         -- How context is inherited: 'inherit', 'override', 'none', or 'workspace' (inherit from workspace)
         context_inheritance_mode TEXT NOT NULL DEFAULT 'inherit', -- 'inherit', 'override', 'none', 'workspace'. 'workspace' means inherit from workspace.
         -- Temporal markers for specimen tracking
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
 -- Indexes for workspaces (for future-proofing your galactic queries)
@@ -20,7 +20,7 @@ CREATE TABLE
 -- These data-vessels organize Earth-communications into our preferred hierarchical formation
 -- Humans' disorganized data patterns are most peculiar to our species! 
 CREATE TABLE
-    chat_folders (
+    folders (
         id TEXT PRIMARY KEY NOT NULL, -- ULID - specimen container identifier with embedded timestamp
         -- Designation data
         name TEXT NOT NULL,
@@ -38,15 +38,15 @@ CREATE TABLE
         -- Temporal markers for specimen tracking
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         -- Interstellar relational bindings
-        CONSTRAINT fk_folder_parent FOREIGN KEY (parent_id) REFERENCES chat_folders (id) ON DELETE CASCADE,
+        CONSTRAINT fk_folder_parent FOREIGN KEY (parent_id) REFERENCES folders (id) ON DELETE CASCADE,
         CONSTRAINT fk_folder_workspace FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE
     );
 
--- Indexes for chat_folders (for warp-speed folder lookups)
-CREATE INDEX idx_folders_workspace_id ON chat_folders (workspace_id);
+-- Indexes for folders (for warp-speed folder lookups)
+CREATE INDEX idx_folders_workspace_id ON folders (workspace_id);
 
 -- Find all folders in a workspace at light speed
-CREATE INDEX idx_folders_parent_id ON chat_folders (parent_id);
+CREATE INDEX idx_folders_parent_id ON folders (parent_id);
 
 -- Traverse the folder nebula
 -- 👾 COMMUNICATION TRANSMISSION LOGS
@@ -60,11 +60,9 @@ CREATE TABLE
         -- Reference to progenitor vessel
         parent_id TEXT, -- The parent folder for this chat (NULL if root)
         -- Reference to habitation unit
-        workspace_id TEXT, -- The workspace this chat belongs to
+        workspace_id TEXT NOT NULL, -- The workspace this chat belongs to
         -- Reference to current timeline variant
         current_branch_id TEXT, -- The current timeline branch (for quantum chat adventures)
-        -- Reference to intelligence simulation unit
-        model_id TEXT, -- The AI model currently piloting this chat
         -- Flexible context for this chat (e.g., system prompt, docs, files in future)
         context TEXT DEFAULT NULL, -- Context can be used for system prompt, docs, or anything else. More flexible than 'system_prompt'.
         -- How context is inherited: 'inherit', 'override', 'none', or 'workspace' (inherit from workspace)
@@ -73,14 +71,14 @@ CREATE TABLE
         is_archived BOOLEAN NOT NULL DEFAULT FALSE, -- Transmission temporarily suspended! 🌌
         archived_at TIMESTAMP, -- Stardate of transmission suspension
         -- Analytics and usage metrics
-        metadata TEXT DEFAULT NULL, -- JSON field for storing chat-wide metrics (tokens, cost, etc.) 🔢
+        json_metadata TEXT DEFAULT NULL, -- JSON field for storing chat-wide metrics (tokens, cost, etc.) 🔢
         -- Extension data storage
-        extensions TEXT DEFAULT NULL, -- JSON field for extensions to store arbitrary data
+        json_extensions TEXT DEFAULT NULL, -- JSON field for extensions to store arbitrary data
         -- Temporal markers for specimen tracking
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         -- Interstellar relational bindings
-        CONSTRAINT fk_chat_parent FOREIGN KEY (parent_id) REFERENCES chat_folders (id) ON DELETE CASCADE,
-        CONSTRAINT fk_chat_branch FOREIGN KEY (current_branch_id) REFERENCES chat_branches (id) ON DELETE SET NULL,
+        CONSTRAINT fk_chat_parent FOREIGN KEY (parent_id) REFERENCES folders (id) ON DELETE CASCADE,
+        CONSTRAINT fk_chat_branch FOREIGN KEY (current_branch_id) REFERENCES branches (id) ON DELETE SET NULL,
         CONSTRAINT fk_chat_workspace FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE
     );
 
@@ -96,7 +94,7 @@ CREATE INDEX idx_chats_workspace_id ON chats (workspace_id);
 -- Reminiscent of our quantum probability manipulators from Dimension X-7
 -- Each timeline variant inherits cosmic patterns from its progenitor!
 CREATE TABLE
-    chat_branches (
+    branches (
         id TEXT PRIMARY KEY NOT NULL, -- ULID - reality variant identifier with embedded timestamp
         -- Designation data
         name TEXT, -- Name of this timeline branch (optional, for creative aliens)
@@ -118,23 +116,23 @@ CREATE TABLE
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         -- Interstellar relational bindings
         CONSTRAINT fk_branch_chat FOREIGN KEY (chat_id) REFERENCES chats (id) ON DELETE CASCADE,
-        CONSTRAINT fk_branch_parent FOREIGN KEY (parent_id) REFERENCES chat_branches (id) ON DELETE SET NULL,
-        CONSTRAINT fk_branch_node FOREIGN KEY (branched_from_node_id) REFERENCES chat_nodes (id) ON DELETE SET NULL,
-        CONSTRAINT fk_branch_model FOREIGN KEY (model_id) REFERENCES ai_models (id) ON DELETE SET NULL
+        CONSTRAINT fk_branch_parent FOREIGN KEY (parent_id) REFERENCES branches (id) ON DELETE SET NULL,
+        CONSTRAINT fk_branch_node FOREIGN KEY (branched_from_node_id) REFERENCES nodes (id) ON DELETE SET NULL,
+        CONSTRAINT fk_branch_model FOREIGN KEY (model_id) REFERENCES models (id) ON DELETE SET NULL
     );
 
--- Indexes for chat_branches (for multiverse navigation)
-CREATE INDEX idx_chat_branches_chat_id ON chat_branches (chat_id);
+-- Indexes for branches (for multiverse navigation)
+CREATE INDEX idx_branches_chat_id ON branches (chat_id);
 
 -- Find all branches for a chat
 -- 🪐 COMMUNICATION QUANTUM PARTICLES
 -- The fundamental matter-units of our transmission observation network
 -- Can manifest as Earth-being messages or our research annotations
 CREATE TABLE
-    chat_nodes (
+    nodes (
         id TEXT PRIMARY KEY NOT NULL, -- ULID - quantum particle identifier with embedded timestamp
         -- Particle classification
-        node_type TEXT NOT NULL, -- 'user_message', 'assistant_message', 'user_note', 'assistant_note'
+        type TEXT NOT NULL, -- 'user_message', 'assistant_message', 'user_note', 'assistant_note'
         -- Reference to timeline variant
         branch_id TEXT NOT NULL, -- The timeline branch this node belongs to
         -- Reference to progenitor particle
@@ -148,25 +146,25 @@ CREATE TABLE
         -- Extension data storage
         extensions TEXT DEFAULT NULL, -- JSON field for extensions to store arbitrary data
         -- Interstellar relational bindings
-        CONSTRAINT fk_node_branch FOREIGN KEY (branch_id) REFERENCES chat_branches (id) ON DELETE CASCADE,
-        CONSTRAINT fk_node_parent FOREIGN KEY (parent_id) REFERENCES chat_nodes (id) ON DELETE CASCADE,
-        CONSTRAINT fk_node_message FOREIGN KEY (active_message_id) REFERENCES chat_node_messages (id) ON DELETE SET NULL,
-        CONSTRAINT fk_node_tool_use FOREIGN KEY (active_tool_use_id) REFERENCES chat_node_mcp_tool_use (id) ON DELETE SET NULL
+        CONSTRAINT fk_node_branch FOREIGN KEY (branch_id) REFERENCES branches (id) ON DELETE CASCADE,
+        CONSTRAINT fk_node_parent FOREIGN KEY (parent_id) REFERENCES nodes (id) ON DELETE CASCADE,
+        CONSTRAINT fk_node_message FOREIGN KEY (active_message_id) REFERENCES node_messages (id) ON DELETE SET NULL,
+        CONSTRAINT fk_node_tool_use FOREIGN KEY (active_tool_use_id) REFERENCES node_mcp_tool_use (id) ON DELETE SET NULL
     );
 
--- Indexes for chat_nodes (for quantum entanglement lookups)
-CREATE INDEX idx_chat_nodes_branch_id ON chat_nodes (branch_id);
+-- Indexes for nodes (for quantum entanglement lookups)
+CREATE INDEX idx_nodes_branch_id ON nodes (branch_id);
 
 -- Find all nodes in a branch
 -- 📡 QUANTUM STATE ARCHIVES
 -- Records different matter-states of each communication particle
 -- Enables monitoring of Earth-communication evolution across spacetime
 CREATE TABLE
-    chat_node_messages (
+    node_messages (
         id TEXT PRIMARY KEY NOT NULL, -- ULID - quantum state identifier with embedded timestamp
         -- Matter-state data
         content TEXT NOT NULL, -- The actual message content (Earthling or alien)
-        version_number INTEGER NOT NULL, -- Version of this message state (for time-travel debugging)
+        version_number INTEGER NOT NULL DEFAULT 0, -- Version of this message state (for time-travel debugging)
         -- Status tracking for content versions
         status TEXT NOT NULL, -- 'generating', 'error', 'done', etc. (galactic status codes)
         -- Reference to quantum particle
@@ -176,131 +174,77 @@ CREATE TABLE
         -- Cosmic energy consumption metrics
         token_count INTEGER, -- Number of tokens consumed during transmission
         cost REAL, -- Cost of the AI operation in Earth currency
-        api_metadata TEXT, -- JSON field with additional API response data
+        json_api_metadata TEXT DEFAULT NULL, -- JSON field with additional API response data
         -- Extension data storage
-        extensions TEXT DEFAULT NULL, -- JSON field for extensions to store arbitrary data
+        json_extensions TEXT DEFAULT NULL, -- JSON field for extensions to store arbitrary data
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         -- Interstellar relational bindings
-        CONSTRAINT fk_message_node FOREIGN KEY (node_id) REFERENCES chat_nodes (id) ON DELETE CASCADE,
-        CONSTRAINT fk_message_model FOREIGN KEY (model_id) REFERENCES ai_models (id) ON DELETE SET NULL
+        CONSTRAINT fk_message_node FOREIGN KEY (node_id) REFERENCES nodes (id) ON DELETE CASCADE,
+        CONSTRAINT fk_message_model FOREIGN KEY (model_id) REFERENCES models (id) ON DELETE SET NULL
     );
 
--- Indexes for chat_node_messages (for state evolution at warp speed)
-CREATE INDEX idx_chat_node_messages_node_id ON chat_node_messages (node_id);
+-- Indexes for node_messages (for state evolution at warp speed)
+CREATE INDEX idx_node_messages_node_id ON node_messages (node_id);
 
 -- Find all messages for a node
--- 🤖 SYNTHETIC INTELLIGENCE INTERFACE PROTOCOLS
--- Because one intelligence simulation is insufficient for comprehensive Earth study!
--- This is our registry of artificial thought-pattern generators
+-- 🚀 PROVIDERS TABLE (formerly ai_integrations)
 CREATE TABLE
-    ai_integrations (
-        id TEXT PRIMARY KEY NOT NULL, -- ULID - interface protocol identifier with embedded timestamp
-        mynth_id TEXT, -- Our special galactic classification code, utility under evaluation by High Council
-        -- Designation data
-        display_name TEXT NOT NULL,
-        host TEXT NOT NULL, -- Coordinates of intelligence simulation hub (e.g., "api.openai.com")
-        base_path TEXT, -- Access portal coordinates (e.g., "/v1")
-        -- Paths by type
-        chat_completion_path TEXT, -- Path to the chat completion endpoint
-        -- API key
-        api_key_id TEXT, -- Your interstellar access credential 🔑
-        is_enabled BOOLEAN NOT NULL DEFAULT TRUE, -- Is the protocol currently active?
-        is_custom BOOLEAN NOT NULL DEFAULT TRUE, -- Is this a custom integration?
-        -- We track the origin of each protocol for our galactic research database
-        marketplace_integration_id TEXT, -- Identifier for protocols acquired from the Earth's digital bazaars
-        -- Integration-specific settings
-        settings TEXT DEFAULT NULL, -- JSON field for settings like auto-update models, etc.
-        -- Temporal markers for specimen tracking
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    providers (
+        id TEXT PRIMARY KEY NOT NULL, -- ULID - provider identifier
+        name TEXT NOT NULL, -- Display name for the provider
+        base_url TEXT NOT NULL, -- API base URL
+        compatibility TEXT NOT NULL DEFAULT 'none', -- `none` | `openai`
+        auth_type TEXT NOT NULL, -- 'none', 'bearer', 'custom'
+        auth_config TEXT, -- JSON: custom token placement, headers, etc.
+        models_sync_strategy TEXT NOT NULL, -- 'mynth', 'local'
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP -- For syncing/versioning
     );
 
--- No indexes for ai_integrations yet (aliens are still evaluating the need)
--- 🛸 SYNTHETIC INTELLIGENCE SIMULATION UNITS
--- The thought-pattern generators in our Earth-observation laboratory
+-- 🛰️ PROVIDER ENDPOINTS TABLE
 CREATE TABLE
-    ai_models (
-        id TEXT PRIMARY KEY NOT NULL, -- ULID - simulation unit identifier with embedded timestamp
-        -- Designation data
-        model_id TEXT NOT NULL, -- The unit's Earth designation (e.g., "gpt-4")
-        mynth_model_id TEXT, -- Our special galactic classification code, utility under evaluation by High Council
-        path TEXT, -- Access portal coordinates (e.g., "/chat/completions")
-        display_name TEXT, -- User-friendly name for the model
-        -- We track the origin of each simulation unit for our research protocols
-        is_custom BOOLEAN NOT NULL DEFAULT FALSE, -- Is this a custom model?
-        -- Capabilities supported by this model
-        capabilities TEXT DEFAULT '[]', -- JSON array of capabilities: 'image_upload', 'vision', 'tools', etc.
-        -- Classification tags for organization and filtering
-        tags TEXT DEFAULT '[]', -- JSON array of tags: 'creative', 'factual', 'coding', 'fast', etc.
-        metadata TEXT DEFAULT NULL, -- JSON field for storing arbitrary metadata
-        -- User notes
-        notes TEXT, -- Notes for galactic researchers
-        -- Context window size
-        max_context_size INTEGER, -- Maximum context window for this model
-        -- Cost metrics (in USD)
-        cost_per_input_token REAL, -- Cost per input token (Earth currency)
-        cost_per_output_token REAL, -- Cost per output token (Earth currency)
-        -- Settings for this model
-        settings TEXT DEFAULT NULL, -- JSON field for settings like temperature, custom_context_size, etc.
-        -- Reference to interface protocol
-        integration_id TEXT NOT NULL, -- The integration this model belongs to
-        -- Temporal markers for specimen tracking
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        -- Interstellar relational bindings
-        CONSTRAINT fk_model_integration FOREIGN KEY (integration_id) REFERENCES ai_integrations (id) ON DELETE CASCADE,
-        -- Ensure model_id + integration_id combination is unique across the galaxy
-        CONSTRAINT uq_model_integration UNIQUE (model_id, integration_id)
+    provider_endpoints (
+        id TEXT PRIMARY KEY NOT NULL, -- ULID - endpoint identifier
+        provider_id TEXT NOT NULL, -- FK to providers
+        display_name TEXT, -- e.g. 'chat'
+        type TEXT NOT NULL, -- 'chat', 'completion', 'embedding', 'moderation'
+        path TEXT NOT NULL, -- Relative URL
+        method TEXT NOT NULL, -- 'GET', 'POST'
+        -- Schema
+        json_request_schema TEXT, -- JSON: template or schema for request body
+        json_response_schema TEXT, -- JSON: template or schema for response body
+        -- Response parsing and request building
+        json_request_config TEXT, -- JSON: extra config (e.g. headers override)
+        json_response_config TEXT, -- JSON: template or schema for response body
+        streaming BOOLEAN NOT NULL DEFAULT TRUE, -- Does it stream?
+        priority INTEGER, -- Optional: helps choose default endpoint
+        json_config TEXT, -- JSON: extra config (e.g. headers override)
+        CONSTRAINT fk_endpoint_provider FOREIGN KEY (provider_id) REFERENCES providers (id) ON DELETE CASCADE
     );
 
--- Find all settings for a chat
--- 🧪 VARIABLE CONTAINMENT VESSELS
--- For storing customizable data elements used in system prompts and chat messages
--- These elements can be substituted at runtime with their assigned values using the {{variable_name}} syntax
+-- 🤖 PROVIDER MODELS TABLE
 CREATE TABLE
-    variables (
-        id TEXT PRIMARY KEY NOT NULL, -- ULID - variable identifier with embedded timestamp
-        -- Variable designation
-        key TEXT NOT NULL, -- Variable name (e.g., "user_name", "company", "context")
-        value TEXT NOT NULL, -- Variable value, to be substituted at runtime
-        description TEXT, -- Optional explanation of the variable's purpose
-        -- Reference points in the hierarchy
-        workspace_id TEXT DEFAULT '' NOT NULL REFERENCES workspaces (id) ON DELETE CASCADE,
-        folder_id TEXT DEFAULT '' NOT NULL REFERENCES chat_folders (id) ON DELETE CASCADE,
-        chat_id TEXT DEFAULT '' NOT NULL REFERENCES chats (id) ON DELETE CASCADE,
-        -- Temporal markers for specimen tracking
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        -- Entity type integrity constraint
-        CONSTRAINT check_one_entity CHECK (
-            (
-                workspace_id != ''
-                AND folder_id = ''
-                AND chat_id = ''
-            )
-            OR (
-                workspace_id = ''
-                AND folder_id != ''
-                AND chat_id = ''
-            )
-            OR (
-                workspace_id = ''
-                AND folder_id = ''
-                AND chat_id != ''
-            )
-        ),
-        -- Simple UNIQUE constraint works with non-NULL empty strings
-        CONSTRAINT unique_variable_per_entity UNIQUE (key, workspace_id, folder_id, chat_id)
+    models (
+        id TEXT PRIMARY KEY NOT NULL, -- ULID - model identifier
+        provider_id TEXT NOT NULL, -- FK to providers
+        name TEXT NOT NULL, -- model name used in API calls
+        display_name TEXT, -- User-facing title
+        max_input_tokens INTEGER, -- Maximum context window size (e.g. 8192, 32000)
+        input_price REAL, -- Cost per 1k tokens for prompts
+        output_price REAL, -- Cost per 1k tokens for completions
+        tags TEXT, -- Comma-separated or JSON array of model tags
+        source TEXT NOT NULL, -- 'remote', 'local'
+        is_hidden BOOLEAN NOT NULL DEFAULT FALSE, -- Whether to show in UI
+        json_config TEXT, -- JSON: architecture, family, speeds, etc.
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- For syncing
+        CONSTRAINT fk_model_provider FOREIGN KEY (provider_id) REFERENCES providers (id) ON DELETE CASCADE
     );
-
--- Indexes for variables (for variable substitution at light speed)
-CREATE INDEX idx_variables_key ON variables (key);
 
 -- Find variables by key
-CREATE INDEX idx_variables_workspace_id ON variables (workspace_id);
-
+-- CREATE INDEX idx_variables_key ON variables (key);
 -- Find variables for a workspace
-CREATE INDEX idx_variables_folder_id ON variables (folder_id);
-
+-- CREATE INDEX idx_variables_workspace_id ON variables (workspace_id);
 -- Find variables for a folder
-CREATE INDEX idx_variables_chat_id ON variables (chat_id);
-
+-- CREATE INDEX idx_variables_folder_id ON variables (folder_id);
 -- Find variables for a chat
 -- 🛠️ MCP SERVER INTEGRATION PLATFORM
 -- Coordinate servers for the Multi-Cognitive Processing (MCP) network
@@ -354,7 +298,7 @@ CREATE TABLE
 -- Records different states of tool usage associated with a quantum particle
 -- Allows tracking of tool inputs, outputs, and execution status
 CREATE TABLE
-    chat_node_mcp_tool_use (
+    node_mcp_tool_use (
         id TEXT PRIMARY KEY NOT NULL, -- ULID - tool use state identifier with embedded timestamp
         -- State data
         status TEXT NOT NULL, -- 'pending', 'in_progress', 'done', 'error' (galactic status codes)
@@ -369,12 +313,12 @@ CREATE TABLE
         -- Temporal markers
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         -- Interstellar relational bindings
-        CONSTRAINT fk_tool_use_node FOREIGN KEY (node_id) REFERENCES chat_nodes (id) ON DELETE CASCADE,
+        CONSTRAINT fk_tool_use_node FOREIGN KEY (node_id) REFERENCES nodes (id) ON DELETE CASCADE,
         CONSTRAINT fk_tool_use_tool FOREIGN KEY (tool_id) REFERENCES mcp_server_tools (id) ON DELETE CASCADE
     );
 
--- Indexes for chat_node_mcp_tool_use (for tool use tracking at galactic scale)
-CREATE INDEX idx_chat_node_mcp_tool_use_node_id ON chat_node_mcp_tool_use (node_id);
+-- Indexes for node_mcp_tool_use (for tool use tracking at galactic scale)
+CREATE INDEX idx_node_mcp_tool_use_node_id ON node_mcp_tool_use (node_id);
 
 -- Find all tool uses for a node
-CREATE INDEX idx_chat_node_mcp_tool_use_tool_id ON chat_node_mcp_tool_use (tool_id);
+CREATE INDEX idx_node_mcp_tool_use_tool_id ON node_mcp_tool_use (tool_id);

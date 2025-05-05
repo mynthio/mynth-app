@@ -1,20 +1,22 @@
-import CorvuDialog from "@corvu/dialog";
-import { ComponentProps, JSX } from "solid-js";
-import { Button, ButtonProps } from "./button";
+import CorvuDialog from '@corvu/dialog'
 
-export const useDialog = CorvuDialog.useContext;
+import { ComponentProps, JSX } from 'solid-js'
+
+import { Button, ButtonProps } from './button'
+
+export const useDialog = CorvuDialog.useContext
 
 interface DialogProps extends ComponentProps<typeof CorvuDialog> {}
 
 export function Dialog(props: DialogProps) {
-  return <CorvuDialog {...props} />;
+  return <CorvuDialog {...props} />
 }
 
 interface DialogTriggerProps
   extends ComponentProps<typeof CorvuDialog.Trigger> {}
 
 function DialogTrigger(props: DialogTriggerProps) {
-  return <CorvuDialog.Trigger {...props} />;
+  return <CorvuDialog.Trigger {...props} />
 }
 
 interface DialogContentProps
@@ -43,13 +45,13 @@ export function DialogContent(props: DialogContentProps) {
         />
       </div>
     </CorvuDialog.Portal>
-  );
+  )
 }
 
 interface DialogLabelProps extends ComponentProps<typeof CorvuDialog.Label> {}
 
 export function DialogLabel(props: DialogLabelProps) {
-  return <CorvuDialog.Label {...props} class="text-16px font-500" />;
+  return <CorvuDialog.Label {...props} class="text-16px font-500" />
 }
 
 interface DialogDescriptionProps
@@ -58,18 +60,18 @@ interface DialogDescriptionProps
 export function DialogDescription(props: DialogDescriptionProps) {
   return (
     <CorvuDialog.Description {...props} class="text-16px font-300 mt-12px" />
-  );
+  )
 }
 
 interface DialogCloseButtonProps
   extends ComponentProps<typeof CorvuDialog.Close> {}
 
 export function DialogCloseButton(props: DialogCloseButtonProps) {
-  return <CorvuDialog.Close {...props} />;
+  return <CorvuDialog.Close {...props} />
 }
 
 interface DialogActionsProps {
-  children: JSX.Element;
+  children: JSX.Element
 }
 
 export function DialogActions(props: DialogActionsProps) {
@@ -77,11 +79,11 @@ export function DialogActions(props: DialogActionsProps) {
     <div class="flex items-center justify-end gap-6px mt-24px">
       {props.children}
     </div>
-  );
+  )
 }
 
 interface DialogActionButtonProps extends ButtonProps {}
 
 export function DialogActionButton(props: DialogActionButtonProps) {
-  return <Button {...props} />;
+  return <Button {...props} />
 }

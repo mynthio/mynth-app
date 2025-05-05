@@ -1,9 +1,9 @@
-import { ChatNode as ChatNodeType } from "../../../../types";
-import { Card } from "../../../../ui/card";
+import { ChatNode as ChatNodeType } from '../../../../types'
+import { Card } from '../../../../ui/card'
 
 type ChatNodeProps = {
-  node: ChatNodeType;
-};
+  node: ChatNodeType
+}
 
 export function ChatNode(props: ChatNodeProps) {
   return (
@@ -13,5 +13,5 @@ export function ChatNode(props: ChatNodeProps) {
         innerHTML={props.node.activeMessage?.content}
       />
     </Card>
-  );
+  )
 }

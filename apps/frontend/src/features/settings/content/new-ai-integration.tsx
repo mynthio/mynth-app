@@ -1,10 +1,11 @@
-import { For } from "solid-js";
-import { useProvidersQuery } from "../../../data/queries/api/use-providers-query";
-import { Button } from "../../../ui/button";
-import { setNavigationStore } from "../../../stores/navigation.store";
+import { For } from 'solid-js'
+
+import { useProvidersQuery } from '../../../data/queries/api/use-providers-query'
+import { setNavigationStore } from '../../../stores/navigation.store'
+import { Button } from '../../../ui/button'
 
 export function NewAiIntegration() {
-  const providersQuery = useProvidersQuery();
+  const providersQuery = useProvidersQuery()
 
   return (
     <div class="flex flex-col gap-24px">
@@ -19,10 +20,10 @@ export function NewAiIntegration() {
             <div>
               <Button
                 onClick={() => {
-                  setNavigationStore("content", {
+                  setNavigationStore('content', {
                     id: `provider_integration_settings_configure_${provider.id}`,
-                    type: "settings",
-                  });
+                    type: 'settings',
+                  })
                 }}
               >
                 Integrate
@@ -32,5 +33,5 @@ export function NewAiIntegration() {
         )}
       </For>
     </div>
-  );
+  )
 }

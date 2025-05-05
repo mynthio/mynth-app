@@ -1,4 +1,4 @@
-import { Component } from "solid-js";
+import { Component } from 'solid-js'
 
 /**
  * Look & Feel settings page component
@@ -40,5 +40,5 @@ export const LookAndFeelSettings: Component = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

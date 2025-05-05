@@ -1,9 +1,10 @@
-import { TabBase } from "./tab-base";
-import { type EmptyTab, state, pop, switchTo } from "../../tabs.store";
-import { createMemo } from "solid-js";
+import { createMemo } from 'solid-js'
+
+import { type EmptyTab, pop, state, switchTo } from '../../tabs.store'
+import { TabBase } from './tab-base'
 
 export function EmptyTab({ tab }: { tab: EmptyTab }) {
-  const isActive = createMemo(() => tab.id === state.currentTab);
+  const isActive = createMemo(() => tab.id === state.currentTab)
   return (
     <TabBase
       tab={tab}
@@ -12,5 +13,5 @@ export function EmptyTab({ tab }: { tab: EmptyTab }) {
       onClick={() => switchTo(tab.id)}
       onClose={() => pop(tab.id)}
     />
-  );
+  )
 }

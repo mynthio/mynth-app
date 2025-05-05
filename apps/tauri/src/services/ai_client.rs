@@ -1,9 +1,8 @@
-use futures::{Stream, StreamExt};
+use futures::StreamExt;
 use reqwest::Client;
 use serde::de::DeserializeOwned;
 use serde_json::json;
 use std::error::Error;
-use std::pin::Pin;
 
 /// Message for chat completions
 #[derive(Clone, Debug, serde::Serialize)]

@@ -1,17 +1,17 @@
 $schema: 'https://moonrepo.dev/schemas/project.json'
 
-language: "typescript"
+language: 'typescript'
 project:
-  name: "frontend"
-  description: "SolidJS frontend"
-type: "application"
+  name: 'frontend'
+  description: 'SolidJS frontend'
+type: 'application'
 tasks:
   build:
-    command: "pnpm build"
+    command: 'pnpm build'
     outputs:
-      - "dist/**"
+      - 'dist/**'
   dev:
-    command: "pnpm dev"
+    command: 'pnpm dev'
     preset: server
   update-deps:
-    command: "pnpm up --latest"
+    command: 'pnpm up --latest'

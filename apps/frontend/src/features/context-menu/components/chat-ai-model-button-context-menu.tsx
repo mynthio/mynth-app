@@ -1,11 +1,11 @@
-import { ContextMenuPayload } from "..";
+import { ContextMenuPayload } from '..'
 import {
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from "../../../ui/dropdown-menu";
+} from '../../../ui/dropdown-menu'
 
 interface ChatAiModelButtonContextMenuProps {
-  payload: ContextMenuPayload;
+  payload: ContextMenuPayload
 }
 
 /**
@@ -18,31 +18,31 @@ export function ChatAiModelButtonContextMenu(
   return (
     <>
       <DropdownMenuItem
-        onSelect={() => console.log("Select model", props.payload.id)}
+        onSelect={() => console.log('Select model', props.payload.id)}
       >
         Select Model
       </DropdownMenuItem>
       <DropdownMenuItem
-        onSelect={() => console.log("Configure model", props.payload.id)}
+        onSelect={() => console.log('Configure model', props.payload.id)}
       >
         Configure Settings
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem
-        onSelect={() => console.log("View model info", props.payload.id)}
+        onSelect={() => console.log('View model info', props.payload.id)}
       >
         Hyperbolic / Llama 3.3. 70B
       </DropdownMenuItem>
       <DropdownMenuItem
-        onSelect={() => console.log("Set as default", props.payload.id)}
+        onSelect={() => console.log('Set as default', props.payload.id)}
       >
         Groq / DeepSeek Coder 32B
       </DropdownMenuItem>
       <DropdownMenuItem
-        onSelect={() => console.log("Set as default", props.payload.id)}
+        onSelect={() => console.log('Set as default', props.payload.id)}
       >
         Groq / Claude 3.5 Sonnet
       </DropdownMenuItem>
     </>
-  );
+  )
 }

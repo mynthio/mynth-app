@@ -1,14 +1,14 @@
-import { DateTime } from "../common";
+import { DateTime } from '../common'
 
 /**
  * Represents a chat folder in the application
  * Maps to ChatFolder struct in Rust backend
  */
 export interface ChatFolder {
-  id: string;
-  name: string;
-  parentId?: string;
-  workspaceId?: string;
+  id: string
+  name: string
+  parentId?: string
+  workspaceId?: string
 }
 
 /**
@@ -16,11 +16,11 @@ export interface ChatFolder {
  * Maps to ChatListItem struct in Rust backend
  */
 interface ChatListItem {
-  id: string;
-  name: string;
-  parentId?: string;
-  workspaceId?: string;
-  updatedAt?: DateTime;
+  id: string
+  name: string
+  parentId?: string
+  workspaceId?: string
+  updatedAt?: DateTime
 }
 
 /**
@@ -28,8 +28,8 @@ interface ChatListItem {
  * Maps to UpdateChatParams in Rust backend
  */
 interface UpdateChatParams {
-  name?: string;
-  parentId?: string;
+  name?: string
+  parentId?: string
 }
 
 /**
@@ -37,8 +37,8 @@ interface UpdateChatParams {
  * Maps to UpdateFolderParams in Rust backend
  */
 interface UpdateFolderParams {
-  name?: string;
-  parentId?: string;
+  name?: string
+  parentId?: string
 }
 
 /**
@@ -46,15 +46,15 @@ interface UpdateFolderParams {
  * Maps to Chat struct in Rust backend
  */
 export interface Chat {
-  id: string;
-  name: string;
-  parentId?: string;
-  workspaceId?: string;
-  currentBranchId?: string;
-  isArchived?: boolean;
-  archivedAt?: DateTime;
-  createdAt?: DateTime;
-  updatedAt?: DateTime;
+  id: string
+  name: string
+  parentId?: string
+  workspaceId?: string
+  currentBranchId?: string
+  isArchived?: boolean
+  archivedAt?: DateTime
+  createdAt?: DateTime
+  updatedAt?: DateTime
 }
 
 /**
@@ -62,14 +62,14 @@ export interface Chat {
  * Maps to Branch struct in Rust backend
  */
 export interface Branch {
-  id: string;
-  name?: string;
-  chatId: string;
-  parentId?: string;
-  branchedFromNodeId?: string;
-  branchedFromNodeAt?: DateTime;
-  createdAt?: DateTime;
-  updatedAt?: DateTime;
+  id: string
+  name?: string
+  chatId: string
+  parentId?: string
+  branchedFromNodeId?: string
+  branchedFromNodeAt?: DateTime
+  createdAt?: DateTime
+  updatedAt?: DateTime
 }
 
 /**
@@ -77,34 +77,34 @@ export interface Branch {
  * Maps to ContentVersion struct in Rust backend
  */
 interface Message {
-  id: string;
-  content: string;
-  versionNumber: number;
+  id: string
+  content: string
+  versionNumber: number
 }
 
 /**
  * Type of chat node
  */
 type NodeType =
-  | "user_message"
-  | "assistant_message"
-  | "user_note"
-  | "assistant_note";
+  | 'user_message'
+  | 'assistant_message'
+  | 'user_note'
+  | 'assistant_note'
 
 /**
  * Represents a chat node in the application
  * Maps to ChatNode struct in Rust backend
  */
 export interface ChatNode {
-  id: string;
-  nodeType: NodeType;
-  branchId: string;
-  parentId?: string;
-  modelId?: string;
-  activeMessageId?: string;
-  updatedAt?: DateTime;
-  activeMessage?: Message;
-  messageCount?: number;
+  id: string
+  nodeType: NodeType
+  branchId: string
+  parentId?: string
+  modelId?: string
+  activeMessageId?: string
+  updatedAt?: DateTime
+  activeMessage?: Message
+  messageCount?: number
 }
 
 /**
@@ -112,8 +112,8 @@ export interface ChatNode {
  * Maps to ChatNodesResponse in Rust backend
  */
 export interface ChatNodesResponse {
-  nodes: ChatNode[];
-  hasMore: boolean;
+  nodes: ChatNode[]
+  hasMore: boolean
 }
 
 /**
@@ -121,14 +121,14 @@ export interface ChatNodesResponse {
  * Maps to ChatBranch struct in Rust backend
  */
 export interface ChatBranch {
-  id: string;
-  name?: string;
-  chatId: string;
-  parentId?: string;
-  branchedFromNodeId?: string;
-  branchedFromNodeAt?: DateTime;
-  createdAt?: DateTime;
-  updatedAt?: DateTime;
+  id: string
+  name?: string
+  chatId: string
+  parentId?: string
+  branchedFromNodeId?: string
+  branchedFromNodeAt?: DateTime
+  createdAt?: DateTime
+  updatedAt?: DateTime
 }
 
 /**
@@ -136,6 +136,6 @@ export interface ChatBranch {
  * Maps to ChatMessagePair struct in Rust backend
  */
 export interface ChatMessagePair {
-  userNode: ChatNode;
-  assistantNode: ChatNode;
+  userNode: ChatNode
+  assistantNode: ChatNode
 }

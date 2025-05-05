@@ -1,22 +1,23 @@
-import { createShortcut } from "@solid-primitives/keyboard";
-import { next, push, pushEmpty } from "./tabs.store";
+import { createShortcut } from '@solid-primitives/keyboard'
+
+import { next, push, pushEmpty } from './tabs.store'
 
 export function TabsKbdShortcuts() {
   createShortcut(
-    ["Meta", "T"],
+    ['Meta', 'T'],
     () => {
-      pushEmpty();
+      pushEmpty()
     },
     { preventDefault: true, requireReset: false }
-  );
+  )
 
   createShortcut(
-    ["Control", "Tab"],
+    ['Control', 'Tab'],
     () => {
-      next();
+      next()
     },
     { preventDefault: true, requireReset: false }
-  );
+  )
 
-  return null;
+  return null
 }

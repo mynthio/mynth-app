@@ -1,3 +1,3 @@
 export function ChatsSettings() {
-  return <div>ChatsSettings</div>;
+  return <div>ChatsSettings</div>
 }

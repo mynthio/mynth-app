@@ -1,18 +1,20 @@
-import { Accessor } from "solid-js";
-import { useQuery } from "@tanstack/solid-query";
-import { GET_AI_MODELS_KEYS } from "../../utils/query-keys";
-import { getAiModels } from "../../api/ai-models/get-ai-models";
+import { Accessor } from 'solid-js'
+
+import { useQuery } from '@tanstack/solid-query'
+
+import { getAiModels } from '../../api/ai-models/get-ai-models'
+import { GET_AI_MODELS_KEYS } from '../../utils/query-keys'
 
 export const useAiModels = ({
   aiIntegrationId,
 }: {
-  aiIntegrationId?: Accessor<string | null>;
+  aiIntegrationId?: Accessor<string | null>
 } = {}) => {
   return useQuery(() => ({
     queryKey: GET_AI_MODELS_KEYS({ aiIntegrationId }),
     queryFn: () => {
-      const id = aiIntegrationId?.();
-      return getAiModels(id || undefined);
+      const id = aiIntegrationId?.()
+      return getAiModels(id || undefined)
     },
-  }));
-};
+  }))
+}

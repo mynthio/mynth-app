@@ -21,7 +21,13 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
 
-    "types": ["unplugin-icons/types/solid"]
+    "types": ["unplugin-icons/types/solid"],
+
+    /* Path Aliases */
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["src/shared/*"]
+    }
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]

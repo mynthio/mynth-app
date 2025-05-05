@@ -1,3 +1,3 @@
 export function CommandsSettings() {
-  return <div>CommandsSettings</div>;
+  return <div>CommandsSettings</div>
 }

@@ -1,3 +1,3 @@
 export function Tabs() {
-  return <div>Tabs</div>;
+  return <div>Tabs</div>
 }

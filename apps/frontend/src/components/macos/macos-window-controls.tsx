@@ -1,37 +1,37 @@
-import { Window } from "@tauri-apps/api/window";
+import { Window } from '@tauri-apps/api/window'
 
 export function MacOsWindowControls() {
   const handleClose = async () => {
     try {
-      const appWindow = Window.getCurrent();
-      await appWindow.close();
+      const appWindow = Window.getCurrent()
+      await appWindow.close()
     } catch (error) {
-      console.error("Failed to close window:", error);
+      console.error('Failed to close window:', error)
     }
-  };
+  }
 
   const handleMinimize = async () => {
     try {
-      const appWindow = Window.getCurrent();
-      await appWindow.minimize();
+      const appWindow = Window.getCurrent()
+      await appWindow.minimize()
     } catch (error) {
-      console.error("Failed to minimize window:", error);
+      console.error('Failed to minimize window:', error)
     }
-  };
+  }
 
   const handleMaximize = async () => {
     try {
-      const appWindow = Window.getCurrent();
-      const isMaximized = await appWindow.isMaximized();
+      const appWindow = Window.getCurrent()
+      const isMaximized = await appWindow.isMaximized()
       if (isMaximized) {
-        await appWindow.unmaximize();
+        await appWindow.unmaximize()
       } else {
-        await appWindow.maximize();
+        await appWindow.maximize()
       }
     } catch (error) {
-      console.error("Failed to toggle maximize window:", error);
+      console.error('Failed to toggle maximize window:', error)
     }
-  };
+  }
 
   return (
     <div
@@ -65,5 +65,5 @@ export function MacOsWindowControls() {
         <span class="opacity-0 hover:opacity-100 text-black text-[8px]">+</span>
       </button>
     </div>
-  );
+  )
 }

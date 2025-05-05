@@ -7,14 +7,14 @@ This feature provides a reusable context menu system for the Mynth App. It allow
 ### Basic Usage
 
 ```tsx
-import { openContextMenu } from "@features/context-menu";
+import { openContextMenu } from '@features/context-menu'
 
 function MyComponent() {
   return (
-    <button onContextMenu={openContextMenu("item", { id: "item_123" })}>
+    <button onContextMenu={openContextMenu('item', { id: 'item_123' })}>
       Right-click me
     </button>
-  );
+  )
 }
 ```
 
@@ -37,7 +37,7 @@ You can add more types by:
 To integrate the context menu system into your application, add the `ContextMenuContainer` component to your app's root component:
 
 ```tsx
-import { ContextMenuContainer } from "@features/context-menu/context-menu-container";
+import { ContextMenuContainer } from '@features/context-menu/context-menu-container'
 
 function App() {
   return (
@@ -45,7 +45,7 @@ function App() {
       {/* Your app content */}
       <ContextMenuContainer />
     </>
-  );
+  )
 }
 ```
 

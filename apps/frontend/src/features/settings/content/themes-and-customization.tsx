@@ -1,21 +1,23 @@
-import { Show } from "solid-js";
-import { appConfig, setAppConfig } from "../../../stores/app-config.store";
-import { load } from "@tauri-apps/plugin-store";
-import { Switch } from "../../../ui/switch";
+import { Show } from 'solid-js'
+
+import { load } from '@tauri-apps/plugin-store'
+
+import { appConfig, setAppConfig } from '../../../stores/app-config.store'
 import {
   Field,
   FieldDescription,
   FieldInput,
   FieldMeta,
   FieldTitle,
-} from "../../../ui/field";
+} from '../../../ui/field'
+import { Switch } from '../../../ui/switch'
 
 const toggleTrafficLights = (newValue: boolean) => {
-  setAppConfig("window", "showTrafficLights", newValue);
-  load("store.json", { autoSave: false }).then((store) => {
-    store.set("window", { ...appConfig.window, showTrafficLights: newValue });
-  });
-};
+  setAppConfig('window', 'showTrafficLights', newValue)
+  load('store.json', { autoSave: false }).then((store) => {
+    store.set('window', { ...appConfig.window, showTrafficLights: newValue })
+  })
+}
 
 export function ThemesAndCustomization() {
   return (
@@ -35,12 +37,12 @@ export function ThemesAndCustomization() {
             <Switch
               checked={appConfig.window.showTrafficLights}
               onChange={(checked) => {
-                toggleTrafficLights(checked);
+                toggleTrafficLights(checked)
               }}
             />
           </FieldInput>
         </Field>
       </div>
     </div>
-  );
+  )
 }

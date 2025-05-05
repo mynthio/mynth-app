@@ -1,25 +1,29 @@
-import { Accessor, useContext } from "solid-js";
-import { useChat } from "../../../../data/queries/chats/use-chat";
-import { navigationStore } from "../../../../stores/navigation.store";
+import { Accessor, useContext } from 'solid-js'
+
+import { useQueryClient } from '@tanstack/solid-query'
+
+import { invoke } from '@tauri-apps/api/core'
+
+import { useChatBranch } from '../../../../data/queries/chat-branches/use-chat-branch'
+import { useChatBranches } from '../../../../data/queries/chat-branches/use-chat-branches'
+import { useChat } from '../../../../data/queries/chats/use-chat'
+import { GET_CHAT_KEYS } from '../../../../data/utils/query-keys'
+import { navigationStore } from '../../../../stores/navigation.store'
+import { Chat } from '../../../../types'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../../../../ui/dropdown-menu";
-import { useQueryClient } from "@tanstack/solid-query";
-import { useChatBranches } from "../../../../data/queries/chat-branches/use-chat-branches";
-import { useChatBranch } from "../../../../data/queries/chat-branches/use-chat-branch";
-import { invoke } from "@tauri-apps/api/core";
-import { GET_CHAT_KEYS } from "../../../../data/utils/query-keys";
-import { Chat } from "../../../../types";
-import { ChatContext } from "../../contexts/chat.context";
+} from '../../../../ui/dropdown-menu'
+import { ChatContext } from '../../contexts/chat.context'
+
 export function ChatTitleBar() {
   const chat = useChat({
     chatId: () => navigationStore.content.id!,
-  });
+  })
 
-  const chatContext = useContext(ChatContext);
+  const chatContext = useContext(ChatContext)
 
   return (
     <div
@@ -30,9 +34,9 @@ export function ChatTitleBar() {
         <button class="flex items-center gap-4px hover:bg-accent/10 px-8px rounded-8px h-24px">
           <div class="i-lucide:message-circle text-ui-icon" />
           <span class="text-ui max-w-300px truncate">{chat.data?.name}</span>
-          <span>{chatContext.state.isFetching ? "loading" : "done"}</span>
+          <span>{chatContext.state.isFetching ? 'loading' : 'done'}</span>
           <span>|</span>
-          <span>{chatContext.state.noMoreNodes ? "No more nodes" : ""}</span>
+          <span>{chatContext.state.noMoreNodes ? 'No more nodes' : ''}</span>
         </button>
       </div>
 
@@ -46,23 +50,23 @@ export function ChatTitleBar() {
         </button>
       </div>
     </div>
-  );
+  )
 }
 
 function ChatBranchesDropdownMenu({
   branchId,
 }: {
-  branchId: Accessor<string>;
+  branchId: Accessor<string>
 }) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
   const branches = useChatBranches({
     chatId: () => navigationStore.content.id!,
-  });
+  })
 
   const branch = useChatBranch({
     branchId: () => branchId(),
-  });
+  })
 
   return (
     <DropdownMenu>
@@ -77,7 +81,7 @@ function ChatBranchesDropdownMenu({
         {branches.data?.map((branch) => (
           <DropdownMenuItem
             onSelect={() => {
-              invoke("update_chat", {
+              invoke('update_chat', {
                 chatId: navigationStore.content.id!,
                 params: {
                   currentBranchId: branch.id,
@@ -94,8 +98,8 @@ function ChatBranchesDropdownMenu({
                           currentBranchId: branch.id,
                         }
                       : undefined
-                );
-              });
+                )
+              })
             }}
           >
             <span>{branch.name}</span>
@@ -103,5 +107,5 @@ function ChatBranchesDropdownMenu({
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  )
 }

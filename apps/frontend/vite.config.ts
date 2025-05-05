@@ -1,9 +1,9 @@
-import { defineConfig } from "vite";
-import solid from "vite-plugin-solid";
-import tailwindcss from "@tailwindcss/vite";
-import unocss from "unocss/vite";
+import tailwindcss from '@tailwindcss/vite'
+import unocss from 'unocss/vite'
+import { defineConfig } from 'vite'
+import solid from 'vite-plugin-solid'
 
-const host = process.env.TAURI_DEV_HOST;
+const host = process.env.TAURI_DEV_HOST
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
@@ -20,13 +20,13 @@ export default defineConfig(async () => ({
     host: host || false,
     hmr: host
       ? {
-          protocol: "ws",
+          protocol: 'ws',
           host,
           port: 1421,
         }
       : undefined,
     watch: {
-      ignored: ["**/moon.yml"],
+      ignored: ['**/moon.yml'],
     },
   },
-}));
+}))

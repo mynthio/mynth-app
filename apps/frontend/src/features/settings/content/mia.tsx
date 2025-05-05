@@ -1,3 +1,3 @@
 export function MiaSettings() {
-  return <div>MiaSettings</div>;
+  return <div>MiaSettings</div>
 }

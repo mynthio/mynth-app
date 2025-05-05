@@ -1,17 +1,18 @@
-import { Match, Switch } from "solid-js";
-import { Dialog, DialogContent } from "../../ui/dialog";
+import { Match, Switch } from 'solid-js'
+
 import {
-  dialogsState,
-  closeDialog,
-  ChatSystemPromptDialog,
-  ChatSystemPromptDialogProps,
   ChatModelSelectionDialog,
   ChatModelSelectionDialogProps,
-} from ".";
+  ChatSystemPromptDialog,
+  ChatSystemPromptDialogProps,
+  closeDialog,
+  dialogsState,
+} from '.'
+import { Dialog, DialogContent } from '../../ui/dialog'
 import {
   AppSettingsDialog,
   AppSettingsDialogProps,
-} from "./components/app-settings.dialog";
+} from './components/app-settings.dialog'
 
 export function DialogsDialog() {
   return (
@@ -19,7 +20,7 @@ export function DialogsDialog() {
       open={dialogsState()?.isOpen}
       onOpenChange={(open) => {
         if (!open) {
-          closeDialog();
+          closeDialog()
         }
       }}
       noOutsidePointerEvents={false} // Adjust as needed for larger dialogs
@@ -45,17 +46,17 @@ export function DialogsDialog() {
         </button> */}
 
         <Switch>
-          <Match when={dialogsState()?.type === "app-settings"}>
+          <Match when={dialogsState()?.type === 'app-settings'}>
             <AppSettingsDialog
               {...(dialogsState()?.payload as AppSettingsDialogProps)}
             />
           </Match>
-          <Match when={dialogsState()?.type === "chat-system-prompt-dialog"}>
+          <Match when={dialogsState()?.type === 'chat-system-prompt-dialog'}>
             <ChatSystemPromptDialog
               {...(dialogsState()?.payload as ChatSystemPromptDialogProps)}
             />
           </Match>
-          <Match when={dialogsState()?.type === "chat-model-selection"}>
+          <Match when={dialogsState()?.type === 'chat-model-selection'}>
             <ChatModelSelectionDialog
               {...(dialogsState()?.payload as ChatModelSelectionDialogProps)}
             />
@@ -74,5 +75,5 @@ export function DialogsDialog() {
         </div> */}
       </DialogContent>
     </Dialog>
-  );
+  )
 }

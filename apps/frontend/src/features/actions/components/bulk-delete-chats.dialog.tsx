@@ -1,3 +1,12 @@
+import { createMemo } from 'solid-js'
+
+import { useQueryClient } from '@tanstack/solid-query'
+
+import { invoke } from '@tauri-apps/api/core'
+
+import { closeActionDialog } from '..'
+import { GET_CHATS_KEYS, GET_CHAT_KEYS } from '../../../data/utils/query-keys'
+import { navigationStore } from '../../../stores/navigation.store'
 import {
   DialogActionButton,
   DialogActions,
@@ -5,39 +14,33 @@ import {
   DialogDescription,
   DialogLabel,
   useDialog,
-} from "../../../ui/dialog";
-import { useQueryClient } from "@tanstack/solid-query";
-import { createMemo } from "solid-js";
-import { closeActionDialog } from "..";
-import { invoke } from "@tauri-apps/api/core";
-import { GET_CHAT_KEYS, GET_CHATS_KEYS } from "../../../data/utils/query-keys";
-import { navigationStore } from "../../../stores/navigation.store";
+} from '../../../ui/dialog'
 
-export type BULK_DELETE_CHATS_EVENT_ID = "bulk-delete-chats";
+export type BULK_DELETE_CHATS_EVENT_ID = 'bulk-delete-chats'
 
 export interface BulkDeleteChatsDialogProps {
-  chatIds: string[];
+  chatIds: string[]
 }
 
 export function BulkDeleteChatsDialog(props: BulkDeleteChatsDialogProps) {
-  const dialog = useDialog();
-  const queryClient = useQueryClient();
+  const dialog = useDialog()
+  const queryClient = useQueryClient()
 
-  const chatIds = createMemo(() => props.chatIds);
+  const chatIds = createMemo(() => props.chatIds)
 
   const handleDelete = async () => {
     try {
       // TODO: This should be moved to a single Tauri command that handles bulk deletion
       // instead of deleting each chat individually for better performance
       for (const chatId of chatIds()) {
-        await invoke("delete_chat", { chatId });
+        await invoke('delete_chat', { chatId })
       }
 
       // Invalidate individual chat queries
       for (const chatId of chatIds()) {
         queryClient.invalidateQueries({
           queryKey: GET_CHAT_KEYS({ chatId: () => chatId }),
-        });
+        })
       }
 
       // Invalidate chats list queries to refresh the list
@@ -45,14 +48,14 @@ export function BulkDeleteChatsDialog(props: BulkDeleteChatsDialogProps) {
         queryKey: GET_CHATS_KEYS({
           workspaceId: () => navigationStore.workspace.id,
         }),
-      });
+      })
 
-      dialog.setOpen(false);
+      dialog.setOpen(false)
     } catch (error) {
-      console.error("Failed to delete chats:", error);
+      console.error('Failed to delete chats:', error)
       // Here you might want to show an error notification to the user
     }
-  };
+  }
 
   return (
     <>
@@ -67,5 +70,5 @@ export function BulkDeleteChatsDialog(props: BulkDeleteChatsDialogProps) {
         <DialogActionButton onClick={handleDelete}>Delete</DialogActionButton>
       </DialogActions>
     </>
-  );
+  )
 }

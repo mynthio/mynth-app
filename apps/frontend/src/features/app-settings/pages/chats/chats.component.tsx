@@ -1,4 +1,4 @@
-import { Component } from "solid-js";
+import { Component } from 'solid-js'
 
 /**
  * Chats settings page component
@@ -33,5 +33,5 @@ export const ChatsSettings: Component = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

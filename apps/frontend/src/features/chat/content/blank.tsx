@@ -1,5 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
-import mynthLogo from "../../../assets/mynth-logo.png";
+import { invoke } from '@tauri-apps/api/core'
+
+import mynthLogo from '../../../assets/mynth-logo.png'
 
 export function BlankContent() {
   return (
@@ -20,15 +21,15 @@ export function BlankContent() {
         <button
           class="bg-accent/10 text-white/70 h-52px px-24px rounded-lg font-300 cursor-default hover:scale-103 transition-all duration-200"
           onClick={() => {
-            invoke("create_chat", {
-              name: "New chat",
-              workspaceId: "w-default",
-            });
+            invoke('create_chat', {
+              name: 'New chat',
+              workspaceId: 'w-default',
+            })
           }}
         >
           Create new chat
         </button>
       </div>
     </div>
-  );
+  )
 }

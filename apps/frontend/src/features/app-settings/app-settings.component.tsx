@@ -1,7 +1,8 @@
-import { Component } from "solid-js";
-import { AppSettingsProvider } from "./app-settings.context";
-import { AppSettingsSidebar } from "./components/app-settings-sidebar.component";
-import { AppSettingsMain } from "./components/app-settings-main.component";
+import { Component } from 'solid-js'
+
+import { AppSettingsProvider } from './app-settings.context'
+import { AppSettingsMain } from './components/app-settings-main.component'
+import { AppSettingsSidebar } from './components/app-settings-sidebar.component'
 
 /**
  * Main App Settings component
@@ -15,5 +16,5 @@ export const AppSettingsComponent: Component = () => {
         <AppSettingsMain />
       </div>
     </AppSettingsProvider>
-  );
-};
+  )
+}

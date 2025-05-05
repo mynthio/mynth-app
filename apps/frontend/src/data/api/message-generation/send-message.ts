@@ -1,6 +1,8 @@
-import { invoke } from "@tauri-apps/api/core";
-import { Channel } from "@tauri-apps/api/core";
-import { ChatMessagePair } from "../../../types";
+import { invoke } from '@tauri-apps/api/core'
+import { Channel } from '@tauri-apps/api/core'
+
+import { ChatMessagePair } from '../../../types'
+
 /**
  * Send a message to a chat and receive a response
  *
@@ -14,9 +16,9 @@ export async function sendMessage(
   message: string,
   onEvent: Channel<any>
 ): Promise<ChatMessagePair> {
-  return invoke<ChatMessagePair>("send_message", {
+  return invoke<ChatMessagePair>('send_message', {
     branchId,
     message,
     onEvent,
-  });
+  })
 }

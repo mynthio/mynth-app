@@ -1,5 +1,6 @@
-import { Switch as KobalteSwitch } from "@kobalte/core/switch";
-import { ComponentProps, JSX } from "solid-js";
+import { Switch as KobalteSwitch } from '@kobalte/core/switch'
+
+import { ComponentProps, JSX } from 'solid-js'
 
 export function Switch(props: ComponentProps<typeof KobalteSwitch>) {
   return (
@@ -24,13 +25,13 @@ export function Switch(props: ComponentProps<typeof KobalteSwitch>) {
         />
       </KobalteSwitch.Control>
     </KobalteSwitch>
-  );
+  )
 }
 
 interface SwitchLabelProps extends ComponentProps<typeof KobalteSwitch.Label> {}
 
 function SwitchLabel(props: SwitchLabelProps) {
-  return <KobalteSwitch.Label class="text-14px font-400" {...props} />;
+  return <KobalteSwitch.Label class="text-14px font-400" {...props} />
 }
 
 interface SwitchDescriptionProps
@@ -39,7 +40,7 @@ interface SwitchDescriptionProps
 function SwitchDescription(props: SwitchDescriptionProps) {
   return (
     <KobalteSwitch.Description class="text-12px text-[#7C8B82]" {...props} />
-  );
+  )
 }
 
 interface SwitchErrorMessageProps
@@ -48,10 +49,10 @@ interface SwitchErrorMessageProps
 function SwitchErrorMessage(props: SwitchErrorMessageProps) {
   return (
     <KobalteSwitch.ErrorMessage class="text-12px text-red-500" {...props} />
-  );
+  )
 }
 
 // Default configuration for switches
 const defaultSwitchProps = {
   // Add any default props here if needed
-};
+}

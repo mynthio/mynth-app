@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "format": "prettier --write ."
   },
   "license": "MIT",
   "dependencies": {
@@ -21,20 +22,22 @@
     "@tanstack/solid-query-devtools": "^5.75.0",
     "@tauri-apps/api": "^2.5.0",
     "@tauri-apps/plugin-store": "~2.2.0",
-    "@unocss/reset": "66.1.0-beta.13",
+    "@unocss/reset": "66.1.0",
     "dayjs": "^1.11.13",
     "monaco-editor": "^0.52.2",
     "monaco-editor-core": "^0.52.2",
     "solid-js": "^1.9.6",
-    "virtua": "^0.40.4"
+    "virtua": "^0.41.0"
   },
   "devDependencies": {
     "@iconify-json/lucide": "^1.2.39",
     "@shikijs/monaco": "^3.3.0",
     "@tailwindcss/vite": "^4.1.5",
+    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
+    "prettier": "^3.5.3",
     "shiki": "^3.3.0",
     "typescript": "^5.8.3",
-    "unocss": "66.1.0-beta.13",
+    "unocss": "66.1.0",
     "unocss-preset-animations": "^1.2.1",
     "unocss-preset-scrollbar": "^3.2.0",
     "unplugin-icons": "^22.1.0",

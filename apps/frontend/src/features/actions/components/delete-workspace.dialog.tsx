@@ -1,3 +1,9 @@
+import { createMemo } from 'solid-js'
+
+import { useQueryClient } from '@tanstack/solid-query'
+
+import { closeActionDialog } from '..'
+import { useWorkspace } from '../../../data/queries/workspaces/use-workspace'
 import {
   DialogActionButton,
   DialogActions,
@@ -5,27 +11,23 @@ import {
   DialogDescription,
   DialogLabel,
   useDialog,
-} from "../../../ui/dialog";
-import { useQueryClient } from "@tanstack/solid-query";
-import { createMemo } from "solid-js";
-import { useWorkspace } from "../../../data/queries/workspaces/use-workspace";
-import { closeActionDialog } from "..";
+} from '../../../ui/dialog'
 
-export type DELETE_WORKSPACE_EVENT_ID = "delete-workspace";
+export type DELETE_WORKSPACE_EVENT_ID = 'delete-workspace'
 
 export interface DeleteWorkspaceDialogProps {
-  workspaceId: string;
+  workspaceId: string
 }
 
 export function DeleteWorkspaceDialog(props: DeleteWorkspaceDialogProps) {
-  const dialog = useDialog();
-  const queryClient = useQueryClient();
+  const dialog = useDialog()
+  const queryClient = useQueryClient()
 
-  const workspaceId = createMemo(() => props.workspaceId);
+  const workspaceId = createMemo(() => props.workspaceId)
 
   const workspace = useWorkspace({
     workspaceId,
-  });
+  })
 
   return (
     <>
@@ -42,16 +44,16 @@ export function DeleteWorkspaceDialog(props: DeleteWorkspaceDialogProps) {
         <DialogActionButton
           onClick={() => {
             queryClient.invalidateQueries({
-              queryKey: ["workspaces"],
-            });
+              queryKey: ['workspaces'],
+            })
 
             // closeActionDialog();
-            dialog.setOpen(false);
+            dialog.setOpen(false)
           }}
         >
           Remove
         </DialogActionButton>
       </DialogActions>
     </>
-  );
+  )
 }

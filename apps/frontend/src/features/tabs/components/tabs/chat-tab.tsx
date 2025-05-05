@@ -1,10 +1,10 @@
-import { TabBase } from "./tab-base";
 import {
   type ChatTab as ChatTabType,
-  state,
   pop,
+  state,
   switchTo,
-} from "../../tabs.store";
+} from '../../tabs.store'
+import { TabBase } from './tab-base'
 
 export function ChatTab({ tab }: { tab: ChatTabType }) {
   return (
@@ -16,5 +16,5 @@ export function ChatTab({ tab }: { tab: ChatTabType }) {
       onAuxClick={() => pop(tab.id)}
       onClose={() => pop(tab.id)}
     />
-  );
+  )
 }

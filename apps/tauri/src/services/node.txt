@@ -1,0 +1,795 @@
+use serde::{Deserialize, Serialize};
+use sqlx::{Row, Sqlite};
+use std::sync::Arc;
+use tracing::{error, info};
+use ulid::Ulid;
+
+use super::database::DbPool;
+use super::node_message::NodeMessageService;
+use crate::models::chat::NodeType;
+use crate::utils::markdown::markdown_to_html;
+use std::str::FromStr;
+
+/// Parameters for updating a chat node
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct UpdateNodeParams {
+    pub r#type: Option<String>,
+    pub parent_id: Option<String>,
+    pub active_message_id: Option<String>,
+}
+
+/// Parameters for getting all chat nodes
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct GetAllNodesParams {
+    pub older_than: Option<String>,
+    pub branch_id: Option<String>,
+}
+
+/// Service responsible for chat node operations
+#[derive(Clone)]
+pub struct NodeService {
+    pool: Arc<DbPool>,
+}
+
+impl NodeService {
+    /// Create a new chat node service
+    pub fn new(pool: Arc<DbPool>) -> Self {
+        Self { pool }
+    }
+
+    /// Create a new chat node
+    pub async fn create(
+        &self,
+        branch_id: &str,
+        type: &str,
+        parent_id: Option<&str>,
+    ) -> sqlx::Result<String> {
+        self.create_with_executor(self.pool.get(), branch_id, type, parent_id)
+            .await
+    }
+
+    /// Create a new chat node with a specified executor
+    pub async fn create_with_executor<'e, E>(
+        &self,
+        executor: E,
+        branch_id: &str,
+        type: &str,
+        parent_id: Option<&str>,
+    ) -> sqlx::Result<String>
+    where
+        E: sqlx::Executor<'e, Database = Sqlite>,
+    {
+        let node_id = Ulid::new().to_string();
+
+        sqlx::query!(
+            r#"
+            INSERT INTO nodes 
+            (id, type, branch_id, parent_id, updated_at)
+            VALUES (?, ?, ?, ?, datetime('now'))
+            "#,
+            node_id,
+            type,
+            branch_id,
+            parent_id
+        )
+        .execute(executor)
+        .await?;
+
+        Ok(node_id)
+    }
+
+    /// Create a new chat node with content
+    ///
+    /// This function:
+    /// 1. Creates a new chat node
+    /// 2. Creates a content version for the node
+    /// 3. Links the content version to the node
+    /// 4. Returns the node ID
+    pub async fn create_node(
+        &self,
+        branch_id: &str,
+        type: &str,
+        content: &str,
+        parent_id: Option<&str>,
+    ) -> sqlx::Result<String> {
+        info!(
+            "Creating {} node in branch {} with parent_id: {:?}",
+            type, branch_id, parent_id
+        );
+
+        // Generate IDs for the node and its content version
+        let node_id = Ulid::new().to_string();
+        let content_version_id = Ulid::new().to_string();
+
+        // Start a transaction
+        let mut tx = self.pool.get().begin().await?;
+
+        // 1. Insert chat node first without active_message_id
+        let query = sqlx::query!(
+            r#"
+            INSERT INTO nodes 
+            (id, type, branch_id, parent_id, updated_at)
+            VALUES (?, ?, ?, ?, datetime('now'))
+            "#,
+            node_id,
+            type,
+            branch_id,
+            parent_id
+        )
+        .execute(&mut *tx)
+        .await;
+
+        if let Err(e) = query {
+            error!("Failed to insert chat node: {:?}", e);
+            let _ = tx.rollback().await;
+            return Err(e);
+        }
+
+        // 2. Insert the content version
+        let query = sqlx::query!(
+            r#"
+            INSERT INTO node_messages
+            (id, node_id, content, version_number, status)
+            VALUES (?, ?, ?, ?, 'done')
+            "#,
+            content_version_id,
+            node_id,
+            content,
+            1
+        )
+        .execute(&mut *tx)
+        .await;
+
+        if let Err(e) = query {
+            error!("Failed to insert content version: {:?}", e);
+            let _ = tx.rollback().await;
+            return Err(e);
+        }
+
+        // 3. Update the chat node with the content version ID
+        let query = sqlx::query!(
+            r#"
+            UPDATE nodes
+            SET active_message_id = ?
+            WHERE id = ?
+            "#,
+            content_version_id,
+            node_id
+        )
+        .execute(&mut *tx)
+        .await;
+
+        if let Err(e) = query {
+            error!("Failed to update chat node with content version: {:?}", e);
+            let _ = tx.rollback().await;
+            return Err(e);
+        }
+
+        // Commit the transaction
+        tx.commit().await?;
+
+        info!(
+            "Successfully created {} node with ID: {}",
+            type, node_id
+        );
+        Ok(node_id)
+    }
+
+    /// Get the latest nodes from a branch
+    pub async fn get_latest_nodes(
+        &self,
+        branch_id: &str,
+        limit: i64,
+    ) -> sqlx::Result<Vec<sqlx::sqlite::SqliteRow>> {
+        sqlx::query(
+            r#"
+            SELECT cn.id, cn.type, cn.active_message_id, cv.content
+            FROM nodes cn
+            LEFT JOIN node_messages cv ON cn.active_message_id = cv.id
+            WHERE cn.branch_id = ?
+            AND cn.type IN (?, ?)
+            ORDER BY cn.updated_at DESC
+            LIMIT ?
+            "#,
+        )
+        .bind(branch_id)
+        .bind(NodeType::UserMessage.to_string())
+        .bind(NodeType::AssistantMessage.to_string())
+        .bind(limit)
+        .fetch_all(self.pool.get())
+        .await
+    }
+
+    /// Create a new content version for an existing node and update its active_message_id
+    ///
+    /// This function:
+    /// 1. Creates a new content version for the node
+    /// 2. Updates the node's active_message_id to point to the new content version
+    /// 3. Returns the new content version ID
+    pub async fn create_content_version_and_update_node(
+        &self,
+        node_id: &str,
+        content: &str,
+    ) -> sqlx::Result<String> {
+        info!("Creating new content version for node ID: {}", node_id);
+
+        // Generate ID for the new content version
+        let content_version_id = Ulid::new().to_string();
+        let content_version_id_clone = content_version_id.clone(); // Clone before using it
+
+        // Start a transaction
+        let mut tx = self.pool.get().begin().await?;
+
+        // Get the current version number
+        let current_version = sqlx::query(
+            r#"
+            SELECT MAX(version_number) as max_version 
+            FROM node_messages 
+            WHERE node_id = ?
+            "#,
+        )
+        .bind(node_id)
+        .fetch_one(&mut *tx)
+        .await?;
+
+        let max_version: Option<i64> = current_version.get("max_version");
+        let new_version_number = max_version.unwrap_or(0) + 1;
+
+        // 1. Insert the new content version
+        let query = sqlx::query(
+            r#"
+            INSERT INTO node_messages
+            (id, node_id, content, version_number, status)
+            VALUES (?, ?, ?, ?, 'done')
+            "#,
+        )
+        .bind(&content_version_id)
+        .bind(node_id)
+        .bind(content)
+        .bind(new_version_number)
+        .execute(&mut *tx)
+        .await;
+
+        if let Err(e) = query {
+            error!("Failed to insert content version: {:?}", e);
+            let _ = tx.rollback().await;
+            return Err(e);
+        }
+
+        // 2. Update the chat node with the new content version ID
+        let query = sqlx::query(
+            r#"
+            UPDATE nodes
+            SET active_message_id = ?, updated_at = datetime('now')
+            WHERE id = ?
+            "#,
+        )
+        .bind(&content_version_id)
+        .bind(node_id)
+        .execute(&mut *tx)
+        .await;
+
+        if let Err(e) = query {
+            error!("Failed to update chat node with content version: {:?}", e);
+            let _ = tx.rollback().await;
+            return Err(e);
+        }
+
+        // Commit the transaction
+        tx.commit().await?;
+
+        info!(
+            "Successfully updated node with new content version: {}",
+            content_version_id
+        );
+        Ok(content_version_id_clone)
+    }
+
+    /// Set content version for a node using the ChatNodeMessageService
+    ///
+    /// This function:
+    /// 1. Creates a new content version with the next version number
+    /// 2. Updates the node's active_message_id to point to the new content version
+    /// 3. Returns the new content version ID
+    pub async fn set_content_version(
+        &self,
+        node_id: &str,
+        content: &str,
+        content_version_service: &ChatNodeMessageService,
+    ) -> sqlx::Result<String> {
+        info!("Setting new content version for node ID: {}", node_id);
+
+        // Start a transaction
+        let mut tx = self.pool.get().begin().await?;
+
+        // Get the next version number
+        let version_number = content_version_service
+            .get_next_version_number_with_executor(&mut *tx, node_id)
+            .await?;
+
+        // Create the content version
+        let content_version_id = content_version_service
+            .create_with_executor(&mut *tx, node_id, content, version_number, "done")
+            .await?;
+
+        // Update the chat node with the new content version ID using the update_with_executor method
+        let update_params = UpdateChatNodeParams {
+            active_message_id: Some(content_version_id.clone()),
+            ..Default::default()
+        };
+
+        self.update_with_executor(&mut *tx, node_id, update_params)
+            .await?;
+
+        // Commit the transaction
+        tx.commit().await?;
+
+        info!(
+            "Successfully set node content version: {}",
+            content_version_id
+        );
+        Ok(content_version_id)
+    }
+
+    /// Update a chat node with the given parameters
+    ///
+    /// Only fields that are Some will be updated
+    pub async fn update(&self, node_id: &str, params: UpdateChatNodeParams) -> sqlx::Result<()> {
+        info!("Updating chat node with id: {}", node_id);
+        self.update_with_executor(self.pool.get(), node_id, params)
+            .await
+    }
+
+    /// Update a chat node with the given parameters using the provided executor
+    ///
+    /// Only fields that are Some will be updated
+    pub async fn update_with_executor<'e, E>(
+        &self,
+        executor: E,
+        node_id: &str,
+        params: UpdateChatNodeParams,
+    ) -> sqlx::Result<()>
+    where
+        E: sqlx::Executor<'e, Database = Sqlite>,
+    {
+        let mut updates = Vec::new();
+        let mut binds = Vec::new();
+
+        if let Some(type_) = &params.type { // renamed from node_type
+            updates.push("type = ?");
+            binds.push(type_.as_str());
+
+        }
+
+        if let Some(parent_id) = &params.parent_id {
+            updates.push("parent_id = ?");
+            binds.push(parent_id.as_str());
+        }
+
+        if let Some(active_message_id) = &params.active_message_id {
+            updates.push("active_message_id = ?");
+            binds.push(active_message_id.as_str());
+        }
+
+        if updates.is_empty() {
+            info!("No chat node updates provided, skipping update");
+            return Ok(());
+        }
+
+        // Add updated_at timestamp to the updates
+        updates.push("updated_at = datetime('now')");
+
+        let updates_str = updates.join(", ");
+        let query = format!(
+            r#"
+            UPDATE nodes
+            SET {updates_str}
+            WHERE id = ?
+            "#
+        );
+
+        // Build the query with bindings
+        let mut query_builder = sqlx::query(&query);
+        for bind in binds {
+            query_builder = query_builder.bind(bind);
+        }
+        query_builder = query_builder.bind(node_id);
+
+        // Execute the query
+        query_builder.execute(executor).await?;
+
+        info!("Successfully updated chat node: {}", node_id);
+        Ok(())
+    }
+
+    /// Create a new chat node with an associated message
+    ///
+    /// This function:
+    /// 1. Creates a new chat node
+    /// 2. Creates a message for the node
+    /// 3. Updates the node with the message ID
+    pub async fn create_node_with_message(
+        &self,
+        branch_id: &str,
+        type: &str,
+        content: &str,
+        parent_id: Option<&str>,
+        message_service: &ChatNodeMessageService,
+    ) -> sqlx::Result<(String, String)> {
+        // Start a transaction
+        let mut tx = self.pool.get().begin().await?;
+
+        // Create the node
+        let node_id = self
+            .create_with_executor(&mut *tx, branch_id, type, parent_id)
+            .await?;
+
+        // Create the message with version 1
+        let message_id = message_service
+            .create_with_executor(&mut *tx, &node_id, content, 1, "done")
+            .await?;
+
+        // Update node with the active message
+        let update_params = UpdateChatNodeParams {
+            active_message_id: Some(message_id.clone()),
+            ..Default::default()
+        };
+        self.update_with_executor(&mut *tx, &node_id, update_params)
+            .await?;
+
+        // Commit the transaction
+        tx.commit().await?;
+
+        Ok((node_id, message_id))
+    }
+
+    /// Get a chat node by its ID
+    ///
+    /// This function fetches a single chat node by its ID and includes its active message content
+    pub async fn get_node(&self, node_id: &str) -> sqlx::Result<crate::models::chat::ChatNode> {
+        info!("Fetching chat node with ID: {}", node_id);
+
+        let row = sqlx::query(
+            r#"
+            SELECT 
+                nodes.id,
+                nodes.type,
+                nodes.branch_id,
+                nodes.parent_id,
+                nodes.active_message_id,
+                nodes.updated_at,
+                content_versions.id as cv_id,
+                content_versions.content as cv_content,
+                content_versions.version_number as cv_version_number,
+                content_versions.node_id as cv_node_id,
+                content_versions.status,
+                content_versions.token_count as cv_token_count,
+                content_versions.cost as cv_cost,
+                content_versions.api_metadata as cv_api_metadata,
+                content_versions.model_id as cv_model_id,
+                (SELECT COUNT(*) FROM node_messages WHERE node_id = nodes.id) as message_count
+            FROM nodes
+            LEFT JOIN node_messages as content_versions ON nodes.active_message_id = content_versions.id
+            WHERE nodes.id = ?
+            "#,
+        )
+        .bind(node_id)
+        .fetch_one(self.pool.get())
+        .await?;
+
+        // Map the row to ChatNode and ContentVersion
+        let node = crate::models::chat::ChatNode {
+            id: row.get("id"),
+            node_type: row.get("type"),
+            branch_id: row.get("branch_id"),
+            parent_id: row.get("parent_id"),
+            active_message_id: row.get("active_message_id"),
+            active_tool_use_id: None,
+            updated_at: row.get("updated_at"),
+            extensions: Default::default(),
+            active_message: if row.try_get::<Option<String>, _>("cv_id")?.is_some() {
+                Some(crate::models::chat::ContentVersion {
+                    id: row.get("cv_id"),
+                    content: row.get("cv_content"),
+                    version_number: row.get::<i64, _>("cv_version_number") as i32,
+                    status: row.get("status"),
+                    node_id: row.get("cv_node_id"),
+                    token_count: row.try_get("cv_token_count").ok(),
+                    cost: row.try_get("cv_cost").ok(),
+                    api_metadata: row.try_get("cv_api_metadata").ok(),
+                    model_id: row.try_get("cv_model_id").ok(),
+                    extensions: Default::default(),
+                })
+            } else {
+                None
+            },
+            message_count: row.try_get("message_count").ok(),
+            active_tool_use: None,
+        };
+
+        Ok(node)
+    }
+
+    /// Get all message nodes from a branch in chronological order
+    ///
+    /// This function fetches all user and assistant messages from a branch
+    /// and returns them sorted by creation time (oldest first)
+    ///
+    /// Returns empty vector if no messages are found, but panics on database errors
+    pub async fn get_branch_messages(&self, branch_id: &str) -> Vec<sqlx::sqlite::SqliteRow> {
+        info!("Fetching all message nodes for branch: {}", branch_id);
+
+        match sqlx::query(
+            r#"
+            SELECT cn.id, cn.type, cn.active_message_id, cv.content, cv.token_count, cn.updated_at
+            FROM nodes cn
+            LEFT JOIN node_messages cv ON cn.active_message_id = cv.id
+            WHERE cn.branch_id = ?
+            AND cn.type IN ('user_message', 'assistant_message')
+            ORDER BY cn.id ASC
+            "#,
+        )
+        .bind(branch_id)
+        .fetch_all(self.pool.get())
+        .await {
+            Ok(nodes) => nodes,
+            Err(err) => {
+                // Log the error and panic - this is a critical database error
+                error!("CRITICAL DATABASE ERROR while fetching branch messages: {:?}", err);
+                panic!("Database error: {:?}", err);
+            }
+        }
+    }
+
+    /// Get all chat nodes with optional filtering
+    ///
+    /// If older_than is provided, returns only nodes older than the given ID
+    /// Results are sorted from oldest to newest by their ULID
+    pub async fn get_all(
+        &self,
+        params: GetAllChatNodesParams,
+    ) -> sqlx::Result<Vec<crate::models::chat::ChatNode>> {
+        info!("Fetching chat nodes with params: {:?}", params);
+
+        let mut query = sqlx::QueryBuilder::new(
+            r#"
+            SELECT 
+                nodes.id,
+                nodes.type,
+                nodes.branch_id,
+                nodes.parent_id,
+                nodes.active_message_id,
+                nodes.updated_at,
+                content_versions.id as cv_id,
+                content_versions.content as cv_content,
+                content_versions.version_number as cv_version_number,
+                content_versions.node_id as cv_node_id,
+                content_versions.status,
+                content_versions.token_count as cv_token_count,
+                content_versions.cost as cv_cost,
+                content_versions.api_metadata as cv_api_metadata,
+                content_versions.model_id as cv_model_id,
+                (SELECT COUNT(*) FROM node_messages WHERE node_id = nodes.id) as message_count
+            FROM nodes
+            LEFT JOIN node_messages as content_versions ON nodes.active_message_id = content_versions.id
+            "#,
+        );
+
+        // Build WHERE clause based on params
+        let mut has_where = false;
+
+        // Add branch_id filter if provided
+        if let Some(branch_id) = &params.branch_id {
+            query.push(" WHERE nodes.branch_id = ");
+            query.push_bind(branch_id);
+            has_where = true;
+        }
+
+        // Add older_than filter if provided
+        if let Some(older_than) = &params.older_than {
+            if has_where {
+                query.push(" AND nodes.id < ");
+            } else {
+                query.push(" WHERE nodes.id < ");
+            }
+            query.push_bind(older_than);
+        }
+
+        // Add ORDER BY clause for sorting by ULID (oldest to newest)
+        query.push(" ORDER BY nodes.id ASC");
+
+        // Build and execute the query
+        let rows = query.build().fetch_all(self.pool.get()).await?;
+
+        // Map the rows to ChatNode objects
+        let nodes = rows
+            .iter()
+            .map(|row| crate::models::chat::ChatNode {
+                id: row.get("id"),
+                node_type: row.get("type"),
+                branch_id: row.get("branch_id"),
+                parent_id: row.get("parent_id"),
+                active_message_id: row.get("active_message_id"),
+                active_tool_use_id: None,
+                updated_at: row.get("updated_at"),
+                extensions: Default::default(),
+                active_message: if row
+                    .try_get::<Option<String>, _>("cv_id")
+                    .ok()
+                    .flatten()
+                    .is_some()
+                {
+                    Some(crate::models::chat::ContentVersion {
+                        id: row.get("cv_id"),
+                        content: row.get("cv_content"),
+                        version_number: row.get::<i64, _>("cv_version_number") as i32,
+                        status: row.get("status"),
+                        node_id: row.get("cv_node_id"),
+                        token_count: row.try_get("cv_token_count").ok(),
+                        cost: row.try_get("cv_cost").ok(),
+                        api_metadata: row.try_get("cv_api_metadata").ok(),
+                        model_id: row.try_get("cv_model_id").ok(),
+                        extensions: Default::default(),
+                    })
+                } else {
+                    None
+                },
+                message_count: row.try_get("message_count").ok(),
+                active_tool_use: None,
+            })
+            .collect();
+
+        Ok(nodes)
+    }
+
+    /// Switch the active message version for a chat node
+    ///
+    /// This function:
+    /// 1. Finds the message for the given node and version
+    /// 2. Updates the chat node's active_message_id
+    /// 3. Returns the new message data
+    pub async fn switch_active_message_version(
+        &self,
+        node_id: String,
+        version_number: i64,
+    ) -> sqlx::Result<Option<crate::models::chat::ContentVersion>> {
+        // Find the message for the node and version
+        let row = sqlx::query(
+            r#"
+            SELECT * FROM node_messages
+            WHERE node_id = ? AND version_number = ?
+            "#,
+        )
+        .bind(&node_id)
+        .bind(version_number)
+        .fetch_optional(self.pool.get())
+        .await?;
+
+        let row = match row {
+            Some(row) => row,
+            None => return Ok(None),
+        };
+
+        let message_id: String = row.get("id");
+
+        // Update the chat node's active_message_id
+        self.update(
+            &node_id,
+            UpdateChatNodeParams {
+                active_message_id: Some(message_id.clone()),
+                ..Default::default()
+            },
+        )
+        .await?;
+
+        // Return the new message data as ContentVersion
+        let content_version = crate::models::chat::ContentVersion {
+            id: row.get("id"),
+            content: markdown_to_html(row.get("content")),
+            version_number: row.get::<i64, _>("version_number") as i32,
+            status: row.get("status"),
+            node_id: row.get("node_id"),
+            token_count: row.try_get("token_count").ok(),
+            cost: row.try_get("cost").ok(),
+            api_metadata: row.try_get("api_metadata").ok(),
+            model_id: row.try_get("model_id").ok(),
+            extensions: Default::default(),
+        };
+        Ok(Some(content_version))
+    }
+
+    pub async fn get_node_messages(
+        &self,
+        node_id: &str,
+    ) -> Result<Vec<crate::models::chat::ChatNodeMessage>, sqlx::Error> {
+        let messages = sqlx::query_as!(
+            crate::models::chat::ChatNodeMessage,
+            "SELECT * FROM node_messages WHERE node_id = ? ORDER BY version_number DESC",
+            node_id
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(messages)
+    }
+
+    pub async fn create_message_version(
+        &self,
+        node_id: &str,
+        content: &str,
+    ) -> Result<crate::models::chat::ChatNodeMessage, sqlx::Error> {
+        // Get the next version number
+        let next_version = sqlx::query_scalar!(
+            "SELECT COALESCE(MAX(version_number), 0) + 1 FROM node_messages WHERE node_id = ?",
+            node_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        let message_id = Ulid::new().to_string();
+        sqlx::query!(
+            "INSERT INTO node_messages (id, node_id, content, version_number, status) VALUES (?, ?, ?, ?, ?)",
+            message_id,
+            node_id,
+            content,
+            next_version,
+            "done"
+        )
+        .execute(&self.pool)
+        .await?;
+
+        // Fetch the newly created message
+        let new_message = sqlx::query_as!(
+            crate::models::chat::ChatNodeMessage,
+            "SELECT * FROM node_messages WHERE id = ?",
+            message_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(new_message)
+    }
+
+    pub async fn get_node_with_messages(
+        &self,
+        node_id: &str,
+        limit: i64,
+    ) -> Result<Vec<crate::models::chat::ChatNodeMessage>, sqlx::Error> {
+        let messages = sqlx::query_as!(crate::models::chat::ChatNodeMessage, "
+            WITH RECURSIVE NodeHierarchy(id, parent_id, level) AS (
+                SELECT id, parent_id, 0 FROM nodes WHERE id = ?1
+                UNION ALL
+                SELECT cn.id, cn.parent_id, nh.level + 1
+                FROM nodes cn
+                JOIN NodeHierarchy nh ON cn.id = nh.parent_id
+                WHERE nh.level < ?2 -- Use the limit
+            )
+            SELECT
+                nodes.id,
+                nodes.type,
+                nodes.branch_id,
+                nodes.parent_id,
+                nodes.active_message_id,
+                nodes.updated_at,
+                content_versions.id as message_id,
+                content_versions.content as message_content,
+                content_versions.version_number as message_version_number,
+                content_versions.status as message_status,
+                content_versions.node_id as message_node_id,
+                content_versions.model_id as message_model_id,
+                content_versions.token_count as message_token_count,
+                content_versions.cost as message_cost,
+                content_versions.api_metadata as message_api_metadata,
+                content_versions.extensions as message_extensions,
+                (SELECT COUNT(*) FROM node_messages WHERE node_id = nodes.id) as message_count,
+                nh.level
+            FROM NodeHierarchy nh
+            JOIN nodes ON nh.id = nodes.id
+            LEFT JOIN node_messages as content_versions ON nodes.active_message_id = content_versions.id
+            WHERE nodes.id != ?1 -- Exclude the starting node
+            ORDER BY nh.level DESC; -- Order from root to parent
+        ", node_id, limit)
+            .fetch_all(&self.pool)
+            .await?;
+        Ok(messages)
+    }
+}

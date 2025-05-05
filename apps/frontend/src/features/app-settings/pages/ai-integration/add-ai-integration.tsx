@@ -1,14 +1,17 @@
-import { For } from "solid-js";
-import { useProvidersQuery } from "../../../../data/queries/api/use-providers-query";
-import { GET_AI_INTEGRATIONS_KEYS } from "../../../../data/utils/query-keys";
-import { invoke } from "@tauri-apps/api/core";
-import { getProviderModels } from "../../../../data/api/api/get-provider-models";
-import { useQueryClient } from "@tanstack/solid-query";
+import { For } from 'solid-js'
+
+import { useQueryClient } from '@tanstack/solid-query'
+
+import { invoke } from '@tauri-apps/api/core'
+
+import { getProviderModels } from '../../../../data/api/api/get-provider-models'
+import { useProvidersQuery } from '../../../../data/queries/api/use-providers-query'
+import { GET_AI_INTEGRATIONS_KEYS } from '../../../../data/utils/query-keys'
 
 export function AddAiIntegration() {
-  const providersQuery = useProvidersQuery();
+  const providersQuery = useProvidersQuery()
 
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return (
     <div>
       <h1>Add AI Integration</h1>
@@ -19,11 +22,11 @@ export function AddAiIntegration() {
             <pre class="mt-10px">{JSON.stringify(provider, null, 2)}</pre>
             <button
               onClick={async () => {
-                const models = await getProviderModels(provider.id);
+                const models = await getProviderModels(provider.id)
 
-                console.log(models);
+                console.log(models)
 
-                await invoke("create_ai_integration", {
+                await invoke('create_ai_integration', {
                   params: {
                     name: provider.displayName,
                     baseHost: provider.host,
@@ -33,14 +36,14 @@ export function AddAiIntegration() {
                     apiKey: null,
                     models: models.map((model) => ({
                       modelId: model.modelId,
-                      origin: "mynth",
+                      origin: 'mynth',
                     })),
                   },
                 }).then(() => {
                   queryClient.invalidateQueries({
                     queryKey: GET_AI_INTEGRATIONS_KEYS(),
-                  });
-                });
+                  })
+                })
               }}
             >
               Integrate
@@ -49,5 +52,5 @@ export function AddAiIntegration() {
         )}
       </For>
     </div>
-  );
+  )
 }

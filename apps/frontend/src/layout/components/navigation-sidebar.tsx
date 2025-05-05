@@ -1,11 +1,11 @@
-import { useWorkspace } from "../../data/queries/workspaces/use-workspace";
-import { navigationStore } from "../../stores/navigation.store";
-import { openDialog } from "../../features/dialogs";
+import { useWorkspace } from '../../data/queries/workspaces/use-workspace'
+import { openDialog } from '../../features/dialogs'
+import { navigationStore } from '../../stores/navigation.store'
 
 export function NavigationSidebar() {
   const workspace = useWorkspace({
     workspaceId: () => navigationStore.workspace.id,
-  });
+  })
 
   return (
     <div
@@ -25,12 +25,12 @@ export function NavigationSidebar() {
         <button
           class="rounded-default text-muted size-34px flex items-center justify-center cursor-default"
           onClick={() => {
-            openDialog({ id: "app-settings", payload: {} });
+            openDialog({ id: 'app-settings', payload: {} })
           }}
         >
           <div class="i-lucide:bolt text-15px text-muted" />
         </button>
       </div>
     </div>
-  );
+  )
 }

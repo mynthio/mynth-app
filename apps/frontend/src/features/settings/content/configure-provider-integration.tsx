@@ -1,35 +1,36 @@
-import { Accessor, createMemo, createSignal } from "solid-js";
+import { TextField } from '@kobalte/core/text-field'
 
-import { useProviderModelsQuery } from "../../../data/queries/api/use-provider-models-query";
-import { useProvidersQuery } from "../../../data/queries/api/use-providers-query";
-import { TextField } from "@kobalte/core/text-field";
-import { Button } from "../../../ui/button";
-import { invoke } from "@tauri-apps/api/core";
-import { useQueryClient } from "@tanstack/solid-query";
-import { GET_AI_INTEGRATIONS_KEYS } from "../../../data/utils/query-keys";
+import { Accessor, createMemo, createSignal } from 'solid-js'
+
+import { useQueryClient } from '@tanstack/solid-query'
+
+import { invoke } from '@tauri-apps/api/core'
+
+import { useProviderModelsQuery } from '../../../data/queries/api/use-provider-models-query'
+import { useProvidersQuery } from '../../../data/queries/api/use-providers-query'
+import { GET_AI_INTEGRATIONS_KEYS } from '../../../data/utils/query-keys'
+import { Button } from '../../../ui/button'
 
 type ConfigureProviderIntegrationProps = {
-  providerId: Accessor<string>;
-};
+  providerId: Accessor<string>
+}
 
 export function ConfigureProviderIntegration({
   providerId,
 }: ConfigureProviderIntegrationProps) {
   const providerModelsQuery = useProviderModelsQuery({
     providerId,
-  });
+  })
 
-  const providersQuery = useProvidersQuery();
+  const providersQuery = useProvidersQuery()
 
   const provider = createMemo(() => {
-    return providersQuery.data?.find(
-      (provider) => provider.id === providerId()
-    );
-  });
+    return providersQuery.data?.find((provider) => provider.id === providerId())
+  })
 
-  const [apiKey, setApiKey] = createSignal("");
+  const [apiKey, setApiKey] = createSignal('')
 
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
   return (
     <div>
@@ -52,27 +53,27 @@ export function ConfigureProviderIntegration({
 
       <Button
         onClick={() => {
-          invoke("create_ai_integration", {
+          invoke('create_ai_integration', {
             params: {
               name: provider()?.providerName,
               baseHost: provider()?.host,
               // TODO: get base path from provider
-              basePath: "/some/path/todo",
+              basePath: '/some/path/todo',
               apiKey: apiKey(),
               models: providerModelsQuery.data?.map((model) => ({
                 modelId: model.providerModelId,
-                origin: "mynth",
+                origin: 'mynth',
               })),
             },
           }).then(() => {
             queryClient.invalidateQueries({
               queryKey: GET_AI_INTEGRATIONS_KEYS(),
-            });
-          });
+            })
+          })
         }}
       >
         Yeah, let's do it!
       </Button>
     </div>
-  );
+  )
 }

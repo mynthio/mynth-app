@@ -1,34 +1,34 @@
-import { createStore } from "solid-js/store";
+import { createStore } from 'solid-js/store'
 
 /**
  * WORKSPACE
  */
 interface Workspace {
-  id: string;
+  id: string
 }
 
 /**
  * CONTENT
  */
-type ContentType = "chat" | "settings" | "ai-integrations";
+type ContentType = 'chat' | 'settings' | 'ai-integrations'
 
 interface Content {
-  id: string | null;
-  type: ContentType;
+  id: string | null
+  type: ContentType
 }
 
 /**
  * SIDEBAR
  */
 interface Sidebar {
-  isOpen: boolean;
+  isOpen: boolean
 }
 
 type NavigationStore = {
-  workspace: Workspace;
-  content: Content;
-  sidebar: Sidebar;
-};
+  workspace: Workspace
+  content: Content
+  sidebar: Sidebar
+}
 
 /**
  * Navigation store
@@ -39,13 +39,13 @@ const [navigationStore, setNavigationStore] = createStore<NavigationStore>({
   // Even if user will remove it, we will fallback then to the first workspace from the list
   // But at this point we don't care :)
   workspace: {
-    id: "w-default",
+    id: 'w-default',
   },
   // `null` is default for empty/new chat
-  content: { id: null, type: "chat" },
+  content: { id: null, type: 'chat' },
   sidebar: {
     isOpen: true,
   },
-});
+})
 
-export { navigationStore, setNavigationStore };
+export { navigationStore, setNavigationStore }

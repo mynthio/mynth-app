@@ -6,4 +6,4 @@
  * Represents a DateTime string in ISO format
  * Maps to NaiveDateTime in Rust backend
  */
-export type DateTime = string;
+export type DateTime = string

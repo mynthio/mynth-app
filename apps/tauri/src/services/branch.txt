@@ -1,0 +1,242 @@
+use super::database::DbPool;
+use crate::models::chat::ChatNode;
+use crate::models::chat::ChatNodesResponse;
+use crate::models::chat::ContentVersion;
+use crate::models::chat_branch::Branch;
+use crate::models::chat_branch::UpdateBranchParams;
+use crate::models::mcp::ChatNodeMcpToolUse;
+use crate::utils::markdown::markdown_to_html;
+use sqlx::{Executor, QueryBuilder, Row, Sqlite};
+use std::sync::Arc;
+use tracing::{error, info};
+use ulid::Ulid;
+
+/// Service for handling chat branch operations
+pub struct ChatBranchService {
+    pool: Arc<DbPool>,
+}
+
+impl ChatBranchService {
+    /// Create a new chat branch service
+    pub fn new(pool: Arc<DbPool>) -> Self {
+        Self { pool }
+    }
+
+    /// Create a new branch
+    pub async fn create(
+        &self,
+        chat_id: &str,
+        name: &str,
+        model_id: Option<&str>,
+    ) -> sqlx::Result<String> {
+        self.create_with_executor(self.pool.get(), chat_id, name, model_id)
+            .await
+    }
+
+    /// Create a new branch with a specified executor
+    pub async fn create_with_executor<'e, E>(
+        &self,
+        executor: E,
+        chat_id: &str,
+        name: &str,
+        model_id: Option<&str>,
+    ) -> sqlx::Result<String>
+    where
+        E: sqlx::Executor<'e, Database = Sqlite>,
+    {
+        let branch_id = Ulid::new().to_string();
+
+        sqlx::query!(
+            r#"
+            INSERT INTO branches (id, chat_id, name, model_id)
+            VALUES (?, ?, ?, ?)
+            "#,
+            branch_id,
+            chat_id,
+            name,
+            model_id
+        )
+        .execute(executor)
+        .await?;
+
+        Ok(branch_id)
+    }
+
+    /// Update a branch
+    pub async fn update(&self, branch_id: &str, params: UpdateBranchParams) -> sqlx::Result<()> {
+        self.update_with_executor(self.pool.get(), branch_id, params)
+            .await
+    }
+
+    /// Update a branch with a specified executor
+    pub async fn update_with_executor<'e, E>(
+        &self,
+        executor: E,
+        branch_id: &str,
+        params: UpdateBranchParams,
+    ) -> sqlx::Result<()>
+    where
+        E: sqlx::Executor<'e, Database = Sqlite>,
+    {
+        info!(
+            "Updating branch with id: {}, params: {:?}",
+            branch_id, params
+        );
+
+        let mut query_builder = QueryBuilder::new("UPDATE branches SET ");
+        let mut separated = query_builder.separated(", ");
+
+        if let Some(name) = params.name {
+            separated.push("name = ").push_bind_unseparated(name);
+        }
+
+        if let Some(model_id) = params.model_id {
+            separated
+                .push("model_id = ")
+                .push_bind_unseparated(model_id);
+        }
+
+        // Always update the timestamp if we're executing an update
+        separated.push("updated_at = datetime('now')");
+
+        query_builder.push(" WHERE id = ").push_bind(branch_id);
+
+        info!("Executing query: {}", query_builder.sql());
+        let query = query_builder.build();
+
+        if let Err(err) = query.execute(executor).await {
+            error!("Failed to execute branch update query: {}", err);
+            return Err(err);
+        }
+
+        info!("Successfully completed branch update for id: {}", branch_id);
+        Ok(())
+    }
+
+    /// Get a chat branch by its ID
+    pub async fn get_branch(&self, branch_id: &str) -> sqlx::Result<Option<Branch>> {
+        info!("Fetching branch with id: {}", branch_id);
+
+        let branch = sqlx::query_as::<_, Branch>(
+            r#"
+            SELECT *
+            FROM branches
+            WHERE id = ?
+            "#,
+        )
+        .bind(branch_id)
+        .fetch_optional(self.pool.get())
+        .await?;
+
+        info!(
+            "Branch fetch result for id {}: {}",
+            branch_id,
+            if branch.is_some() {
+                "found"
+            } else {
+                "not found"
+            }
+        );
+
+        Ok(branch)
+    }
+
+    /// Get all nodes for a specific branch, optionally after a specific node ID.
+    pub async fn get_nodes(
+        &self,
+        branch_id: &str,
+        after_node_id: Option<&str>,
+    ) -> Result<Vec<ChatNodeWithMessages>, sqlx::Error> {
+        let query_str = "
+            SELECT 
+                nodes.id,
+                nodes.node_type,
+                nodes.branch_id,
+                nodes.parent_id,
+                nodes.active_message_id,
+                nodes.active_tool_use_id,
+                nodes.updated_at,
+                content_versions.id as message_id,
+                content_versions.content as message_content,
+                content_versions.version_number as message_version_number,
+                content_versions.status as message_status,
+                content_versions.node_id as message_node_id,
+                content_versions.model_id as message_model_id,
+                content_versions.token_count as message_token_count,
+                content_versions.cost as message_cost,
+                content_versions.api_metadata as message_api_metadata,
+                content_versions.extensions as message_extensions,
+                tool_use.id as tool_use_id,
+                tool_use.status as tool_use_status,
+                tool_use.input as tool_use_input,
+                tool_use.output as tool_use_output,
+                tool_use.error as tool_use_error,
+                tool_use.version_number as tool_use_version_number,
+                tool_use.node_id as tool_use_node_id,
+                tool_use.tool_id as tool_use_tool_id,
+                tool_use.updated_at as tool_use_updated_at,
+                (SELECT COUNT(*) FROM node_messages WHERE node_id = nodes.id) as message_count
+            FROM nodes
+            LEFT JOIN node_messages as content_versions ON nodes.active_message_id = content_versions.id
+            LEFT JOIN node_mcp_tool_use as tool_use ON nodes.active_tool_use_id = tool_use.id
+            WHERE nodes.branch_id = ?
+            ORDER BY nodes.id DESC
+        "; // TODO: Add pagination using after_node_id
+
+        let nodes = sqlx::query_as::<_, ChatNodeWithMessages>(query_str)
+            .bind(branch_id)
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(nodes)
+    }
+
+    /// Get all branches for a specific chat
+    pub async fn get_branches(&self, chat_id: &str) -> sqlx::Result<Vec<Branch>> {
+        info!("Fetching all branches for chat with id: {}", chat_id);
+
+        let branches = sqlx::query_as::<_, Branch>(
+            r#"
+            SELECT *
+            FROM branches
+            WHERE chat_id = ?
+            ORDER BY updated_at DESC
+            "#,
+        )
+        .bind(chat_id)
+        .fetch_all(self.pool.get())
+        .await?;
+
+        info!("Found {} branches for chat: {}", branches.len(), chat_id);
+
+        Ok(branches)
+    }
+
+    /// Get the model ID for a specific branch
+    pub async fn get_branch_model(&self, branch_id: &str) -> sqlx::Result<Option<String>> {
+        info!("Fetching model ID for branch: {}", branch_id);
+
+        let model_id = sqlx::query!(
+            r#"
+            SELECT model_id
+            FROM branches
+            WHERE id = ?
+            "#,
+            branch_id
+        )
+        .fetch_optional(self.pool.get())
+        .await?
+        .map(|record| record.model_id)
+        .flatten(); // Convert Option<Option<String>> to Option<String>
+
+        info!(
+            "Model ID for branch {}: {}",
+            branch_id,
+            model_id.as_deref().unwrap_or("not set")
+        );
+
+        Ok(model_id)
+    }
+
+    // Additional branch-related methods can be added here
+}

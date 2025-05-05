@@ -1,12 +1,12 @@
-import { ContextMenuPayload } from "..";
+import { ContextMenuPayload } from '..'
 import {
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from "../../../ui/dropdown-menu";
-import { openActionDialog } from "../../actions";
+} from '../../../ui/dropdown-menu'
+import { openActionDialog } from '../../actions'
 
 interface WorkspaceContextMenuProps {
-  payload: ContextMenuPayload;
+  payload: ContextMenuPayload
 }
 
 /**
@@ -16,26 +16,26 @@ export function WorkspaceContextMenu(props: WorkspaceContextMenuProps) {
   return (
     <>
       <DropdownMenuItem
-        onSelect={() => console.log("Rename workspace", props.payload.id)}
+        onSelect={() => console.log('Rename workspace', props.payload.id)}
       >
         Rename
       </DropdownMenuItem>
       <DropdownMenuItem
-        onSelect={() => console.log("Share workspace", props.payload.id)}
+        onSelect={() => console.log('Share workspace', props.payload.id)}
       >
         Share
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem
         onSelect={() => {
-          openActionDialog("delete-workspace", {
+          openActionDialog('delete-workspace', {
             workspaceId: props.payload.id,
-          });
+          })
         }}
         class="text-red-500"
       >
         Delete
       </DropdownMenuItem>
     </>
-  );
+  )
 }

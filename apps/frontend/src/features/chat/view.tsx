@@ -1,41 +1,45 @@
-import { invoke, Channel } from "@tauri-apps/api/core";
-import { useChatBranch } from "../../data/queries/chat-branches/use-chat-branch";
-import { useChatBranches } from "../../data/queries/chat-branches/use-chat-branches";
-import { useChat } from "../../data/queries/chats/use-chat";
-import { navigationStore } from "../../stores/navigation.store";
+import dayjs from 'dayjs'
+import relativeTime from 'dayjs/plugin/relativeTime'
+import { VList, VListHandle } from 'virtua/solid'
+
+import {
+  Accessor,
+  Match,
+  Show,
+  Switch,
+  createEffect,
+  createMemo,
+  createSignal,
+  onMount,
+} from 'solid-js'
+
+import { useQueryClient } from '@tanstack/solid-query'
+
+import { Channel, invoke } from '@tauri-apps/api/core'
+
+import { sendMessage } from '../../data/api/message-generation/send-message'
+import { useChatBranchNodes } from '../../data/queries/chat-branch-nodes/use-chat-branch-nodes'
+import { useChatBranch } from '../../data/queries/chat-branches/use-chat-branch'
+import { useChatBranches } from '../../data/queries/chat-branches/use-chat-branches'
+import { useChat } from '../../data/queries/chats/use-chat'
+import {
+  GET_CHAT_BRANCH_NODES_KEYS,
+  GET_CHAT_KEYS,
+} from '../../data/utils/query-keys'
+import { navigationStore } from '../../stores/navigation.store'
+import { Chat, ChatNode } from '../../types'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../../ui/dropdown-menu";
-import { openContextMenu } from "../context-menu";
-import { useQueryClient } from "@tanstack/solid-query";
-import {
-  GET_CHAT_BRANCH_NODES_KEYS,
-  GET_CHAT_KEYS,
-} from "../../data/utils/query-keys";
-import { Chat, ChatNode } from "../../types";
-import { useChatBranchNodes } from "../../data/queries/chat-branch-nodes/use-chat-branch-nodes";
-import {
-  Accessor,
-  createEffect,
-  createMemo,
-  createSignal,
-  Match,
-  onMount,
-  Show,
-  Switch,
-} from "solid-js";
-import dayjs from "dayjs";
-import { VList, VListHandle } from "virtua/solid";
-import relativeTime from "dayjs/plugin/relativeTime";
-import { openActionDialog } from "../actions";
+} from '../../ui/dropdown-menu'
+import { openActionDialog } from '../actions'
+import { openContextMenu } from '../context-menu'
+import { BlankContent } from './content/blank'
+import { ChatContent } from './content/chat'
 
-import { sendMessage } from "../../data/api/message-generation/send-message";
-import { BlankContent } from "./content/blank";
-import { ChatContent } from "./content/chat";
-dayjs.extend(relativeTime);
+dayjs.extend(relativeTime)
 
 export function ChatView() {
   return (
@@ -44,15 +48,15 @@ export function ChatView() {
         <ChatContent />
       </Match>
     </Switch>
-  );
+  )
 
   const chat = useChat({
     chatId: () => navigationStore.content.id!,
-  });
+  })
 
   const branch = useChatBranch({
     branchId: () => chat.data?.currentBranchId!,
-  });
+  })
 
   return (
     <>
@@ -109,27 +113,27 @@ export function ChatView() {
         </div> */}
       </div>
     </>
-  );
+  )
 }
 
 function ChatSending({ branchId }: { branchId: Accessor<string> }) {
-  const [message, setMessage] = createSignal("");
+  const [message, setMessage] = createSignal('')
 
-  const onEvent = new Channel<any>();
+  const onEvent = new Channel<any>()
 
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
-  const [thisNodeId, setThisNodeId] = createSignal("");
+  const [thisNodeId, setThisNodeId] = createSignal('')
 
-  const [resMsg, setResMsg] = createSignal("");
+  const [resMsg, setResMsg] = createSignal('')
 
   onEvent.onmessage = (event) => {
-    console.log(event);
-    setResMsg((current) => event.data.message);
-  };
+    console.log(event)
+    setResMsg((current) => event.data.message)
+  }
 
   createEffect(() => {
-    if (resMsg().length < 1) return;
+    if (resMsg().length < 1) return
     queryClient.setQueryData(
       GET_CHAT_BRANCH_NODES_KEYS({
         branchId: branchId,
@@ -155,8 +159,8 @@ function ChatSending({ branchId }: { branchId: Accessor<string> }) {
         ),
         pageParams: data.pageParams,
       })
-    );
-  });
+    )
+  })
 
   return (
     <div>
@@ -185,26 +189,26 @@ function ChatSending({ branchId }: { branchId: Accessor<string> }) {
       <button
         onClick={() => {
           sendMessage(branchId(), message(), onEvent).then((messagePair) => {
-            setThisNodeId(messagePair.assistantNode.id);
+            setThisNodeId(messagePair.assistantNode.id)
 
             queryClient.invalidateQueries({
               queryKey: GET_CHAT_KEYS({
                 chatId: () => navigationStore.content.id!,
               }),
-            });
-          });
+            })
+          })
         }}
       >
         Send
       </button>
     </div>
-  );
+  )
 }
 
 function ChatTitleBar() {
   const chat = useChat({
     chatId: () => navigationStore.content.id!,
-  });
+  })
 
   return (
     <div
@@ -228,23 +232,23 @@ function ChatTitleBar() {
         </button>
       </div>
     </div>
-  );
+  )
 }
 
 function ChatBranchesDropdownMenu({
   branchId,
 }: {
-  branchId: Accessor<string>;
+  branchId: Accessor<string>
 }) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
   const branches = useChatBranches({
     chatId: () => navigationStore.content.id!,
-  });
+  })
 
   const branch = useChatBranch({
     branchId: () => branchId(),
-  });
+  })
 
   return (
     <DropdownMenu>
@@ -259,7 +263,7 @@ function ChatBranchesDropdownMenu({
         {branches.data?.map((branch) => (
           <DropdownMenuItem
             onSelect={() => {
-              invoke("update_chat", {
+              invoke('update_chat', {
                 chatId: navigationStore.content.id!,
                 params: {
                   currentBranchId: branch.id,
@@ -276,8 +280,8 @@ function ChatBranchesDropdownMenu({
                           currentBranchId: branch.id,
                         }
                       : undefined
-                );
-              });
+                )
+              })
             }}
           >
             <span>{branch.name}</span>
@@ -285,19 +289,19 @@ function ChatBranchesDropdownMenu({
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  )
 }
 
 function Messages({ branchId }: { branchId: Accessor<string> }) {
-  let virtualListRef!: VListHandle;
+  let virtualListRef!: VListHandle
 
   const nodes = useChatBranchNodes({
     branchId: branchId,
-  });
+  })
 
   const items = createMemo(
     () => nodes.data?.pages.flatMap((page) => page.nodes) ?? []
-  );
+  )
 
   // Scroll to the bottom when new messages arrive
   // createEffect(() => {
@@ -310,21 +314,21 @@ function Messages({ branchId }: { branchId: Accessor<string> }) {
 
   onMount(() => {
     setTimeout(() => {
-      virtualListRef?.scrollToIndex(items().length - 1, { align: "end" });
-    }, 100);
-  });
+      virtualListRef?.scrollToIndex(items().length - 1, { align: 'end' })
+    }, 100)
+  })
 
   return (
     <VList
       ref={(h) => {
-        virtualListRef = h!;
+        virtualListRef = h!
       }}
       shift
       onScroll={() => {
         // If scrolled to the top, fetch older messages
         if (virtualListRef.findStartIndex() < 5) {
-          console.log("fetching older messages");
-          nodes.fetchNextPage();
+          console.log('fetching older messages')
+          nodes.fetchNextPage()
         }
       }}
       data={items()}
@@ -334,30 +338,30 @@ function Messages({ branchId }: { branchId: Accessor<string> }) {
       {(node, index) => (
         <div
           classList={{
-            "mb-210px": index === items().length - 1,
-            "mt-150px": index === 0,
+            'mb-210px': index === items().length - 1,
+            'mt-150px': index === 0,
           }}
         >
           <Node node={node} />
         </div>
       )}
     </VList>
-  );
+  )
 }
 
 function Node({ node }: { node: ChatNode }) {
   return (
     <div
       class="mx-auto max-w-700px"
-      onContextMenu={openContextMenu("chat-node", {
-        id: "",
+      onContextMenu={openContextMenu('chat-node', {
+        id: '',
       })}
     >
       <div
         class="rounded-22px my-10px px-24px py-16px max-w-640px"
         classList={{
-          "bg-gradient-to-bl backdrop-blur-88px from-[#919C98]/5 via-[#B7C8C2]/5 to-[#677C74]/5 ml-auto":
-            node.nodeType.startsWith("user"),
+          'bg-gradient-to-bl backdrop-blur-88px from-[#919C98]/5 via-[#B7C8C2]/5 to-[#677C74]/5 ml-auto':
+            node.nodeType.startsWith('user'),
         }}
       >
         {/* {node.nodeType} | {dayjs(node.createdAt).fromNow()} |{" "}
@@ -369,7 +373,7 @@ function Node({ node }: { node: ChatNode }) {
         />
       </div>
     </div>
-  );
+  )
 }
 
 function ChatToolbar() {
@@ -387,5 +391,5 @@ function ChatToolbar() {
         <div class="i-lucide:play text-ui-icon" />
       </button>
     </div>
-  );
+  )
 }

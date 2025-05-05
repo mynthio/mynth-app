@@ -3,12 +3,12 @@ import {
   DialogCloseButton,
   DialogDescription,
   DialogLabel,
-} from "../../../ui/dialog";
+} from '../../../ui/dialog'
 
-export type MODEL_SELECTOR_EVENT_ID = "model-selector";
+export type MODEL_SELECTOR_EVENT_ID = 'model-selector'
 
 export interface ModelSelectorDialogProps {
-  chatId: string;
+  chatId: string
 }
 
 export function ModelSelectorDialog(props: ModelSelectorDialogProps) {
@@ -22,5 +22,5 @@ export function ModelSelectorDialog(props: ModelSelectorDialogProps) {
         <DialogCloseButton>Cancel</DialogCloseButton>
       </DialogActions>
     </>
-  );
+  )
 }

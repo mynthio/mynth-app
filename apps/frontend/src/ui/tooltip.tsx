@@ -1,19 +1,20 @@
-import CorvuTooltip from "@corvu/tooltip";
-import { ComponentProps } from "solid-js";
+import CorvuTooltip from '@corvu/tooltip'
 
-const useTooltip = CorvuTooltip.useContext;
+import { ComponentProps } from 'solid-js'
+
+const useTooltip = CorvuTooltip.useContext
 
 interface TooltipProps extends ComponentProps<typeof CorvuTooltip> {}
 
 export function Tooltip(props: TooltipProps) {
-  return <CorvuTooltip {...props} />;
+  return <CorvuTooltip {...props} />
 }
 
 interface TooltipTriggerProps
   extends ComponentProps<typeof CorvuTooltip.Trigger> {}
 
 export function TooltipTrigger(props: TooltipTriggerProps) {
-  return <CorvuTooltip.Trigger {...props} />;
+  return <CorvuTooltip.Trigger {...props} />
 }
 
 interface TooltipContentProps
@@ -34,16 +35,16 @@ export function TooltipContent(props: TooltipContentProps) {
         {props.children}
       </CorvuTooltip.Content>
     </CorvuTooltip.Portal>
-  );
+  )
 }
 
 // Default configuration for tooltips
 const defaultTooltipProps = {
-  placement: "top" as const,
+  placement: 'top' as const,
   openDelay: 200,
   floatingOptions: {
     offset: 8,
     flip: true,
     shift: true,
   },
-};
+}

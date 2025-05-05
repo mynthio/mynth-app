@@ -1,32 +1,34 @@
-import { MacOsWindowControls } from "../components/macos/macos-window-controls";
-import { ActionsDialog } from "../features/actions/actions-dialog";
-import { DialogsDialog } from "../features/dialogs/dialogs-dialog";
-import { ContextMenuContainer } from "../features/context-menu/context-menu-container";
-import { appConfig } from "../stores/app-config.store";
-import { navigationStore } from "../stores/navigation.store";
-import { Content } from "./content/content";
-import { Sidebar } from "./components/sidebar";
+import { SolidQueryDevtools } from '@tanstack/solid-query-devtools'
+
+import { Show } from 'solid-js'
+
 import {
   QueryClient,
   QueryClientProvider,
   useQueryClient,
-} from "@tanstack/solid-query";
-import { SolidQueryDevtools } from "@tanstack/solid-query-devtools";
-import mynthLogo from "../assets/mynth-logo.png";
-import { Tabs } from "../features/tabs/tabs";
-import { TabsKbdShortcuts } from "../features/tabs/tabs-kbd-shortcuts";
+} from '@tanstack/solid-query'
+
+import { invoke } from '@tauri-apps/api/core'
+
+import { MacOsWindowControls } from '../components/macos/macos-window-controls'
+import { useWorkspace } from '../data/queries/workspaces/use-workspace'
+import { GET_CHATS_KEYS } from '../data/utils/query-keys'
+import { ActionsDialog } from '../features/actions/actions-dialog'
+import { ContextMenuContainer } from '../features/context-menu/context-menu-container'
+import { DialogsDialog } from '../features/dialogs/dialogs-dialog'
+import { Tabs } from '../features/tabs/tabs'
+import { TabsKbdShortcuts } from '../features/tabs/tabs-kbd-shortcuts'
+import { appConfig } from '../stores/app-config.store'
+import { navigationStore } from '../stores/navigation.store'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import { Show } from "solid-js";
-import { invoke } from "@tauri-apps/api/core";
-import { GET_CHAT_KEYS } from "../data/utils/query-keys";
-import { GET_CHATS_KEYS } from "../data/utils/query-keys";
-import { useWorkspace } from "../data/queries/workspaces/use-workspace";
+} from '../ui/dropdown-menu'
+import { Sidebar } from './components/sidebar'
+import { Content } from './content/content'
 
 const client = new QueryClient({
   defaultOptions: {
@@ -36,7 +38,7 @@ const client = new QueryClient({
       refetchOnReconnect: false,
     },
   },
-});
+})
 
 /**
  * App Layout
@@ -62,22 +64,22 @@ export default function AppLayout() {
       <ContextMenuContainer />
       <SolidQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
-  );
+  )
 }
 
 function TopBar() {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
   const workspace = useWorkspace({
     workspaceId: () => navigationStore.workspace.id,
-  });
+  })
 
   return (
     <div class="flex items-center gap-5px">
       <div
         class="h-top-bar flex items-center gap-16px flex-shrink-0"
         classList={{
-          "w-sidebar": navigationStore.sidebar.isOpen,
+          'w-sidebar': navigationStore.sidebar.isOpen,
         }}
       >
         {appConfig.window.showTrafficLights ? (
@@ -122,17 +124,17 @@ function TopBar() {
             <DropdownMenuContent>
               <DropdownMenuItem
                 onClick={() => {
-                  invoke("create_chat", {
-                    name: "New chat",
-                    workspaceId: "w-default",
+                  invoke('create_chat', {
+                    name: 'New chat',
+                    workspaceId: 'w-default',
                   }).then(() => {
                     // Invalidate chats queries to refresh the list
                     queryClient.invalidateQueries({
                       queryKey: GET_CHATS_KEYS({
                         workspaceId: () => navigationStore.workspace.id,
                       }),
-                    });
-                  });
+                    })
+                  })
                 }}
               >
                 New chat
@@ -145,5 +147,5 @@ function TopBar() {
       <Tabs />
       <TabsKbdShortcuts />
     </div>
-  );
+  )
 }

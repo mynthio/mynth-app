@@ -1,15 +1,15 @@
-import { Component, lazy, Suspense } from "solid-js";
+import { Component, Suspense, lazy } from 'solid-js'
 
-const SystemPrompt = lazy(() => import("../../chat-context/system-prompt"));
+const SystemPrompt = lazy(() => import('../../chat-context/system-prompt'))
 
-export const CHAT_SYSTEM_PROMPT_DIALOG_EVENT_ID = "chat-system-prompt-dialog";
+export const CHAT_SYSTEM_PROMPT_DIALOG_EVENT_ID = 'chat-system-prompt-dialog'
 
 /**
  * Props for the ChatSystemPromptDialog component.
  * Add any necessary props here.
  */
 export interface ChatSystemPromptDialogProps {
-  branchId: string;
+  branchId: string
 }
 
 /**
@@ -28,5 +28,5 @@ export const ChatSystemPromptDialog: Component<ChatSystemPromptDialogProps> = (
     <Suspense fallback={<div>Loading...</div>}>
       <SystemPrompt branchId={props.branchId} />
     </Suspense>
-  );
-};
+  )
+}

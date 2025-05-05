@@ -1,4 +1,4 @@
-import { Component } from "solid-js";
+import { Component } from 'solid-js'
 
 /**
  * General settings page component
@@ -26,5 +26,5 @@ export const GeneralSettings: Component = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

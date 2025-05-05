@@ -1,58 +1,61 @@
-import { invoke } from "@tauri-apps/api/core";
+import { makePersisted } from '@solid-primitives/storage'
+
 import {
   Accessor,
+  For,
+  JSX,
+  Show,
   createContext,
   createMemo,
   createResource,
   createSignal,
-  For,
-  JSX,
   onCleanup,
-  Show,
   useContext,
-} from "solid-js";
-import { makePersisted } from "@solid-primitives/storage";
-import { navigationStore } from "../../../../stores/navigation.store";
-import { openContextMenu } from "../../../context-menu";
+} from 'solid-js'
+
+import { invoke } from '@tauri-apps/api/core'
+
+import { navigationStore } from '../../../../stores/navigation.store'
+import { openContextMenu } from '../../../context-menu'
 
 // const WORKSPACE_ID = "w-default";
-const WORKSPACE_ID = "workspace-b430f600-e05b-4197-accc-d47870528557";
+const WORKSPACE_ID = 'workspace-b430f600-e05b-4197-accc-d47870528557'
 // "workspace-b430f600-e05b-4197-accc-d47870528557"
 
 // Define proper types for folder and item structures
 interface Folder {
-  id: string;
-  name: string;
+  id: string
+  name: string
   // Add other properties as needed
 }
 
 interface Item {
-  id: string;
-  name: string;
+  id: string
+  name: string
   // Add other properties as needed
 }
 
 interface WorkspaceContents {
-  folders: Folder[];
-  items: Item[];
+  folders: Folder[]
+  items: Item[]
 }
 
-type RefetchMap = Map<string, () => void>;
+type RefetchMap = Map<string, () => void>
 
 interface TreeContextInterface {
-  openFolders: Accessor<string[]>;
-  toggleFolder: (folderId: string) => void;
-  refetchMap: RefetchMap;
-  registerRefetch: (folderId: string, refetch: () => void) => void;
-  triggerRefetch: (folderId: string) => void;
-  unregisterRefetch: (folderId: string) => void;
+  openFolders: Accessor<string[]>
+  toggleFolder: (folderId: string) => void
+  refetchMap: RefetchMap
+  registerRefetch: (folderId: string, refetch: () => void) => void
+  triggerRefetch: (folderId: string) => void
+  unregisterRefetch: (folderId: string) => void
 }
 
-const TreeContext = createContext<TreeContextInterface>();
+const TreeContext = createContext<TreeContextInterface>()
 
 type TreeProviderProps = {
-  children: JSX.Element;
-};
+  children: JSX.Element
+}
 
 /**
  * Provider component that manages the tree state and refetch functionality
@@ -65,28 +68,28 @@ function TreeProvider(props: TreeProviderProps) {
     {
       name: `mynth:sidebar:tree:open-folders`,
     }
-  );
+  )
 
   // Map to store refetch functions for each folder
-  const refetchMap = new Map<string, () => void>();
+  const refetchMap = new Map<string, () => void>()
 
   // Register a refetch function for a specific folder
   const registerRefetch = (folderId: string, refetch: () => void) => {
-    refetchMap.set(folderId, refetch);
-  };
+    refetchMap.set(folderId, refetch)
+  }
 
   // Trigger refetch for a specific folder
   const triggerRefetch = (folderId: string) => {
-    const refetch = refetchMap.get(folderId);
+    const refetch = refetchMap.get(folderId)
     if (refetch) {
-      refetch();
+      refetch()
     }
-  };
+  }
 
   // Remove refetch function when no longer needed
   const unregisterRefetch = (folderId: string) => {
-    refetchMap.delete(folderId);
-  };
+    refetchMap.delete(folderId)
+  }
 
   // Toggle folder open/closed state
   const toggleFolder = (folderId: string) => {
@@ -94,8 +97,8 @@ function TreeProvider(props: TreeProviderProps) {
       prev.includes(folderId)
         ? prev.filter((id) => id !== folderId)
         : [...prev, folderId]
-    );
-  };
+    )
+  }
 
   return (
     <TreeContext.Provider
@@ -110,7 +113,7 @@ function TreeProvider(props: TreeProviderProps) {
     >
       {props.children}
     </TreeContext.Provider>
-  );
+  )
 }
 
 export function TreeSidebar() {
@@ -120,22 +123,22 @@ export function TreeSidebar() {
         <TreeNode parentId={null} />
       </TreeProvider>
     </div>
-  );
+  )
 }
 
 type TreeNodeProps = {
-  parentId: string | null;
-};
+  parentId: string | null
+}
 
 /**
  * Component that fetches and renders a tree node's contents
  * Uses SolidJS resources for efficient data loading
  */
 function TreeNode(props: TreeNodeProps) {
-  const ctx = useContext(TreeContext);
+  const ctx = useContext(TreeContext)
 
   if (!ctx) {
-    throw new Error("TreeNode must be used within a TreeProvider");
+    throw new Error('TreeNode must be used within a TreeProvider')
   }
 
   // Use createResource with proper typing
@@ -144,40 +147,40 @@ function TreeNode(props: TreeNodeProps) {
     async (workspaceId: string) => {
       try {
         const [chats, folders] = await Promise.all([
-          invoke<any>("get_chats", {
+          invoke<any>('get_chats', {
             workspaceId,
             parentId: props.parentId,
           }),
-          invoke<any>("get_chat_folders", {
+          invoke<any>('get_chat_folders', {
             workspaceId,
             parentId: props.parentId,
           }),
-        ]);
+        ])
 
         return {
           folders,
           items: chats,
-        };
+        }
       } catch (error) {
-        console.error("Failed to fetch workspace contents:", error);
-        return { folders: [], items: [] };
+        console.error('Failed to fetch workspace contents:', error)
+        return { folders: [], items: [] }
       }
     }
-  );
+  )
 
   // Calculate loading and error states using createMemo for better performance
-  const isLoading = createMemo(() => contents.loading);
-  const hasError = createMemo(() => contents.error);
+  const isLoading = createMemo(() => contents.loading)
+  const hasError = createMemo(() => contents.error)
 
   // Register refetch function with cleanup
   if (props.parentId !== null) {
-    ctx.registerRefetch(props.parentId, refetch);
+    ctx.registerRefetch(props.parentId, refetch)
 
     onCleanup(() => {
       if (props.parentId !== null) {
-        ctx.unregisterRefetch(props.parentId);
+        ctx.unregisterRefetch(props.parentId)
       }
-    });
+    })
   }
 
   return (
@@ -186,13 +189,13 @@ function TreeNode(props: TreeNodeProps) {
         <TreeNodeContent folders={content.folders} items={content.items} />
       )}
     </Show>
-  );
+  )
 }
 
 type TreeNodeContentProps = {
-  folders: Folder[];
-  items: Item[];
-};
+  folders: Folder[]
+  items: Item[]
+}
 
 /**
  * Component that renders the contents of a tree node
@@ -205,12 +208,12 @@ function TreeNodeContent(props: TreeNodeContentProps) {
       </For>
       <For each={props.items}>{(item) => <TreeItem item={item} />}</For>
     </div>
-  );
+  )
 }
 
 type TreeItemProps = {
-  item: Item;
-};
+  item: Item
+}
 
 /**
  * Component that renders a single item in the tree
@@ -221,38 +224,38 @@ function TreeItem(props: TreeItemProps) {
       <div class="i-lucide:message-square text-11px" />
       <span class="truncate">{props.item.name}</span>
     </button>
-  );
+  )
 }
 
 type TreeFolderProps = {
-  folder: Folder;
-};
+  folder: Folder
+}
 
 /**
  * Component that renders a folder in the tree with toggleable contents
  */
 function TreeFolder(props: TreeFolderProps) {
-  const ctx = useContext(TreeContext);
+  const ctx = useContext(TreeContext)
 
   if (!ctx) {
-    throw new Error("TreeFolder must be used within a TreeProvider");
+    throw new Error('TreeFolder must be used within a TreeProvider')
   }
 
   // Use createMemo to derive whether the folder is open
-  const isOpen = createMemo(() => ctx.openFolders().includes(props.folder.id));
+  const isOpen = createMemo(() => ctx.openFolders().includes(props.folder.id))
 
   return (
     <>
       <button
         class="flex items-center gap-2 truncate py-2px w-full hover:bg-accent/10 rounded-sm px-1"
         onClick={() => ctx.toggleFolder(props.folder.id)}
-        onContextMenu={openContextMenu("chat-folder", { id: props.folder.id })}
+        onContextMenu={openContextMenu('chat-folder', { id: props.folder.id })}
       >
         <div
           class="text-11px"
           classList={{
-            "i-lucide:folder": !isOpen(),
-            "i-lucide:folder-open": isOpen(),
+            'i-lucide:folder': !isOpen(),
+            'i-lucide:folder-open': isOpen(),
           }}
         />
         <span class="truncate">{props.folder.name}</span>
@@ -263,5 +266,5 @@ function TreeFolder(props: TreeFolderProps) {
         </div>
       </Show>
     </>
-  );
+  )
 }

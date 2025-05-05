@@ -1,28 +1,28 @@
-import { Menu, useMenu } from "@ark-ui/solid/menu";
-import { JSX } from "solid-js/jsx-runtime";
+import { Menu, useMenu } from '@ark-ui/solid/menu'
+import { JSX } from 'solid-js/jsx-runtime'
 
-export const useMenuContext = useMenu;
+export const useMenuContext = useMenu
 
 interface ContextMenuProviderProps extends Menu.RootProviderProps {}
 
 export function ContextMenuProvider(props: ContextMenuProviderProps) {
-  return <Menu.RootProvider {...props} />;
+  return <Menu.RootProvider {...props} />
 }
 
 interface ContextMenuProps extends Menu.RootProps {}
 
 export function ContextMenu(props: ContextMenuProps) {
-  return <Menu.Root {...props} />;
+  return <Menu.Root {...props} />
 }
 
 interface ContextMenuTriggerProps extends Menu.ContextTriggerProps {}
 
 export function ContextMenuTrigger(props: ContextMenuTriggerProps) {
-  return <Menu.ContextTrigger {...props} />;
+  return <Menu.ContextTrigger {...props} />
 }
 
 interface ContextMenuContentProps {
-  children: JSX.Element;
+  children: JSX.Element
 }
 
 export function ContextMenuContent(props: ContextMenuContentProps) {
@@ -32,7 +32,7 @@ export function ContextMenuContent(props: ContextMenuContentProps) {
         {props.children}
       </Menu.Content>
     </Menu.Positioner>
-  );
+  )
 }
 
 interface ContextMenuItemProps extends Menu.ItemProps {}
@@ -43,7 +43,7 @@ export function ContextMenuItem(props: ContextMenuItemProps) {
       {...props}
       class="px-12px py-4px text-body font-500 text-13px data-[highlighted]:bg-accent/5 rounded-9px"
     />
-  );
+  )
 }
 
 interface ContextMenuSeparatorProps extends Menu.SeparatorProps {}
@@ -54,17 +54,17 @@ export function ContextMenuSeparator(props: ContextMenuSeparatorProps) {
       {...props}
       class="h-1px border-accent/25 w-[calc(100%-20px)] ml-10px my-3px"
     />
-  );
+  )
 }
 
 interface ContextMenuGroupProps extends Menu.ItemGroupProps {}
 
 export function ContextMenuGroup(props: ContextMenuGroupProps) {
-  return <Menu.ItemGroup {...props} />;
+  return <Menu.ItemGroup {...props} />
 }
 
 interface ContextMenuGroupLabelProps extends Menu.ItemGroupLabelProps {}
 
 export function ContextMenuGroupLabel(props: ContextMenuGroupLabelProps) {
-  return <Menu.ItemGroupLabel {...props} />;
+  return <Menu.ItemGroupLabel {...props} />
 }

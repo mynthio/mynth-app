@@ -1,66 +1,69 @@
-import { invoke } from "@tauri-apps/api/core";
+import { createShortcut } from '@solid-primitives/keyboard'
+
 import {
   Accessor,
+  Setter,
   createContext,
   createResource,
   createSignal,
-  Setter,
   useContext,
-} from "solid-js";
+} from 'solid-js'
+
+import { invoke } from '@tauri-apps/api/core'
+
+import { useChats } from '../../../../data/queries/chats/use-chats'
 import {
   navigationStore,
   setNavigationStore,
-} from "../../../../stores/navigation.store";
-import { openContextMenu } from "../../../context-menu";
-import { useChats } from "../../../../data/queries/chats/use-chats";
-import { push } from "../../../tabs/tabs.store";
-import { createShortcut } from "@solid-primitives/keyboard";
-import { openActionDialog } from "../../../actions";
+} from '../../../../stores/navigation.store'
+import { openActionDialog } from '../../../actions'
+import { openContextMenu } from '../../../context-menu'
+import { push } from '../../../tabs/tabs.store'
 
 const ChatSelectContext = createContext<{
-  selected: Accessor<string[]>;
-  setSelected: Setter<string[]>;
+  selected: Accessor<string[]>
+  setSelected: Setter<string[]>
 }>({
   selected: () => [],
   setSelected: () => {},
-});
+})
 
 const useChatSelect = () => {
-  return useContext(ChatSelectContext);
-};
+  return useContext(ChatSelectContext)
+}
 
 export function ActivitySidebar() {
   const chats = useChats({
     workspaceId: () => navigationStore.workspace.id,
-  });
+  })
 
-  const [selected, setSelected] = createSignal<string[]>([]);
+  const [selected, setSelected] = createSignal<string[]>([])
 
-  createShortcut(["Meta", "Backspace"], () => {
+  createShortcut(['Meta', 'Backspace'], () => {
     if (selected().length === 1) {
-      openActionDialog("delete-chat", {
+      openActionDialog('delete-chat', {
         chatId: selected()[0],
-      });
+      })
     } else if (selected().length > 0) {
-      openActionDialog("bulk-delete-chats", {
+      openActionDialog('bulk-delete-chats', {
         chatIds: selected(),
-      });
+      })
     }
-  });
+  })
 
   return (
     <ChatSelectContext.Provider value={{ selected, setSelected }}>
       <div class="overflow-auto h-full w-full scrollbar-app">
-        <Group title={""} items={chats.data ?? []} />
+        <Group title={''} items={chats.data ?? []} />
       </div>
     </ChatSelectContext.Provider>
-  );
+  )
 }
 
 type GroupProps = {
-  title: string;
-  items: any[];
-};
+  title: string
+  items: any[]
+}
 
 function Group(props: GroupProps) {
   return (
@@ -72,23 +75,23 @@ function Group(props: GroupProps) {
         ))}
       </div>
     </div>
-  );
+  )
 }
 
 type ItemProps = {
-  item: any;
-};
+  item: any
+}
 
 function Item(props: ItemProps) {
-  const { selected, setSelected } = useChatSelect();
+  const { selected, setSelected } = useChatSelect()
 
   return (
     <button
-      onContextMenu={openContextMenu("chat", {
+      onContextMenu={openContextMenu('chat', {
         id: props.item.id,
       })}
       classList={{
-        "bg-elements-background-soft text-selected": selected().includes(
+        'bg-elements-background-soft text-selected': selected().includes(
           props.item.id
         ),
       }}
@@ -103,34 +106,34 @@ function Item(props: ItemProps) {
           // Toggle selection for this item
           if (selected().includes(props.item.id)) {
             // If already selected, remove from selection
-            setSelected((state) => state.filter((id) => id !== props.item.id));
+            setSelected((state) => state.filter((id) => id !== props.item.id))
           } else {
             // If not selected, add to selection
-            setSelected((state) => [...state, props.item.id]);
+            setSelected((state) => [...state, props.item.id])
           }
         } else {
           // Normal click - clear selection and select only this item
-          setSelected([props.item.id]);
+          setSelected([props.item.id])
 
-          setNavigationStore("content", {
+          setNavigationStore('content', {
             id: props.item.id,
-            type: "chat",
-          });
+            type: 'chat',
+          })
 
           push({
             id: props.item.id as string,
-            type: "chat" as const,
-            state: "idle",
+            type: 'chat' as const,
+            state: 'idle',
             title: props.item.name as string,
             data: {
               chatId: props.item.id as string,
             },
-          });
+          })
         }
       }}
     >
       <div class="i-lucide:message-circle text-ui-icon flex-shrink-0" />
       <span class="truncate">{props.item.name}</span>
     </button>
-  );
+  )
 }

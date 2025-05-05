@@ -1,20 +1,20 @@
-import { Component, Match, Switch } from "solid-js";
-import { useAppSettings } from "../app-settings.context";
+import { Component, Match, Switch } from 'solid-js'
 
+import { useAppSettings } from '../app-settings.context'
+import { AddAiIntegration } from '../pages/ai-integration/add-ai-integration'
+import { AiIntegrationSettings } from '../pages/ai-integration/ai-integration.component'
+import { ChatsSettings } from '../pages/chats/chats.component'
 // Import page components
-import { GeneralSettings } from "../pages/general/general.component";
-import { ChatsSettings } from "../pages/chats/chats.component";
-import { WorkspaceSettings } from "../pages/workspace/workspace.component";
-import { LookAndFeelSettings } from "../pages/look-and-feel/look-and-feel.component";
-import { AiIntegrationSettings } from "../pages/ai-integration/ai-integration.component";
-import { AddAiIntegration } from "../pages/ai-integration/add-ai-integration";
+import { GeneralSettings } from '../pages/general/general.component'
+import { LookAndFeelSettings } from '../pages/look-and-feel/look-and-feel.component'
+import { WorkspaceSettings } from '../pages/workspace/workspace.component'
 
 /**
  * The main content area for app settings
  * Renders different settings components based on the active item
  */
 export const AppSettingsMain: Component = () => {
-  const { activeItem } = useAppSettings();
+  const { activeItem } = useAppSettings()
 
   return (
     <main class="flex-1 px-36px overflow-auto scrollbar-app">
@@ -22,9 +22,9 @@ export const AppSettingsMain: Component = () => {
         <Match
           when={
             activeItem() &&
-            activeItem().type === "static" &&
-            "item" in activeItem() &&
-            activeItem().item === "general"
+            activeItem().type === 'static' &&
+            'item' in activeItem() &&
+            activeItem().item === 'general'
           }
         >
           <GeneralSettings />
@@ -32,9 +32,9 @@ export const AppSettingsMain: Component = () => {
         <Match
           when={
             activeItem() &&
-            activeItem().type === "static" &&
-            "item" in activeItem() &&
-            activeItem().item === "chats"
+            activeItem().type === 'static' &&
+            'item' in activeItem() &&
+            activeItem().item === 'chats'
           }
         >
           <ChatsSettings />
@@ -42,9 +42,9 @@ export const AppSettingsMain: Component = () => {
         <Match
           when={
             activeItem() &&
-            activeItem().type === "static" &&
-            "item" in activeItem() &&
-            activeItem().item === "look-and-feel"
+            activeItem().type === 'static' &&
+            'item' in activeItem() &&
+            activeItem().item === 'look-and-feel'
           }
         >
           <LookAndFeelSettings />
@@ -52,9 +52,9 @@ export const AppSettingsMain: Component = () => {
         <Match
           when={
             activeItem() &&
-            activeItem().type === "static" &&
-            "item" in activeItem() &&
-            activeItem().item === "add-ai-integration"
+            activeItem().type === 'static' &&
+            'item' in activeItem() &&
+            activeItem().item === 'add-ai-integration'
           }
         >
           <AddAiIntegration />
@@ -62,8 +62,8 @@ export const AppSettingsMain: Component = () => {
         <Match
           when={
             activeItem() &&
-            activeItem().type === "workspace" &&
-            "id" in activeItem() &&
+            activeItem().type === 'workspace' &&
+            'id' in activeItem() &&
             activeItem().id
           }
         >
@@ -72,8 +72,8 @@ export const AppSettingsMain: Component = () => {
         <Match
           when={
             activeItem() &&
-            activeItem().type === "ai-integration" &&
-            "id" in activeItem() &&
+            activeItem().type === 'ai-integration' &&
+            'id' in activeItem() &&
             activeItem().id
           }
         >
@@ -81,5 +81,5 @@ export const AppSettingsMain: Component = () => {
         </Match>
       </Switch>
     </main>
-  );
-};
+  )
+}

@@ -1,3 +1,17 @@
+import { createMemo } from 'solid-js'
+
+import { useQueryClient } from '@tanstack/solid-query'
+
+import { invoke } from '@tauri-apps/api/core'
+
+import { closeActionDialog } from '..'
+import { deleteChatFolder } from '../../../data/api/chat-folders/delete-chat-folder'
+import { useChatFolder } from '../../../data/queries/chat-folders/use-chat-folder'
+import {
+  GET_CHAT_FOLDERS_KEYS,
+  GET_CHAT_FOLDER_KEYS,
+} from '../../../data/utils/query-keys'
+import { navigationStore } from '../../../stores/navigation.store'
 import {
   DialogActionButton,
   DialogActions,
@@ -5,57 +19,46 @@ import {
   DialogDescription,
   DialogLabel,
   useDialog,
-} from "../../../ui/dialog";
-import { useQueryClient } from "@tanstack/solid-query";
-import { createMemo } from "solid-js";
-import { useChatFolder } from "../../../data/queries/chat-folders/use-chat-folder";
-import { closeActionDialog } from "..";
-import { invoke } from "@tauri-apps/api/core";
-import {
-  GET_CHAT_FOLDER_KEYS,
-  GET_CHAT_FOLDERS_KEYS,
-} from "../../../data/utils/query-keys";
-import { navigationStore } from "../../../stores/navigation.store";
-import { deleteChatFolder } from "../../../data/api/chat-folders/delete-chat-folder";
+} from '../../../ui/dialog'
 
-export type DELETE_CHAT_FOLDER_EVENT_ID = "delete-chat-folder";
+export type DELETE_CHAT_FOLDER_EVENT_ID = 'delete-chat-folder'
 
 export interface DeleteChatFolderDialogProps {
-  folderId: string;
+  folderId: string
 }
 
 export function DeleteChatFolderDialog(props: DeleteChatFolderDialogProps) {
-  const dialog = useDialog();
-  const queryClient = useQueryClient();
+  const dialog = useDialog()
+  const queryClient = useQueryClient()
 
-  const folderId = createMemo(() => props.folderId);
+  const folderId = createMemo(() => props.folderId)
 
   const folder = useChatFolder({
     folderId,
-  });
+  })
 
   const handleDelete = async () => {
     try {
-      await deleteChatFolder(folderId());
+      await deleteChatFolder(folderId())
 
       // Invalidate folder query
       queryClient.invalidateQueries({
         queryKey: GET_CHAT_FOLDER_KEYS({ folderId }),
-      });
+      })
 
       // Invalidate folders queries to refresh the list
       queryClient.invalidateQueries({
         queryKey: GET_CHAT_FOLDERS_KEYS({
           workspaceId: () => navigationStore.workspace.id,
         }),
-      });
+      })
 
-      dialog.setOpen(false);
+      dialog.setOpen(false)
     } catch (error) {
-      console.error("Failed to delete folder:", error);
+      console.error('Failed to delete folder:', error)
       // Here you might want to show an error notification to the user
     }
-  };
+  }
 
   return (
     <>
@@ -72,5 +75,5 @@ export function DeleteChatFolderDialog(props: DeleteChatFolderDialogProps) {
         <DialogActionButton onClick={handleDelete}>Delete</DialogActionButton>
       </DialogActions>
     </>
-  );
+  )
 }

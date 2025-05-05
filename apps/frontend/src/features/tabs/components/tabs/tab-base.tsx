@@ -1,22 +1,19 @@
-import { createMemo, JSX } from "solid-js";
-import { pop, state, switchTo } from "../../tabs.store";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "../../../../ui/tooltip";
+import { JSX, createMemo } from 'solid-js'
+
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/tooltip'
+import { pop, state, switchTo } from '../../tabs.store'
 
 // Props for the base tab component
 export type TabBaseProps = {
-  tab: { id: string; title: string };
-  isActive?: boolean;
-  icon?: JSX.Element; // Custom icon for the tab
-  tooltip?: string; // Optional tooltip text
-  onClick?: () => void; // Optional custom click handler
-  onAuxClick?: () => void; // Optional custom aux click handler
-  onClose?: () => void; // Optional custom close handler
-  children?: JSX.Element; // Custom content inside the tab button
-};
+  tab: { id: string; title: string }
+  isActive?: boolean
+  icon?: JSX.Element // Custom icon for the tab
+  tooltip?: string // Optional tooltip text
+  onClick?: () => void // Optional custom click handler
+  onAuxClick?: () => void // Optional custom aux click handler
+  onClose?: () => void // Optional custom close handler
+  children?: JSX.Element // Custom content inside the tab button
+}
 
 /**
  * TabBase - A reusable tab component for all tab types.
@@ -34,11 +31,11 @@ export function TabBase({
   onClose,
   children,
 }: TabBaseProps) {
-  const active = createMemo(() => isActive ?? tab.id === state.currentTab);
+  const active = createMemo(() => isActive ?? tab.id === state.currentTab)
 
-  const handleClick = () => (onClick ? onClick() : switchTo(tab.id));
-  const handleAuxClick = () => (onAuxClick ? onAuxClick() : pop(tab.id));
-  const handleClose = () => (onClose ? onClose() : pop(tab.id));
+  const handleClick = () => (onClick ? onClick() : switchTo(tab.id))
+  const handleAuxClick = () => (onAuxClick ? onAuxClick() : pop(tab.id))
+  const handleClose = () => (onClose ? onClose() : pop(tab.id))
 
   return (
     <Tooltip floatingOptions={{ offset: 10 }}>
@@ -47,7 +44,7 @@ export function TabBase({
         as="div"
         class="h-button flex items-center justify-between min-w-0 rounded-default bg-window-elements-background hover:bg-elements-background-soft w-full max-w-260px"
         classList={{
-          "bg-elements-background-soft": active(),
+          'bg-elements-background-soft': active(),
         }}
       >
         <button
@@ -66,5 +63,5 @@ export function TabBase({
         </button>
       </TooltipTrigger>
     </Tooltip>
-  );
+  )
 }

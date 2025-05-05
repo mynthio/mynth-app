@@ -1,13 +1,11 @@
-import { createQuery } from "@tanstack/solid-query";
-import { GET_WORKSPACES_KEYS } from "../../utils/query-keys";
-import { getWorkspaces } from "../../api/workspaces/get-workspaces";
+import { useQuery } from '@tanstack/solid-query'
+
+import { getAllWorkspaces } from '../../api/workspaces/get-all-workspaces'
+import { GET_WORKSPACES_KEYS } from '../../utils/query-keys'
 
 export function useWorkspaces() {
-  return createQuery(() => ({
+  return useQuery(() => ({
     queryKey: GET_WORKSPACES_KEYS,
-    queryFn: () => getWorkspaces(),
-    refetchOnReconnect: false,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-  }));
+    queryFn: () => getAllWorkspaces(),
+  }))
 }

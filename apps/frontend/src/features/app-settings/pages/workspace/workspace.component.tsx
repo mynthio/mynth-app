@@ -1,5 +1,6 @@
-import { Accessor, Component } from "solid-js";
-import { useWorkspace } from "../../../../data/queries/workspaces/use-workspace";
+import { Accessor, Component } from 'solid-js'
+
+import { useWorkspace } from '../../../../data/queries/workspaces/use-workspace'
 
 /**
  * Workspace settings page component
@@ -10,11 +11,15 @@ export const WorkspaceSettings: Component<{ id: Accessor<string> }> = (
 ) => {
   const workspace = useWorkspace({
     workspaceId: props.id,
-  });
+  })
 
   return (
     <div>
       <h2 class="text-xl font-semibold mb-2">{workspace.data?.name}</h2>
+
+      <code>
+        <pre>{JSON.stringify(workspace.data, null, 2)}</pre>
+      </code>
 
       <div class="space-y-4">
         <div class="p-4 bg-elements-background-soft rounded-lg">
@@ -46,5 +51,5 @@ export const WorkspaceSettings: Component<{ id: Accessor<string> }> = (
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

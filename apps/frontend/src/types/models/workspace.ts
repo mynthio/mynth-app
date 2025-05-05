@@ -1,14 +1,14 @@
-import { DateTime } from "../common";
+import { DateTime } from '../common'
 
 /**
  * Represents a workspace in the application
  * Maps to Workspace struct in Rust backend
  */
 export interface Workspace {
-  id: string;
-  name: string;
-  createdAt?: DateTime;
-  updatedAt?: DateTime;
+  id: string
+  name: string
+  createdAt?: DateTime
+  updatedAt?: DateTime
 }
 
 /**
@@ -16,7 +16,7 @@ export interface Workspace {
  * Maps to UpdateWorkspaceParams in Rust backend
  */
 interface UpdateWorkspaceParams {
-  name?: string;
+  name?: string
 }
 
 /**
@@ -24,5 +24,5 @@ interface UpdateWorkspaceParams {
  * Maps to CreateWorkspaceParams in Rust backend
  */
 interface CreateWorkspaceParams {
-  name: string;
+  name: string
 }

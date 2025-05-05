@@ -1,16 +1,19 @@
-import { Component, For, lazy, Suspense } from "solid-js";
-import { useAiModels } from "../../../data/queries/ai-models/use-ai-models";
-import { invoke } from "@tauri-apps/api/core";
-import { AIModel } from "../../../types/models/ai";
-import { useAiIntegration } from "../../../data/queries/ai-integrations/use-ai-integration";
-import { useChatBranch } from "../../../data/queries/chat-branches/use-chat-branch";
-import { useQueryClient } from "@tanstack/solid-query";
-import { GET_CHAT_BRANCH_KEYS } from "../../../data/utils/query-keys";
-import { Branch } from "../../../types";
+import { Component, For, Suspense, lazy } from 'solid-js'
+
+import { useQueryClient } from '@tanstack/solid-query'
+
+import { invoke } from '@tauri-apps/api/core'
+
+import { useAiIntegration } from '../../../data/queries/ai-integrations/use-ai-integration'
+import { useAiModels } from '../../../data/queries/ai-models/use-ai-models'
+import { useChatBranch } from '../../../data/queries/chat-branches/use-chat-branch'
+import { GET_CHAT_BRANCH_KEYS } from '../../../data/utils/query-keys'
+import { Branch } from '../../../types'
+import { AIModel } from '../../../types/models/ai'
 
 // Assuming a component will be implemented later
 
-export const CHAT_MODEL_SELECTION_DIALOG_EVENT_ID = "chat-model-selection";
+export const CHAT_MODEL_SELECTION_DIALOG_EVENT_ID = 'chat-model-selection'
 
 /**
  * Props for the ChatModelSelectionDialog component.
@@ -18,7 +21,7 @@ export const CHAT_MODEL_SELECTION_DIALOG_EVENT_ID = "chat-model-selection";
  */
 export interface ChatModelSelectionDialogProps {
   // Add required props, like branchId or any other necessary identifiers
-  branchId: string;
+  branchId: string
 }
 
 /**
@@ -30,12 +33,12 @@ export interface ChatModelSelectionDialogProps {
 export const ChatModelSelectionDialog: Component<
   ChatModelSelectionDialogProps
 > = (props) => {
-  const aiModels = useAiModels();
+  const aiModels = useAiModels()
   const branch = useChatBranch({
     branchId: () => props.branchId,
-  });
+  })
 
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
   return (
     <div class="w-full flex flex-col gap-24px">
@@ -48,7 +51,7 @@ export const ChatModelSelectionDialog: Component<
           <button
             class="h-button bg-elements-background"
             onClick={() => {
-              invoke("update_chat_branch", {
+              invoke('update_chat_branch', {
                 branchId: props.branchId,
                 params: {
                   modelId: model.id,
@@ -62,8 +65,8 @@ export const ChatModelSelectionDialog: Component<
                     ...data,
                     modelId: model.id,
                   })
-                );
-              });
+                )
+              })
             }}
           >
             <ModelTile model={model} />
@@ -71,13 +74,13 @@ export const ChatModelSelectionDialog: Component<
         )}
       </For>
     </div>
-  );
-};
+  )
+}
 
 const ModelTile: Component<{ model: AIModel }> = (props) => {
   const aiIntegration = useAiIntegration({
     aiIntegrationId: () => props.model.integrationId,
-  });
+  })
 
   return (
     <div>
@@ -85,5 +88,5 @@ const ModelTile: Component<{ model: AIModel }> = (props) => {
         {aiIntegration.data?.name}/ {props.model.modelId}
       </div>
     </div>
-  );
-};
+  )
+}
