@@ -3,13 +3,13 @@
   "module": "index.ts",
   "type": "module",
   "devDependencies": {
-    "@types/bun": "^1.2.12"
+    "@types/bun": "^1.2.15"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@faker-js/faker": "^9.7.0",
-    "ulid": "^3.0.0"
+    "@faker-js/faker": "^9.8.0",
+    "ulid": "^3.0.1"
   }
 }

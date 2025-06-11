@@ -10,7 +10,7 @@ import { presetScrollbar } from 'unocss-preset-scrollbar'
 
 export default defineConfig({
   shortcuts: {
-    root: 'selector-[:root]:[--top-bar-height:40px]',
+    root: 'selector-[:root]:[--top-bar-height:28px]',
     'scrollbar-app':
       'scrollbar scrollbar-track-color-transparent scrollbar-thumb-color-accent/50 scrollbar-rounded scrollbar-w-3px scrollbar-h-3px scrollbar-radius-2 scrollbar-track-radius-4 scrollbar-thumb-radius-4',
   },
@@ -56,7 +56,7 @@ export default defineConfig({
       provider: 'google',
       fonts: {
         sans: {
-          name: 'Open Sans',
+          name: 'Geist',
           weights: ['100', '200', '300', '400', '500', '600', '700', '800'],
         },
         mono: 'Fira Code',

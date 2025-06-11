@@ -22,11 +22,11 @@ export function Sidebar() {
     <div
       classList={{
         'w-sidebar': navigationStore.sidebar.isOpen,
-        'w-44px': !navigationStore.sidebar.isOpen,
+        'w-0': !navigationStore.sidebar.isOpen,
       }}
-      class="transition-all duration-200 flex flex-shrink-0 gap-5px"
+      class="transition-all duration-200 flex flex-shrink-0 gap-2px"
     >
-      <NavigationSidebar />
+      {/* <NavigationSidebar /> */}
 
       <Show when={navigationStore.sidebar.isOpen}>
         <SidebarContent />

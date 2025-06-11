@@ -97,8 +97,8 @@ function Item(props: ItemProps) {
       }}
       class="
       px-12px 
-      text-left transition-colors flex items-center gap-2 text-muted
-      text-ui truncate h-32px rounded-default cursor-default 
+      text-left transition-colors flex items-center gap-4px text-muted
+      text-12px font-400 truncate h-26px rounded-6px cursor-default 
       transition-all duration-250"
       onClick={(e) => {
         if (e.metaKey || e.ctrlKey) {
@@ -132,7 +132,7 @@ function Item(props: ItemProps) {
         }
       }}
     >
-      <div class="i-lucide:message-circle text-ui-icon flex-shrink-0" />
+      <div class="i-lucide:message-square text-9px flex-shrink-0" />
       <span class="truncate">{props.item.name}</span>
     </button>
   )

@@ -38,11 +38,11 @@ export function TabBase({
   const handleClose = () => (onClose ? onClose() : pop(tab.id))
 
   return (
-    <Tooltip floatingOptions={{ offset: 10 }}>
+    <Tooltip floatingOptions={{ offset: 2 }}>
       <TooltipContent>{tooltip ?? tab.title}</TooltipContent>
       <TooltipTrigger
         as="div"
-        class="h-button flex items-center justify-between min-w-0 rounded-default bg-window-elements-background hover:bg-elements-background-soft w-full max-w-260px"
+        class="h-28px flex items-center justify-between min-w-0 rounded-default bg-window-elements-background hover:bg-elements-background-soft w-full max-w-260px"
         classList={{
           'bg-elements-background-soft': active(),
         }}
@@ -50,16 +50,16 @@ export function TabBase({
         <button
           onClick={handleClick}
           onAuxClick={handleAuxClick}
-          class="w-full h-full flex items-center gap-5px text-ui-small px-10px cursor-default hover:bg-elements-background-soft rounded-default min-w-0"
+          class="w-full h-full flex items-center gap-5px text-10px font-200 px-10px cursor-default hover:bg-elements-background-soft rounded-default min-w-0"
         >
           {icon}
-          <div class="truncate min-w-0">{children ?? tab.title}</div>
+          <div class="truncate min-w-0 text-11px">{children ?? tab.title}</div>
         </button>
         <button
           class="w-30px h-30px rounded-default flex-shrink-0 flex items-center justify-center cursor-default hover:bg-white/5"
           onClick={handleClose}
         >
-          <div class="i-lucide:x text-16px text-muted" />
+          <div class="i-lucide:x text-9px text-muted" />
         </button>
       </TooltipTrigger>
     </Tooltip>

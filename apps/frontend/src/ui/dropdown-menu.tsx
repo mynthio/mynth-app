@@ -36,8 +36,8 @@ export function DropdownMenuItem(props: DropdownMenuItem) {
   return (
     <KobalteDropdownMenu.Item
       {...props}
-      onContextMenu={(e) => e.preventDefault()}
-      class="data-[highlighted]:bg-accent/10 hover:bg-accent/10 data-[highlighted]:text-body transition-colors transition-duration-150ms px-24px py-4px text-body/90 rounded-7px text-14px"
+      onContextMenu={(e: Event) => e.preventDefault()}
+      class="data-[highlighted]:bg-accent/10 hover:bg-accent/10 active:scale-98 active:bg-accent/15 data-[highlighted]:text-body transition-colors transition-transform transition-duration-150ms px-24px py-4px text-body/90 rounded-7px text-14px"
     />
   )
 }

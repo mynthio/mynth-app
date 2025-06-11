@@ -9,13 +9,13 @@ export const useDialog = CorvuDialog.useContext
 interface DialogProps extends ComponentProps<typeof CorvuDialog> {}
 
 export function Dialog(props: DialogProps) {
-  return <CorvuDialog {...props} />
+  return <CorvuDialog hideScrollbar={false} {...props} />
 }
 
 interface DialogTriggerProps
   extends ComponentProps<typeof CorvuDialog.Trigger> {}
 
-function DialogTrigger(props: DialogTriggerProps) {
+export function DialogTrigger(props: DialogTriggerProps) {
   return <CorvuDialog.Trigger {...props} />
 }
 
@@ -27,7 +27,7 @@ export function DialogContent(props: DialogContentProps) {
     <CorvuDialog.Portal>
       <CorvuDialog.Overlay
         class="
-        fixed inset-0 z-50 bg-elements-background/85 backdrop-blur-7px  rounded-window
+        fixed inset-0 z-50 bg-background/65 backdrop-blur-0px
 
         data-[open]:animate-in data-[open]:fade-in-0 data-[open]:animate-duration-[200ms]
         data-[closed]:animate-out data-[closed]:fade-out-0 data-[closed]:animate-duration-[200ms]"
@@ -37,8 +37,8 @@ export function DialogContent(props: DialogContentProps) {
         <CorvuDialog.Content
           {...props}
           class={`
-            max-w-560px min-w-400px min-h-200px rounded-14px border-2 border-elements-background
-            bg-background
+            min-w-400px min-h-200px rounded-14px border-2 border-elements-background-soft
+            bg-elements-background
             p-24px
             data-[open]:animate-in data-[open]:zoom-in-95 data-[open]:fade-in-0 data-[open]:animate-duration-[300ms]
             data-[closed]:animate-out data-[closed]:zoom-out-95 data-[closed]:fade-out-0 data-[closed]:animate-duration-[200ms] ${props.class}`}

@@ -47,3 +47,19 @@ App directory: `/Users/<USERNAME>/Library/Application Support/com.mynth.macos`
 ### 📝 License
 
 This project is licensed under the **MIT License** for open-source use. However, if you plan to **sell, bundle, or commercially distribute** this software, you must obtain a commercial license. See [COMMERCIAL-LICENSE.md](./COMMERCIAL-LICENSE.md) for details.
+
+### Populate DB
+
+```sql
+INSERT INTO "providers" ("id", "name", "base_url", "auth_type", "api_key_id", "json_auth_config", "json_keys", "json_variables", "models_sync_strategy", "marketplace_id", "updated_at") VALUES
+('1', 'Ollama', 'http://localhost:11434', 'none', NULL, '{}', '{}', '{}', 'local', NULL, '2025-06-09 13:57:03');
+
+INSERT INTO "models" ("id", "name", "display_name", "provider_id", "max_input_tokens", "input_price", "output_price", "tags", "capabilities", "source", "is_hidden", "is_pinned", "is_favourite", "request_template", "json_config", "marketplace_id", "json_variables", "json_metadata_v1", "updated_at") VALUES
+('1', 'gemma3:1b', 'Gemma 3 1B', '1', NULL, NULL, NULL, NULL, NULL, 'local', '0', '0', '0', NULL, NULL, NULL, NULL, NULL, '2025-06-09 13:59:38');
+
+INSERT INTO "provider_endpoints" ("id", "provider_id", "display_name", "type", "path", "method", "compatibility", "request_template", "json_request_schema", "json_response_schema", "json_request_config", "json_response_config", "json_variables", "streaming", "priority", "json_config", "marketplace_id") VALUES
+('1', '1', 'Chat stream', 'chat_stream', '/v1/chat/completions', 'POST', 'open_ai', NULL, NULL, NULL, NULL, NULL, NULL, '1', NULL, NULL, NULL);
+
+INSERT INTO "model_endpoint_configurations" ("id", "model_id", "endpoint_id", "endpoint_type", "updated_at") VALUES
+('1', '1', '1', 'chat_stream', '2025-06-09 13:59:53');
+```

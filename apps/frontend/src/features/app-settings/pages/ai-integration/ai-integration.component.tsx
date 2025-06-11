@@ -4,6 +4,10 @@ import { Accessor, Component } from 'solid-js'
 
 import { useQueryClient } from '@tanstack/solid-query'
 
+import { invoke } from '@tauri-apps/api/core'
+
+import { useProvider } from '@/data/queries/providers/use-provider'
+
 import { deleteAiIntegration } from '../../../../data/api/ai-integrations/delete-ai-integration'
 import { setAiIntegrationApiKey } from '../../../../data/api/ai-integrations/set-ai-integration-api-key'
 import { useAiIntegration } from '../../../../data/queries/ai-integrations/use-ai-integration'
@@ -21,25 +25,22 @@ import { useAppSettings } from '../../app-settings.context'
 export const AiIntegrationSettings: Component<{ id: Accessor<string> }> = (
   props
 ) => {
-  const aiIntegration = useAiIntegration({
-    aiIntegrationId: props.id,
+  const provider = useProvider({
+    providerId: props.id,
   })
-
   const models = useAiModels({
     aiIntegrationId: props.id,
   })
 
   return (
     <div>
-      <h2 class="text-xl font-semibold mb-2">
-        {aiIntegration.data?.displayName}
-      </h2>
+      <h2 class="text-xl font-semibold mb-2">{provider.data?.name}</h2>
       <p class="text-muted mb-4">ID: {props.id()}</p>
 
       <ApiKeyForm id={props.id} />
 
       <code>
-        <pre>{JSON.stringify(aiIntegration.data, null, 2)}</pre>
+        <pre>{JSON.stringify(provider.data, null, 2)}</pre>
       </code>
       <h2>Models</h2>
       <code>
@@ -59,8 +60,8 @@ const ApiKeyForm: Component<{ id: Accessor<string> }> = (props) => {
     const formData = new FormData(e.target as HTMLFormElement)
     const apiKey = formData.get('apiKey')
 
-    setAiIntegrationApiKey({
-      integrationId: props.id(),
+    invoke('update_provider_api_key', {
+      providerId: props.id(),
       apiKey: apiKey as string,
     })
 
@@ -69,7 +70,6 @@ const ApiKeyForm: Component<{ id: Accessor<string> }> = (props) => {
         aiIntegrationId: props.id,
       }),
     })
-
     ;(e.target as HTMLFormElement).reset()
   }
 

@@ -1,5 +1,7 @@
 import { Component, For } from 'solid-js'
 
+import { useProviders } from '@/data/queries/providers/use-providers'
+
 import { useAiIntegrations } from '../../../data/queries/ai-integrations/use-ai-integrations'
 import { useWorkspaces } from '../../../data/queries/workspaces/use-workspaces'
 import {
@@ -44,7 +46,7 @@ export const AppSettingsSidebar: Component = () => {
   }
 
   const worksapces = useWorkspaces()
-  const aiIntegrations = useAiIntegrations()
+  const providers = useProviders()
 
   return (
     <nav class="flex flex-col px-4 border-r-2px border-elements-background-soft w-320px h-full">
@@ -94,20 +96,18 @@ export const AppSettingsSidebar: Component = () => {
       {/* Dynamic AI Integrations */}
       <h4 class="text-ui font-semibold mb-16px">AI Integrations</h4>
       <ul class="mb-22px">
-        <For each={aiIntegrations?.data}>
-          {(integration) => (
+        <For each={providers?.data}>
+          {(provider) => (
             <li class="mb-1">
               <button
-                onClick={() =>
-                  handleItemClick('ai-integration', integration.id)
-                }
+                onClick={() => handleItemClick('ai-integration', provider.id)}
                 class={`w-full text-muted text-left text-ui px-16px h-button rounded-11px hover:bg-elements-background ${
-                  isItemActive('ai-integration', integration.id)
+                  isItemActive('ai-integration', provider.id)
                     ? 'bg-elements-background-soft text-selected'
                     : ''
                 }`}
               >
-                {integration.displayName}
+                {provider.name}
               </button>
             </li>
           )}

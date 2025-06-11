@@ -1,6 +1,6 @@
 import { Accessor } from 'solid-js'
 
-import { createQuery } from '@tanstack/solid-query'
+import { createQuery, useQuery } from '@tanstack/solid-query'
 
 import { getChatBranch } from '../../api/chat-branches/get-chat-branch'
 import { GET_CHAT_BRANCH_KEYS } from '../../utils/query-keys'
@@ -10,7 +10,7 @@ interface UseChatBranchProps {
 }
 
 export const useChatBranch = ({ branchId }: UseChatBranchProps) => {
-  return createQuery(() => ({
+  return useQuery(() => ({
     queryKey: GET_CHAT_BRANCH_KEYS({ branchId }),
     queryFn: () => getChatBranch(branchId()),
   }))

@@ -1,5 +1,6 @@
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
+import * as smd from 'streaming-markdown'
 import { VList, VListHandle } from 'virtua/solid'
 
 import {

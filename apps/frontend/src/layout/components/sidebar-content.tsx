@@ -7,7 +7,7 @@ import { navigationStore } from '../../stores/navigation.store'
 
 export function SidebarContent() {
   return (
-    <div class="w-full h-full flex-1 relative border-l border-background pl-8px">
+    <div class="w-full h-full flex-1 relative border-l border-background pl-2px">
       <Switch>
         <Match when={navigationStore.content.type === 'chat'}>
           <ChatSidebar />

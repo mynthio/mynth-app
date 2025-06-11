@@ -1,0 +1,9 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+tasks:
+  dev:
+    description: Start dummy api in development mode
+    command: "pnpm dev"
+    options:
+      runInCI: false
+      persistent: true

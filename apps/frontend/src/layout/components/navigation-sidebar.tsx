@@ -10,10 +10,10 @@ export function NavigationSidebar() {
   return (
     <div
       data-tauri-drag-region
-      class="relative flex flex-col items-center h-full justify-between gap-4px w-navigation-sidebar mt-4px pb-8px"
+      class="relative flex flex-col items-center h-full justify-between gap-4px w-32px mt-4px pb-8px"
     >
       <div class="flex flex-col items-center gap-4px">
-        <div class="rounded-default bg-elements-background-soft text-selected size-34px flex items-center justify-center">
+        <div class="rounded-8px bg-elements-background-soft text-selected size-28px flex items-center justify-center">
           <div class="i-lucide:messages-square text-15px text-selected" />
         </div>
         <div class="rounded-default text-muted size-34px flex items-center justify-center">

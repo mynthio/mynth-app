@@ -1,5 +1,10 @@
-import { Accessor, Component } from 'solid-js'
+import { Accessor, Component, createResource } from 'solid-js'
 
+import { invoke } from '@tauri-apps/api/core'
+
+import { integrateProvider } from '@/data/api/providers/integrate-provider'
+
+import { selectWorkspaceConfig } from '../../../../data/api/workspaces/select-workspace-config'
 import { useWorkspace } from '../../../../data/queries/workspaces/use-workspace'
 
 /**
@@ -13,43 +18,48 @@ export const WorkspaceSettings: Component<{ id: Accessor<string> }> = (
     workspaceId: props.id,
   })
 
+  const [workspaceConfig] = createResource(async () => {
+    const config = await selectWorkspaceConfig(props.id())
+    return config
+  })
+
+  const [providers] = createResource(async () => {
+    const providers = await invoke('marketplace_api_list_providers')
+    return providers as any
+  })
+
   return (
     <div>
       <h2 class="text-xl font-semibold mb-2">{workspace.data?.name}</h2>
 
+      <button
+        onClick={() => {
+          invoke('call_chat')
+        }}
+      >
+        Test the chat endpoint
+      </button>
+
+      <h3>Workspace</h3>
       <code>
         <pre>{JSON.stringify(workspace.data, null, 2)}</pre>
       </code>
 
-      <div class="space-y-4">
-        <div class="p-4 bg-elements-background-soft rounded-lg">
-          <h3 class="text-lg font-medium mb-2">Workspace Details</h3>
-          <p class="text-sm text-muted">
-            Workspace name, description, and general settings
-          </p>
-        </div>
+      <h3>Workspace Config</h3>
+      <code>
+        <pre>{JSON.stringify(workspaceConfig(), null, 2)}</pre>
+      </code>
 
-        <div class="p-4 bg-elements-background-soft rounded-lg">
-          <h3 class="text-lg font-medium mb-2">Members & Access</h3>
-          <p class="text-sm text-muted">
-            Manage workspace access and permissions
-          </p>
-        </div>
+      <h3>Providers</h3>
+      <code>
+        <pre>{JSON.stringify(providers(), null, 2)}</pre>
+      </code>
 
-        <div class="p-4 bg-elements-background-soft rounded-lg">
-          <h3 class="text-lg font-medium mb-2">Integrations</h3>
-          <p class="text-sm text-muted">
-            Configure workspace-specific integrations
-          </p>
-        </div>
-
-        <div class="p-4 bg-elements-background-soft rounded-lg">
-          <h3 class="text-lg font-medium mb-2">Advanced Settings</h3>
-          <p class="text-sm text-muted">
-            Configure advanced workspace settings
-          </p>
-        </div>
-      </div>
+      <button
+        onClick={() => integrateProvider(providers() ? providers()[0].id : '')}
+      >
+        Integrate Provider
+      </button>
     </div>
   )
 }

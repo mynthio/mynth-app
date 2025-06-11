@@ -68,10 +68,38 @@ export const GET_AI_MODELS_KEYS = ({
   aiIntegrationId?: Accessor<string | null>
 } = {}) => (aiIntegrationId ? ['ai-models', aiIntegrationId()] : ['ai-models'])
 
-export const GET_PROVIDERS_KEYS = () => ['providers']
+export const PROVIDER_KEYS = () => ['providers']
+
+export const GET_PROVIDER_BY_ID_KEYS = ({
+  providerId,
+}: {
+  providerId: Accessor<string>
+}) => ['providers', providerId()]
 
 export const GET_PROVIDER_MODELS_KEYS = ({
   providerId,
 }: {
   providerId: Accessor<string>
 }) => ['provider-models', providerId()]
+
+export const MODELS_KEYS = () => ['models']
+export const MODEL_KEYS = ({ modelId }: { modelId: Accessor<string> }) => [
+  'models',
+  modelId(),
+]
+
+export const BRANCH_KEYS = ({ branchId }: { branchId: Accessor<string> }) => [
+  'branches',
+  branchId(),
+]
+export const BRANCHES_BY_CHAT_ID_KEYS = ({
+  chatId,
+}: {
+  chatId: Accessor<string>
+}) => ['branches', chatId()]
+
+export const NODE_MESSAGES_BY_NODE_ID_KEYS = ({
+  nodeId,
+}: {
+  nodeId: Accessor<string>
+}) => ['node-messages', nodeId()]

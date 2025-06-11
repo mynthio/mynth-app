@@ -1,3 +1,13 @@
+import { For, Show, createMemo } from 'solid-js'
+
+import { useQueryClient } from '@tanstack/solid-query'
+
+import { updateBranch } from '@/data/api/branches/update-branch'
+import { useModels } from '@/data/queries/models/use-models'
+import { BRANCH_KEYS } from '@/data/utils/query-keys'
+import { closeDialog } from '@/features/dialogs'
+import { Branch } from '@/shared/types/branch/branch.type'
+
 import { ContextMenuPayload } from '..'
 import {
   DropdownMenuItem,
@@ -15,6 +25,13 @@ interface ChatAiModelButtonContextMenuProps {
 export function ChatAiModelButtonContextMenu(
   props: ChatAiModelButtonContextMenuProps
 ) {
+  const queryClient = useQueryClient()
+  const models = useModels()
+
+  const pinnedModels = createMemo(() => {
+    return models.data?.filter((model) => model.is_pinned)
+  })
+
   return (
     <>
       <DropdownMenuItem
@@ -27,22 +44,39 @@ export function ChatAiModelButtonContextMenu(
       >
         Configure Settings
       </DropdownMenuItem>
-      <DropdownMenuSeparator />
-      <DropdownMenuItem
-        onSelect={() => console.log('View model info', props.payload.id)}
-      >
-        Hyperbolic / Llama 3.3. 70B
-      </DropdownMenuItem>
-      <DropdownMenuItem
-        onSelect={() => console.log('Set as default', props.payload.id)}
-      >
-        Groq / DeepSeek Coder 32B
-      </DropdownMenuItem>
-      <DropdownMenuItem
-        onSelect={() => console.log('Set as default', props.payload.id)}
-      >
-        Groq / Claude 3.5 Sonnet
-      </DropdownMenuItem>
+      <Show when={pinnedModels()?.length}>
+        <DropdownMenuSeparator />
+
+        <For each={pinnedModels()}>
+          {(model) => (
+            <DropdownMenuItem
+              onSelect={() => {
+                const branchId = props.payload.id
+                updateBranch({
+                  id: branchId,
+                  modelId: model.id,
+                  name: null,
+                }).then(() => {
+                  queryClient.setQueryData<Branch>(
+                    BRANCH_KEYS({
+                      branchId: () => branchId,
+                    }),
+                    (data: Branch | undefined) =>
+                      data
+                        ? {
+                            ...data,
+                            modelId: model.id,
+                          }
+                        : undefined
+                  )
+                })
+              }}
+            >
+              {model.display_name}
+            </DropdownMenuItem>
+          )}
+        </For>
+      </Show>
     </>
   )
 }

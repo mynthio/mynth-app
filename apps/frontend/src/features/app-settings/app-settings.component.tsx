@@ -11,7 +11,7 @@ import { AppSettingsSidebar } from './components/app-settings-sidebar.component'
 export const AppSettingsComponent: Component = () => {
   return (
     <AppSettingsProvider>
-      <div class="flex h-full w-full">
+      <div class="flex h-full w-full pt-45px">
         <AppSettingsSidebar />
         <AppSettingsMain />
       </div>

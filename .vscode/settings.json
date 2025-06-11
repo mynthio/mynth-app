@@ -14,5 +14,7 @@
   },
   "rust-analyzer.check.extraEnv": {
     "DATABASE_URL": "sqlite:.sqlx/database.db"
-  }
+  },
+  "typescript.preferences.importModuleSpecifier": "non-relative",
+  "javascript.preferences.importModuleSpecifier": "non-relative"
 }
