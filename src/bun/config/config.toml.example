@@ -1,0 +1,11 @@
+# Mynth — global application config
+# This file lives at: <AppData>/app.mynth.io/<channel>/config.toml
+# Missing keys fall back to built-in defaults.
+
+[app]
+# UI colour scheme. Currently only "dark" is supported.
+theme = "dark"
+
+[chat.message]
+# Base font size (px) for chat messages.
+fontSize = 14
