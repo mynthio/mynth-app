@@ -18,13 +18,13 @@ CREATE INDEX `assets_chat_id_idx` ON `assets` (`chat_id`);--> statement-breakpoi
 CREATE INDEX `assets_message_id_idx` ON `assets` (`message_id`);--> statement-breakpoint
 CREATE TABLE `chat_settings` (
 	`chat_id` text PRIMARY KEY NOT NULL,
-	`provider_profile_id` text,
 	`model_id` text,
 	`system_prompt` text,
 	`output_mode` text DEFAULT 'text' NOT NULL,
 	`output_schema` text,
 	`updated_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL,
-	FOREIGN KEY (`chat_id`) REFERENCES `chats`(`id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`chat_id`) REFERENCES `chats`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`model_id`) REFERENCES `models`(`id`) ON UPDATE no action ON DELETE set null
 );
 --> statement-breakpoint
 CREATE TABLE `chats` (
@@ -47,26 +47,6 @@ CREATE TABLE `folders` (
 );
 --> statement-breakpoint
 CREATE INDEX `folders_parent_id_idx` ON `folders` (`parent_id`);--> statement-breakpoint
-CREATE TABLE `message_runs` (
-	`id` text PRIMARY KEY NOT NULL,
-	`chat_id` text NOT NULL,
-	`assistant_message_id` text,
-	`provider_profile_id` text,
-	`model_id` text,
-	`status` text DEFAULT 'completed' NOT NULL,
-	`tokens_prompt` integer,
-	`tokens_completion` integer,
-	`tokens_total` integer,
-	`latency_ms` integer,
-	`error` text,
-	`raw_response` text,
-	`created_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL,
-	FOREIGN KEY (`chat_id`) REFERENCES `chats`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`assistant_message_id`) REFERENCES `messages`(`id`) ON UPDATE no action ON DELETE set null
-);
---> statement-breakpoint
-CREATE INDEX `message_runs_chat_id_idx` ON `message_runs` (`chat_id`);--> statement-breakpoint
-CREATE INDEX `message_runs_assistant_message_id_idx` ON `message_runs` (`assistant_message_id`);--> statement-breakpoint
 CREATE TABLE `messages` (
 	`id` text PRIMARY KEY NOT NULL,
 	`chat_id` text NOT NULL,
@@ -82,4 +62,37 @@ CREATE TABLE `messages` (
 --> statement-breakpoint
 CREATE INDEX `messages_chat_id_idx` ON `messages` (`chat_id`);--> statement-breakpoint
 CREATE INDEX `messages_parent_id_idx` ON `messages` (`parent_id`);--> statement-breakpoint
-CREATE INDEX `messages_created_at_idx` ON `messages` (`created_at`);
+CREATE INDEX `messages_created_at_idx` ON `messages` (`created_at`);--> statement-breakpoint
+CREATE TABLE `models` (
+	`id` text PRIMARY KEY NOT NULL,
+	`provider_id` text NOT NULL,
+	`provider_model_id` text NOT NULL,
+	`canonical_model_id` text NOT NULL,
+	`display_name` text,
+	`is_enabled` integer DEFAULT true NOT NULL,
+	`metadata` text DEFAULT '{}' NOT NULL,
+	`created_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL,
+	`updated_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL,
+	FOREIGN KEY (`provider_id`) REFERENCES `providers`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `models_provider_model_unique` ON `models` (`provider_id`,`provider_model_id`);--> statement-breakpoint
+CREATE INDEX `models_canonical_model_id_idx` ON `models` (`canonical_model_id`);--> statement-breakpoint
+CREATE INDEX `models_provider_id_idx` ON `models` (`provider_id`);--> statement-breakpoint
+CREATE INDEX `models_is_enabled_idx` ON `models` (`is_enabled`);--> statement-breakpoint
+CREATE TABLE `providers` (
+	`id` text PRIMARY KEY NOT NULL,
+	`display_name` text NOT NULL,
+	`kind` text NOT NULL,
+	`auth_kind` text DEFAULT 'api_key' NOT NULL,
+	`base_url` text,
+	`api_key_id` text,
+	`api_secret_id` text,
+	`config` text DEFAULT '{}' NOT NULL,
+	`is_enabled` integer DEFAULT true NOT NULL,
+	`created_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL,
+	`updated_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL
+);
+--> statement-breakpoint
+CREATE INDEX `providers_kind_idx` ON `providers` (`kind`);--> statement-breakpoint
+CREATE INDEX `providers_is_enabled_idx` ON `providers` (`is_enabled`);

@@ -4,8 +4,8 @@ const drizzleDbPath = process.env["DRIZZLE_DB_PATH"] ?? "./tmp/drizzle-workspace
 
 export default defineConfig({
   dialect: "sqlite",
-  schema: "./src/bun/db/schema.ts",
-  out: "./src/bun/db/migrations",
+  schema: "./src/main-process/db/schema.ts",
+  out: "./src/main-process/db/migrations",
   dbCredentials: {
     url: drizzleDbPath,
   },

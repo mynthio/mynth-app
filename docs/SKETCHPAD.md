@@ -21,7 +21,7 @@ Core workflow:
 
 ## Core architecture notes
 
-Main process (Bun):
+Main process (Electron):
 - DB access
 - AI SDK calls
 - Runtime stream manager
@@ -37,7 +37,7 @@ Renderer (React):
 - Tab state and notifications
 
 IPC:
-- Electrobun RPC is the live update channel
+- Electron IPC is the live update channel
 - Main pushes stream deltas/events to renderer
 - Renderer does not poll DB for token updates
 

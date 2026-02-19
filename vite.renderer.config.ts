@@ -5,12 +5,12 @@ import path from 'node:path';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  root: 'src/mainview',
+  root: 'src/renderer',
   plugins: [
     TanStackRouterVite({
       target: 'react',
-      routesDirectory: path.resolve(__dirname, 'src/mainview/routes'),
-      generatedRouteTree: path.resolve(__dirname, 'src/mainview/routeTree.gen.ts'),
+      routesDirectory: path.resolve(__dirname, 'src/renderer/routes'),
+      generatedRouteTree: path.resolve(__dirname, 'src/renderer/routeTree.gen.ts'),
       autoCodeSplitting: true,
       quoteStyle: 'double',
     }),
@@ -19,7 +19,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src/mainview'),
+      '@': path.resolve(__dirname, 'src/renderer'),
     },
   },
   server: {

@@ -4,16 +4,16 @@ Task tracking lives in `docs/TASKS.md`.
 
 ## Current stack (repo)
 
-- Desktop shell: Electrobun (Bun main process + webview renderer)
+- Desktop shell: Electron Forge (Electron main process + renderer webview)
 - Renderer: React + Vite
 - Navigation: TanStack Router
 - Styling: Tailwind CSS v4 (+ existing UI primitives)
 - Client state: Zustand
 - Tooling: TypeScript, OXC lint/format
 - Persistence:
-  - Global: `config.toml` (TOML file, no secrets) — implemented in `src/bun/config/`
+  - Global: `config.toml` (TOML file, no secrets) — implemented in `src/main-process/config/`
   - Global session: `session.json` for UI session state (tabs/panes/route, no secrets)
-  - Workspace: SQLite (Bun) + Drizzle ORM + `drizzle-kit` migrations
+  - Workspace: SQLite (`better-sqlite3`) + Drizzle ORM + `drizzle-kit` migrations
     - Query style: `select().from().leftJoin().where()...` (avoid `db.query.*`)
     - Runtime: apply migrations on workspace open / app start
 
@@ -23,14 +23,14 @@ Task tracking lives in `docs/TASKS.md`.
 - AI SDK as the contract: store `message.parts` compatibly.
 - Branching-first: message tree is core behavior.
 - Main/renderer split: secrets + network + DB in main process.
-- IPC for live updates: stream state over Electrobun RPC events, not DB polling.
+- IPC for live updates: stream state over Electron IPC events, not DB polling.
 - SQLite for durable state: persist final chat content and checkpoint snapshots.
 - Router owns page navigation; Zustand owns UI/session state inside pages.
 - Session persistence is main-process owned; renderer never writes session to `localStorage`.
 
 ## Proposed architecture (high level)
 
-Main process (Bun, `src/bun/…`)
+Main process (Electron, `src/main-process/…`)
 - Persistence (SQLite)
 - Provider registry + model discovery
 - AI execution via Vercel AI SDK (streaming, tools, structured output, image/video)
@@ -49,7 +49,7 @@ Renderer (React, `src/mainview/…`)
   - live stream/tab indicator state
   - tab/pane layout state
 
-Typed RPC bridge (Electrobun)
+Typed IPC bridge (Electron)
 - Renderer -> main: request/command RPC (`startStream`, `cancelStream`, CRUD)
 - Main -> renderer: stream events (`started`, `delta`, `completed`, `failed`, `canceled`)
 - Renderer -> main: session RPC (`getWorkspaceSession`, `saveWorkspaceSessionPatch`)
@@ -190,7 +190,7 @@ Deliverable: user can configure providers/models per workspace.
 
 ### M4 — AI streaming runs (4–8 days)
 - Implement main-process stream pipeline with AI SDK `streamText`.
-- Forward stream events to renderer through Electrobun RPC.
+- Forward stream events to renderer through Electron IPC.
 - Persist final assistant message + final metadata in `messages.metadata`.
 - Persist partial checkpoints on timer/tool-call/failure boundaries.
 - Reject concurrent start for same chat with `already_streaming` error.
@@ -232,7 +232,7 @@ Deliverable: decide ship/no-ship after prototype.
 - Streaming is IPC-driven with in-memory runtime state.
 - Zustand is the default state management layer in renderer.
 - TanStack Router is the navigation layer for top-level pages.
-- Hash history (`createHashHistory`) used for Electrobun `views://` protocol compatibility.
+- Hash history (`createHashHistory`) used for desktop renderer compatibility.
 - File-based routing via `@tanstack/router-plugin`; `routeTree.gen.ts` is gitignored.
 - Feature modules live in `src/mainview/features/`; route files in `src/mainview/routes/` are thin wrappers.
 - Tabs/panes/recent-tabs are persisted in main-process `session.json` keyed by workspace.

@@ -1,4 +1,20 @@
-import { defineConfig } from 'vite';
+import { builtinModules } from "node:module";
+import { defineConfig } from "vite";
 
-// https://vitejs.dev/config
-export default defineConfig({});
+const external = [
+  "better-sqlite3",
+  "electron",
+  ...builtinModules,
+  ...builtinModules.map((moduleName) => `node:${moduleName}`),
+];
+
+export default defineConfig({
+  build: {
+    rollupOptions: {
+      external,
+    },
+  },
+  optimizeDeps: {
+    exclude: ["better-sqlite3"],
+  },
+});

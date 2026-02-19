@@ -1,12 +1,13 @@
 import { mkdirSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
-import { getUserDataDirectory } from "../utils/paths";
+import { getUserDataDirectory } from "../system/paths";
 
 const WORKSPACES_DIRECTORY_NAME = "workspaces";
 const WORKSPACE_DATABASE_FILENAME = "workspace.sqlite";
 const WORKSPACE_ASSETS_DIRECTORY_NAME = "assets";
 const WORKSPACE_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
+export const DEFAULT_WORKSPACE_ID = "default";
 
 export interface WorkspacePaths {
   workspaceId: string;

@@ -39,23 +39,23 @@
   - IDs: UUIDv7 everywhere
   - Timestamps: UTC ms epoch
 
-### M0-T4 — DB stack decision + scaffolding (Drizzle + Bun SQLite)
+### M0-T4 — DB stack decision + scaffolding (Drizzle + better-sqlite3)
 - Status: `DONE`
 - Goal: Establish workspace DB access pattern and migrations workflow.
 - Acceptance:
-  - `drizzle.config.ts` present and runnable via Bun scripts
+  - `drizzle.config.ts` present and runnable via pnpm scripts
   - Migration runs against local workspace DB
 
 ### M0-T5 — Spike: Keychain `SecretStore`
 - Status: `BLOCKED`
-- Goal: Pick best macOS Keychain integration path for Electrobun/Bun.
+- Goal: Pick best macOS Keychain integration path for Electron.
 - Acceptance:
   - `SecretStore` API shape agreed (`get/set/delete/list`)
   - Recommended implementation path selected
 
 ### M0-T6 — Shared RPC schema for app IPC
 - Status: `NEXT`
-- Goal: Define shared Electrobun RPC request/message types for chat + streaming.
+- Goal: Define shared Electron IPC request/message types for chat + streaming.
 - Acceptance:
   - Shared RPC type file exists
   - Includes start/cancel stream requests
@@ -82,7 +82,7 @@
 - Status: `NEXT`
 - Goal: Persist workspace UI session state outside renderer storage.
 - Acceptance:
-  - `session.json` file managed by Bun main process
+  - `session.json` file managed by Electron main process
   - Session keyed by `workspaceId`
   - Stores panes/tabs/active pane/recent tabs/last route
   - No `localStorage` usage for workspace session persistence
@@ -170,7 +170,7 @@
   - `startChatStream` returns `already_streaming` error if chat already has an active stream
   - Cancel supported
 
-### M4-T2 — Stream forwarding over Electrobun RPC
+### M4-T2 — Stream forwarding over Electron IPC
 - Status: `BACKLOG`
 - Acceptance:
   - `streamText` deltas emitted to renderer in real time

@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import { getUserDataDirectory } from "../utils/paths";
+import { getUserDataDirectory } from "../system/paths";
 import { ConfigStore } from "./store";
 import type { AppConfig } from "./types";
 

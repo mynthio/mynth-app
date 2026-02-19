@@ -14,7 +14,7 @@
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/mainview/*"]
+      "@/*": ["./src/renderer/*"]
     },
     "types": ["node", "vite/client", "@electron-forge/plugin-vite/forge-vite-env"],
     "resolveJsonModule": true,

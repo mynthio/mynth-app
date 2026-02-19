@@ -88,7 +88,7 @@ typings/
 
 # Vite
 .vite/
-src/mainview/routeTree.gen.ts
+src/renderer/routeTree.gen.ts
 
 # Electron-Forge
 out/

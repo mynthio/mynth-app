@@ -11,7 +11,7 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses';
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
-    extraResource: ['src/bun/db/migrations'],
+    extraResource: ['src/main-process/db/migrations'],
   },
   rebuildConfig: {},
   makers: [

@@ -8,10 +8,10 @@ export default defineConfig({
 	plugins: [
 		TanStackRouterVite({
 			target: "react",
-			routesDirectory: path.resolve(__dirname, "src/mainview/routes"),
+			routesDirectory: path.resolve(__dirname, "src/renderer/routes"),
 			generatedRouteTree: path.resolve(
 				__dirname,
-				"src/mainview/routeTree.gen.ts",
+				"src/renderer/routeTree.gen.ts",
 			),
 			autoCodeSplitting: true,
 			quoteStyle: "double",
@@ -19,10 +19,10 @@ export default defineConfig({
 		react(),
 		tailwindcss(),
 	],
-	root: "src/mainview",
+	root: "src/renderer",
 	resolve: {
 		alias: {
-			"@": path.resolve(__dirname, "src/mainview"),
+			"@": path.resolve(__dirname, "src/renderer"),
 		},
 	},
 	build: {
