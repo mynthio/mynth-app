@@ -4,6 +4,10 @@ import started from "electron-squirrel-startup";
 import { getConfig, getConfigPath } from "./main-process/config";
 import { DEFAULT_WORKSPACE_ID, bootstrapWorkspaceDatabases } from "./main-process/db";
 import { closeAllDatabases } from "./main-process/db/database";
+import {
+  WINDOW_TOOLBAR_HEIGHT,
+  WINDOW_TRAFFIC_LIGHTS_POSITION,
+} from "./shared/window-chrome";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -15,21 +19,25 @@ if (started) {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  const HEADER_HEIGHT = 44;
-
   let mainWindow: BrowserWindow | null = null;
 
   function createWindow() {
+    const isMac = process.platform === "darwin";
+
     mainWindow = new BrowserWindow({
       width: 800,
       height: 600,
-      titleBarStyle: "hiddenInset",
-      trafficLightPosition: { x: 12, y: 12 },
-      titleBarOverlay: {
-        color: "#00000000",
-        symbolColor: "#ffffff",
-        height: HEADER_HEIGHT,
-      },
+      ...(isMac
+        ? {
+            titleBarStyle: "hiddenInset" as const,
+            trafficLightPosition: WINDOW_TRAFFIC_LIGHTS_POSITION,
+            titleBarOverlay: {
+              color: "#00000000",
+              symbolColor: "#ffffff",
+              height: WINDOW_TOOLBAR_HEIGHT,
+            },
+          }
+        : {}),
       webPreferences: {
         preload: path.join(__dirname, "preload.js"),
         contextIsolation: true,

@@ -49,6 +49,8 @@
 
 :root {
   --radius: 0.625rem;
+  --window-toolbar-height: 44px;
+  --window-traffic-lights-spacer: 72px;
   --background: var(--color-white);
   --foreground: var(--color-neutral-800);
   --card: var(--color-white);
@@ -134,7 +136,12 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
   body {
-    @apply bg-background text-foreground;
+    @apply m-0 bg-background text-foreground;
   }
 }

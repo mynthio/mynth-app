@@ -1,4 +1,5 @@
 import { Link, Outlet } from "@tanstack/react-router";
+import { WindowChrome } from "@/components/app/window-chrome";
 
 const navItems = [
 	{ to: "/settings", label: "General", exact: true },
@@ -8,31 +9,51 @@ const navItems = [
 
 export function SettingsLayout() {
 	return (
-		<div className="mx-auto flex min-h-full w-full gap-6 px-6 py-6">
-			<nav className="w-48 shrink-0 space-y-1">
-				<Link
-					to="/chat"
-					className="mb-4 inline-flex w-fit items-center gap-1 rounded-md border px-3 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-				>
-					← Chat
-				</Link>
-				<h2 className="mb-3 font-heading text-lg font-semibold tracking-tight">
-					Settings
-				</h2>
-				{navItems.map((item) => (
+		<WindowChrome
+			toolbar={
+				<div className="flex items-center gap-3">
 					<Link
-						key={item.to}
-						to={item.to}
-						activeOptions={{ exact: "exact" in item }}
-						className="block rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground [&.active]:bg-accent [&.active]:text-accent-foreground"
+						to="/chat"
+						className="inline-flex h-7 items-center rounded-md border px-2.5 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground"
 					>
-						{item.label}
+						Chat
 					</Link>
-				))}
-			</nav>
-			<main className="flex-1">
-				<Outlet />
-			</main>
-		</div>
+					<div className="font-heading text-sm font-semibold tracking-tight">
+						Settings
+					</div>
+					<div className="ml-2 flex items-center gap-1">
+						{navItems.map((item) => (
+							<Link
+								key={`toolbar-${item.to}`}
+								to={item.to}
+								activeOptions={{ exact: "exact" in item }}
+								className="inline-flex h-7 items-center rounded-md px-2.5 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground [&.active]:bg-accent [&.active]:text-accent-foreground"
+							>
+								{item.label}
+							</Link>
+						))}
+					</div>
+				</div>
+			}
+			contentClassName="overflow-hidden"
+		>
+			<div className="mx-auto flex h-full min-h-0 w-full gap-6 px-6 py-6">
+				<nav className="w-48 shrink-0 space-y-1 overflow-auto">
+					{navItems.map((item) => (
+						<Link
+							key={item.to}
+							to={item.to}
+							activeOptions={{ exact: "exact" in item }}
+							className="block rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground [&.active]:bg-accent [&.active]:text-accent-foreground"
+						>
+							{item.label}
+						</Link>
+					))}
+				</nav>
+				<main className="min-h-0 flex-1 overflow-auto">
+					<Outlet />
+				</main>
+			</div>
+		</WindowChrome>
 	);
 }
