@@ -1,7 +1,26 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import {
+	RouterProvider,
+	createHashHistory,
+	createRouter,
+} from "@tanstack/react-router";
+import { routeTree } from "./routeTree.gen";
 import "./index.css";
-import App from "./App";
+
+const hashHistory = createHashHistory();
+
+const router = createRouter({
+	routeTree,
+	history: hashHistory,
+	defaultPreload: "intent",
+});
+
+declare module "@tanstack/react-router" {
+	interface Register {
+		router: typeof router;
+	}
+}
 
 document.body.classList.add("theme");
 const rootElement = document.getElementById("root");
@@ -14,6 +33,6 @@ rootElement.classList.add("theme");
 
 createRoot(rootElement).render(
 	<StrictMode>
-		<App />
+		<RouterProvider router={router} />
 	</StrictMode>,
 );

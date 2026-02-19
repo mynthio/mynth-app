@@ -1,149 +1,166 @@
 # Mynth (Desktop) — Sketchpad
 
-This document is intentionally “messy”: ideas, assumptions, open questions, and design notes. The concrete execution plan lives in `docs/PLAN.md`.
+Concrete execution details live in `docs/PLAN.md`.
 
 ## Product snapshot
 
-**What we’re building**
-- A desktop AI chat app with:
-  - Multi-provider LLM chat (cloud now; local also, starting with Ollama)
-  - Tool usage (first-party and extension-provided tools)
-  - Image generation (v1), with an option to include video generation later
-- Vercel AI SDK is the contract layer for providers, streaming, tools, and message `parts`.
+What we are building:
+- Desktop AI chat app
+- Multi-provider LLM chat (cloud + local, starting with Ollama)
+- Tabbed chat experience
+- Tool usage (first-party + extension-provided)
+- Image generation in-chat
 
-**Core workflow**
-- Users have **Workspaces** (name TBD).
-- Each workspace contains **Chats**, organized in **nested folders**.
-- Each chat is a **tree of messages** (branching supported) using `parentId` adjacency.
+Contract layer:
+- Vercel AI SDK for provider adapters, streaming, tools, and `message.parts`
 
-**Non-goals for now**
-- Exhaustive sampling knobs (`topK`, etc.) beyond basics.
-- Perfect UI/UX and theming (we’ll keep UI simple initially).
-- Complex collaboration/sync (single-device local-first first).
+Core workflow:
+- User has workspaces
+- Workspace contains nested folders and chats
+- Each chat is a message tree (`parentId` adjacency)
 
-## Terminology (proposed)
+## Core architecture notes
 
-- **Workspace**: Top-level container (portable). Alternative names: Project, Space, Vault.
-- **Chat**: A conversation tree.
-- **Message**: A node in the tree with `parentId`, `role`, and `parts`.
-- **Branch**: A path through the message tree. “Branch head” is the currently selected leaf.
-- **Run**: One model invocation (useful for metadata, retries, streaming stats, tool traces).
+Main process (Bun):
+- DB access
+- AI SDK calls
+- Runtime stream manager
+- Secret/keychain access
+- RPC handlers
+- Global session persistence (`session.json`)
 
-## Message model notes (AI SDK alignment)
+Renderer (React):
+- UI rendering
+- TanStack Router
+- Zustand stores
+- RPC client
+- Tab state and notifications
 
-We store `message.parts` as our canonical content format (serialized JSON in SQLite). This keeps us aligned with AI SDK conventions and supports multimodal + tools.
+IPC:
+- Electrobun RPC is the live update channel
+- Main pushes stream deltas/events to renderer
+- Renderer does not poll DB for token updates
 
-Key implications:
-- “Content” is not a single string; it’s an ordered list of parts (text, image, file, tool call/result, etc.).
-- Branching is naturally represented with `parentId` pointers and multiple children.
-- “Metadata” we care about (provider/model/tokens/latency) should be stored in first-class columns (queryable), but we can also store the raw AI SDK response metadata in a JSON column for future compatibility.
+## State model
 
-## Data + storage sketch
+Durable state (SQLite):
+- folders
+- chats
+- messages
+- assets
+- providers
+- models
+- chat_settings
 
-**SQLite** is a strong fit for a desktop, local-first app.
+Global session state (main-managed JSON):
+- workspace route state
+- pane tree
+- open tabs per pane
+- active tab per pane
+- recent tabs
 
-Two viable layouts:
-1) **Single DB for everything** (simplest operationally)
-   - Pros: easy global search, fewer moving parts
-   - Cons: exporting a workspace means copying a subset
-2) **One DB per workspace + one global config file**
-- Global config: app settings, recent workspaces, extension enablement
-- Workspace DB: chats, folders, messages, assets, per-workspace prefs
-   - Pros: workspace portability (copy one file/folder), easier backups
-   - Cons: cross-workspace search needs extra work
+Live state (in memory):
+- active streaming request per chat
+- token deltas
+- per-tab loading indicator
+- per-tab unread completion marker
 
-My lean: **#2** (workspace portability matters; we can add global search later).
+Renderer store split:
+- `chatStore`: durable chat/message view model
+- `streamStore`: live stream + tab indicators + completion state
+- `uiSessionStore`: pane layout, tab state, sidebar, modals
 
-Workspace DB implementation notes:
-- Use Bun SQLite + Drizzle ORM.
-- Use the SQL-like query builder (`select().from().where()...`), not the relational query API.
-- Use `drizzle-kit` to generate migrations and apply them at runtime when opening a workspace.
+## Navigation model
 
-**Assets (images/video/files)**
-- Store binary blobs on disk (not in SQLite), referenced by `assetId` in DB.
-- Keep a workspace folder structure like:
-  - `workspace.sqlite`
-  - `assets/<assetId>.<ext>`
-  - `thumbnails/<assetId>.webp` (optional)
+Router:
+- TanStack Router handles top-level app pages and settings sub-routes.
+- Route set: `/chat`, `/settings`, `/settings/providers`, `/settings/appearance`.
 
-## Providers (initial)
+Store:
+- Tabs and panes are not encoded in route path.
+- Active route is persisted in workspace session state and restored on workspace open.
+- Session save/load goes through main-process RPC, not `localStorage`.
 
-**Ollama**
-- Local HTTP, no API key.
-- Model discovery: fetch models list and let user choose “visible” models.
+## Streaming model (v1)
 
-**OpenRouter**
-- API key via Keychain.
-- Model discovery: fetch list; user selects visible models.
-- Multiple profiles supported (e.g., “Work”, “Personal”).
+- One active stream per chat.
+- Main keeps `Map<chatId, StreamState>`.
+- New start request for a streaming chat returns `already_streaming`.
+- Stream events are emitted via RPC.
+- Active chat accumulates full partial text.
+- Inactive chats keep minimal live state.
+- Partial content can be checkpointed to DB on timer, tool boundaries, and failure paths.
+- On completion, final assistant content is persisted to `messages.parts`.
 
-Provider profile fields (decided):
-- `id`, `kind` (`ollama`, `openrouter`, …), `displayName`
-- `authKind` (`api_key` | `api_key_pair` | `service_account_json` | `none` | `iam_role`)
-- `baseUrl` (optional, useful for self-hosting / OpenAI-compatible endpoints)
-- `apiKeyId` (Keychain item ref for primary secret)
-- `apiSecretId` (Keychain item ref for secondary secret; `api_key_pair` only, e.g. AWS)
-- `config` JSON (org/project IDs, region, custom headers, etc.)
-- Enabled models in separate `models` table (FK to provider)
-- Providers are **per-workspace** (stored in workspace SQLite DB)
-- On new workspace creation, user can optionally copy providers from an existing workspace
+RPC event shape (v1):
+- `chat.stream.started`
+- `chat.stream.delta`
+- `chat.stream.completed`
+- `chat.stream.failed`
+- `chat.stream.canceled`
+- `chat.stream.checkpointed` (optional UI signal)
 
-## API key storage (macOS)
+Notification behavior:
+- If completion occurs in non-active tab, raise desktop notification and mark tab unread/completed.
 
-Goal: store secrets in **macOS Keychain**.
+## Message model notes
 
-Unknowns / spike needed:
-- Best Keychain integration path in **Electrobun/Bun** (native module vs shelling out to `security`).
-- How we want to represent secret references (`apiKeyRef`) and rotation UX.
+Canonical content:
+- `messages.parts` (TEXT JSON)
 
-Fallback (temporary):
-- Encrypted secrets in DB using a per-device key stored in Keychain (or, if blocked, a local config file with loud warnings).
+Branching:
+- Tree via `parentId`
+- Multiple assistant children allowed
 
-## Where image/video lives (UX)
+Metadata:
+- `messages.metadata` stores execution summary:
+  - provider/model
+  - token totals
+  - latency
+  - finish reason
+  - error
+  - checkpoint timestamp/reason
 
-Options:
-1) **In-chat only** (parts render inline)
-2) **Separate “Media” view** (gallery with filters)
-3) **Both** (recommended): in-chat inline + global/workspace gallery
+Non-goals for message persistence:
+- no token-by-token DB writes
+- no dedicated run history table
 
-I lean “both” because:
-- Chat context is where generation happens
-- Gallery is where people browse and reuse results
+## Storage layout
 
-## Structured outputs (advanced)
+Per-workspace layout:
+- `workspace.sqlite`
+- `assets/<assetId>.<ext>`
+- optional thumbnails cache
 
-We should support:
-- Per-chat “output mode”: plain text (default) or JSON schema-driven output
-- Users provide a JSON Schema (or a Zod-like editor later)
-- We store the schema on the chat and the parsed object on the run/message
+Global config:
+- `config.toml` for app-level settings and recent workspaces
 
-This likely maps to AI SDK’s structured output / object generation APIs.
+## Providers
 
-## Extensions (early design notes)
+Initial targets:
+- Ollama (`authKind: none`)
+- OpenRouter (`authKind: api_key`)
 
-We want an extension ecosystem (VS Code-ish), but we can start with a safe MVP.
+Provider profile fields:
+- `id`, `displayName`, `kind`
+- `authKind`
+- `baseUrl`
+- `apiKeyId`, `apiSecretId`
+- `config`
+- enabled models in `models` table
 
-Suggested phases:
-- **Phase A (MVP)**: “extensions as tools”
-  - Extensions register AI tools (function calling) and non-AI commands (export, transforms).
-  - No UI contribution yet (or very limited, like adding a settings panel link).
-- **Phase B**: UI surfaces
-  - Sidebar panels, settings sections, command palette entries, context menu actions.
-- **Phase C**: sandbox + permissions
-  - Explicit capability prompts (“can read workspace files”, “can call network”, etc.)
+Scope:
+- providers are workspace-local
 
-MVP extension package idea:
-- `mynth.extension.json` manifest (name, version, entrypoint, capabilities)
-- JS/TS entrypoint loaded in the main process that registers:
-  - tools (AI SDK compatible)
-  - commands (exporters, utilities)
-  - optional settings schema
+## Extensions
 
-## Open questions (to decide soon)
+MVP direction:
+- extensions register AI tools and commands
+- no large UI contribution surface in first pass
 
-1) “Workspace” naming: Workspace vs Project vs Space vs Vault?
-2) DB layout: single DB vs per-workspace DB + global DB?
-3) Do we want a “Chat = tree” where the UI always shows the full tree, or default to a “linear view” with branch switching?
-4) Message IDs: UUIDv7 vs ULID vs nanoid? (UUIDv7 is nice for ordering.)
-5) Extension model: do we want to allow arbitrary JS execution, or require a more constrained “tool/command” API first?
-6) Keychain integration: preferred approach in Electrobun/Bun?
+## Open implementation notes
+
+- Shared RPC type definitions should be single-source and imported by both main and renderer.
+- Keep stream event payloads small and stable.
+- Use scoped Zustand selectors to avoid broad rerenders.
+- Add inactive-tab throttling if stream volume becomes noticeable.

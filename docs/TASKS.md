@@ -1,7 +1,5 @@
 # Mynth — Tasks (repo tracker)
 
-This is the lightweight, repo-local ticket system. We can migrate/sync to Linear later if/when we want.
-
 ## Status tags
 
 - `BACKLOG` — good idea, not scheduled
@@ -12,9 +10,9 @@ This is the lightweight, repo-local ticket system. We can migrate/sync to Linear
 
 ## How to use
 
-- Each ticket is a small, mergeable slice (ideally ≤1–2 days).
-- Prefer adding **Acceptance** bullets (binary "done / not done").
-- Keep cross-ticket dependencies explicit.
+- Each ticket is a small, mergeable slice (ideally <=1–2 days).
+- Prefer adding Acceptance bullets (binary done/not done).
+- Keep dependencies explicit.
 
 ## M0 — Foundations
 
@@ -22,95 +20,106 @@ This is the lightweight, repo-local ticket system. We can migrate/sync to Linear
 - Status: `NEXT`
 - Goal: Define workspace folder layout (DB + assets) and export/backup story.
 - Acceptance:
-  - A single documented layout under `Utils.paths.userData` (default)
-  - Workspace export = copying one folder (no secrets)
+  - Single documented layout under `Utils.paths.userData`
+  - Workspace export is copying one folder (no secrets)
 
 ### M0-T2 — Global config file (`config.toml`)
 - Status: `DONE`
 - Goal: Define and implement a global TOML config file with typed access.
-- Notes:
-  - Implemented in `src/bun/config/` (`types.ts`, `defaults.ts`, `store.ts`, `index.ts`).
-  - Serialization via `smol-toml`; deep-merge patch API (`updateConfig(patch)`).
-  - Path: `<AppData>/<appId>/<channel>/config.toml`; override via `MYNTH_CONFIG_PATH`.
-  - Shared path resolution extracted to `src/bun/utils/paths.ts`.
 - Acceptance:
-  - Config loads on app start; missing file falls back to defaults ✓
-  - `getConfig()` / `updateConfig(patch)` / `reloadConfig()` API ✓
-  - Current fields: `app.theme`, `chat.message.fontSize` ✓
-  - No secrets stored ✓
-  - Example file documented in `src/bun/config/config.toml.example` ✓
+  - Config loads on app start; missing file falls back to defaults
+  - `getConfig()` / `updateConfig(patch)` / `reloadConfig()` API
+  - Current fields: `app.theme`, `chat.message.fontSize`
+  - No secrets stored
 
 ### M0-T3 — ID + time conventions
 - Status: `NEXT`
 - Goal: Standardize IDs + timestamps.
 - Acceptance:
-  - IDs: UUIDv7 everywhere (documented)
-  - Timestamps: UTC ms epoch (documented)
+  - IDs: UUIDv7 everywhere
+  - Timestamps: UTC ms epoch
 
 ### M0-T4 — DB stack decision + scaffolding (Drizzle + Bun SQLite)
 - Status: `DONE`
-- Goal: Establish the workspace DB access pattern and migrations workflow.
-- Notes:
-  - Use Drizzle ORM with Bun SQLite for DB access.
-  - Use Drizzle's SQL-like query builder (`select().from().where()...`), not the relational `db.query.*` API.
-  - Use `drizzle-kit` to generate migrations and Drizzle migrator to apply them on user machines.
+- Goal: Establish workspace DB access pattern and migrations workflow.
 - Acceptance:
-  - `drizzle.config.*` present and runnable via Bun scripts ✓
-  - A "hello migration" runs against a local workspace DB ✓
+  - `drizzle.config.ts` present and runnable via Bun scripts
+  - Migration runs against local workspace DB
 
 ### M0-T5 — Spike: Keychain `SecretStore`
-- Status: `BLOCKED` (until we pick approach)
-- Goal: Decide the best way to read/write macOS Keychain from Electrobun/Bun.
+- Status: `BLOCKED`
+- Goal: Pick best macOS Keychain integration path for Electrobun/Bun.
 - Acceptance:
-  - Recommended implementation path + fallback path
-  - `SecretStore` API shape agreed (get/set/delete/list)
+  - `SecretStore` API shape agreed (`get/set/delete/list`)
+  - Recommended implementation path selected
 
-### M0-T6 — Spike: AI SDK in Bun main process
+### M0-T6 — Shared RPC schema for app IPC
 - Status: `NEXT`
-- Goal: Validate streaming + tools + parts persistence with Vercel AI SDK.
+- Goal: Define shared Electrobun RPC request/message types for chat + streaming.
 - Acceptance:
-  - Notes on recommended message/parts mapping
-  - Proof that streaming events can be forwarded to renderer reliably
+  - Shared RPC type file exists
+  - Includes start/cancel stream requests
+  - Includes stream started/delta/completed/failed/canceled messages
 
-### M0-T7 — Spike: AI SDK provider auth methods research
-- Status: `DONE`
-- Goal: Research how each Vercel AI SDK provider is configured and what auth fields are needed.
-- Notes:
-  - Full research report: `docs/research/ai-sdk-providers-auth-research-prompt.md`
+### M0-T7 — Renderer state architecture (Zustand)
+- Status: `NEXT`
+- Goal: Settle store boundaries and slices.
 - Acceptance:
-  - Provider matrix covering all official `@ai-sdk/*` packages ✓
-  - Schema recommendations documented ✓
-  - `providers` table updated with `authKind` + `apiSecretId` columns ✓
+  - `chatStore` for durable chat/message state
+  - `streamStore` for live streaming/tab indicators
+  - `uiSessionStore` for tabs/panes/sidebar/modals
+  - Selector pattern documented and used
+
+### M0-T8 — TanStack Router scaffold
+- Status: `DONE`
+- Goal: Add route tree for top-level pages and settings sub-navigation.
+- Acceptance:
+  - TanStack Router installed and bootstrapped in renderer
+  - Routes include `/chat` and `/settings/*`
+  - Settings sections are routed pages
+
+### M0-T9 — Global session persistence service (main process)
+- Status: `NEXT`
+- Goal: Persist workspace UI session state outside renderer storage.
+- Acceptance:
+  - `session.json` file managed by Bun main process
+  - Session keyed by `workspaceId`
+  - Stores panes/tabs/active pane/recent tabs/last route
+  - No `localStorage` usage for workspace session persistence
+
+### M0-T10 — Session RPC contract
+- Status: `NEXT`
+- Goal: Add typed RPC requests for loading/saving workspace session state.
+- Acceptance:
+  - `getWorkspaceSession(workspaceId)` request implemented
+  - `saveWorkspaceSessionPatch(workspaceId, patch)` request implemented
+  - Main validates and writes debounced session updates
 
 ## M1 — Workspace DB + migrations
 
 ### M1-T1 — Workspace DB migrations runner (Drizzle)
 - Status: `NEXT`
-- Goal: Apply `drizzle-kit` migrations on workspace open / app start using Drizzle migrator.
+- Goal: Apply migrations on workspace open / app start.
 - Acceptance:
   - Migrations table used consistently
   - Idempotent open/create workspace DB
-  - Packaged app can still find and apply migration files
+  - Packaged app can find and apply migration files
 
 ### M1-T2 — Schema v1: folders/chats/messages/assets/providers/models/settings
 - Status: `IN_PROGRESS`
-- Goal: Create initial schema aligned with message tree + AI SDK `parts` + provider profiles.
-- Notes:
-  - Schema defined in `src/bun/db/schema.ts`
-  - Provider auth design: see `docs/research/ai-sdk-providers-auth-research-prompt.md`
+- Goal: Create initial schema aligned with message tree + AI SDK parts + provider profiles.
 - Acceptance:
-  - `messages(parent_id)` supports branching ✓
-  - `messages.parts` is TEXT JSON ✓
-  - `providers` table has `authKind`, `apiKeyId`, `apiSecretId`, `config` ✓
-  - `models` table FK to `providers` ✓
-  - `message_runs` captures provider/model/tokens/latency/error (pending)
+  - `messages(parent_id)` supports branching
+  - `messages.parts` is TEXT JSON
+  - `providers` has `authKind`, `apiKeyId`, `apiSecretId`, `config`
+  - `models` FK to `providers`
   - Drizzle migration generated and applied
 
 ### M1-T3 — Workspace CRUD in main process
 - Status: `BACKLOG`
-- Goal: Create/open/list/delete workspaces, manage paths.
+- Goal: Create/open/list/delete workspaces and manage paths.
 - Acceptance:
-  - Create workspace produces folder + `workspace.sqlite` + `assets/`
+  - Create workspace creates folder + `workspace.sqlite` + `assets/`
   - Open workspace validates schema version and migrates if needed
 
 ## M2 — Chat UI (no AI)
@@ -121,50 +130,81 @@ This is the lightweight, repo-local ticket system. We can migrate/sync to Linear
   - Create/rename/delete folder and chat
   - Move chats between folders (nested)
 
-### M2-T2 — Chat view v1: linear branch + branch selector
+### M2-T2 — Tabbed chat shell + branch view
 - Status: `BACKLOG`
 - Acceptance:
-  - Active branch renders as a simple list
-  - Fork points show arrows + "branch count"
-  - "Reply from here" creates a new child branch
+  - Tab strip with open chats
+  - Tabs restored from persisted workspace session
+  - Active branch renders as linear list
+  - Fork points show branch selector
 
 ### M2-T3 — Composer v1
 - Status: `BACKLOG`
 - Acceptance:
-  - Submit creates a `user` message node with `parts=[{type:'text',text:...}]`
+  - Submit creates `user` message node with text part
 
 ## M3 — Providers (workspace-only)
 
 ### M3-T1 — Provider profiles table + UI
 - Status: `BACKLOG`
-- Notes:
-  - Auth design finalized: `authKind` drives form fields; see `docs/research/ai-sdk-providers-auth-research-prompt.md`
 - Acceptance:
-  - Add/edit/remove provider profiles in a workspace
-  - Supports at minimum: Ollama (`authKind: none`), OpenRouter (`authKind: api_key`)
-  - Settings form is provider-aware (shows correct fields per `authKind` + `kind`)
-  - Secrets stored as Keychain references only (`apiKeyId`, `apiSecretId`)
+  - Add/edit/remove provider profiles
+  - Supports Ollama (`authKind: none`) and OpenRouter (`authKind: api_key`)
+  - Form fields driven by `authKind` + provider kind
+  - Secrets stored as Keychain references only
 
 ### M3-T2 — Model discovery + enable/disable models
 - Status: `BACKLOG`
 - Acceptance:
   - Fetch models list per provider profile
-  - Persist enabled set; hide disabled in model picker
+  - Persist enabled set for model picker
 
-## M4 — AI runs (Vercel AI SDK)
+## M4 — AI streaming
 
-### M4-T1 — Stream chat completion to renderer
+### M4-T1 — Main-process stream manager
+- Status: `BACKLOG`
+- Goal: In-memory runtime stream state keyed by `chatId`.
+- Acceptance:
+  - Tracks status, requestId, startedAt, partial text
+  - One active stream per chat in v1
+  - `startChatStream` returns `already_streaming` error if chat already has an active stream
+  - Cancel supported
+
+### M4-T2 — Stream forwarding over Electrobun RPC
 - Status: `BACKLOG`
 - Acceptance:
-  - `streamText` produces live tokens in UI
-  - Final assistant message persisted with `parts`
-  - Run metadata saved on completion
+  - `streamText` deltas emitted to renderer in real time
+  - Started/completed/failed/canceled events emitted
+  - Renderer receives updates by `chatId`
 
-### M4-T2 — Tool calls MVP
+### M4-T3 — Persist final assistant message
 - Status: `BACKLOG`
 - Acceptance:
-  - Tool call/result parts persisted in `messages.parts`
-  - Tool trace visible in a debug/details panel
+  - Final assistant response stored in `messages.parts`
+  - Final metadata stored in `messages.metadata`
+  - No per-token DB writes
+
+### M4-T4 — Partial checkpoint persistence policy
+- Status: `BACKLOG`
+- Acceptance:
+  - Partial assistant content checkpoint persisted at least once per minute while streaming
+  - Partial checkpoint persisted on tool-call boundaries
+  - Partial checkpoint persisted on failure paths
+  - Checkpoint metadata records reason/timestamp
+
+### M4-T5 — Tab indicators + completion notifications
+- Status: `BACKLOG`
+- Acceptance:
+  - Streaming tab shows loading indicator
+  - Background completion marks tab unread/completed
+  - Background completion triggers desktop notification
+
+### M4-T6 — Streaming performance guardrails
+- Status: `BACKLOG`
+- Acceptance:
+  - Inactive chats keep minimal live state
+  - Optional throttling/coalescing for inactive chat deltas
+  - Scoped selectors avoid global rerenders
 
 ## M5 — Images
 
@@ -172,7 +212,7 @@ This is the lightweight, repo-local ticket system. We can migrate/sync to Linear
 - Status: `BACKLOG`
 - Acceptance:
   - Generates image and stores under `assets/`
-  - Adds image part to chat
+  - Adds image part to chat message
 
 ### M5-T2 — Media gallery view
 - Status: `BACKLOG`
@@ -187,8 +227,8 @@ This is the lightweight, repo-local ticket system. We can migrate/sync to Linear
 
 ## M7 — Extensions (MVP)
 
-### M7-T1 — Extension registry (global config) + workspace settings
+### M7-T1 — Extension registry + workspace settings
 - Status: `BACKLOG`
 
-### M7-T2 — "Extensions as tools/commands" host
+### M7-T2 — Extensions as tools/commands host
 - Status: `BACKLOG`

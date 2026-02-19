@@ -9,3 +9,7 @@ Project is an AI chat desktop app using Bun and Electrobun.
 # Documentation
 
 * Due to early stage, we do not write explanation or `why` behind the changes, we just overwrite notes and plan with new decisions. No fallback and no backward compatibility.
+
+# Notes
+
+* Ignore all TSC errors from node_modules and do not try to fix TS config

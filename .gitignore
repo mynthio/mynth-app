@@ -22,6 +22,9 @@ tmp/
 # Vite
 .vite/
 
+# TanStack Router (auto-generated)
+src/mainview/routeTree.gen.ts
+
 # Bun
 bun.lockb
 

@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { homedir } from "node:os";
 
-const DEFAULT_APP_IDENTIFIER = "app.mynth.io";
+import electrobunConfig from "../../../electrobun.config";
 
 /**
  * Returns the platform-specific base directory for application data
@@ -30,7 +30,7 @@ export function getUserDataDirectory(): string {
   }
 
   const appIdentifier =
-    process.env["MYNTH_APP_IDENTIFIER"] ?? DEFAULT_APP_IDENTIFIER;
+    process.env["MYNTH_APP_IDENTIFIER"] ?? electrobunConfig.app.identifier;
   const channel =
     process.env["MYNTH_APP_CHANNEL"] ??
     process.env["ELECTROBUN_CHANNEL"] ??

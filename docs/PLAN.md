@@ -1,212 +1,242 @@
 # Mynth (Desktop) — Implementation Plan
 
-This is the execution-focused plan. Ongoing ideas / debates belong in `docs/SKETCHPAD.md`.
-
 Task tracking lives in `docs/TASKS.md`.
 
 ## Current stack (repo)
 
-- **Desktop shell**: Electrobun (Bun main process + webview renderer)
-- **Renderer**: React + Vite
-- **Styling**: Tailwind CSS v4 (+ existing UI primitives)
-- **Tooling**: TypeScript, OXC lint/format
-- **Persistence**:
+- Desktop shell: Electrobun (Bun main process + webview renderer)
+- Renderer: React + Vite
+- Navigation: TanStack Router
+- Styling: Tailwind CSS v4 (+ existing UI primitives)
+- Client state: Zustand
+- Tooling: TypeScript, OXC lint/format
+- Persistence:
   - Global: `config.toml` (TOML file, no secrets) — implemented in `src/bun/config/`
+  - Global session: `session.json` for UI session state (tabs/panes/route, no secrets)
   - Workspace: SQLite (Bun) + Drizzle ORM + `drizzle-kit` migrations
     - Query style: `select().from().leftJoin().where()...` (avoid `db.query.*`)
     - Runtime: apply migrations on workspace open / app start
 
 ## Guiding principles
 
-- **Local-first**: everything works offline where possible; cloud providers optional.
-- **AI SDK as the contract**: store `message.parts` and tool parts compatibly.
-- **Branching-first**: message tree is not a bolt-on; it’s the core.
-- **Separate concerns**: secrets + network + DB in the main process; renderer uses a typed RPC layer.
-- **Simple now, extensible later**: build “spines” (storage, providers, tools, extension registry) early.
+- Local-first: everything works offline where possible; cloud providers optional.
+- AI SDK as the contract: store `message.parts` compatibly.
+- Branching-first: message tree is core behavior.
+- Main/renderer split: secrets + network + DB in main process.
+- IPC for live updates: stream state over Electrobun RPC events, not DB polling.
+- SQLite for durable state: persist final chat content and checkpoint snapshots.
+- Router owns page navigation; Zustand owns UI/session state inside pages.
+- Session persistence is main-process owned; renderer never writes session to `localStorage`.
 
 ## Proposed architecture (high level)
 
-**Main process (Bun, `src/bun/…`)**
+Main process (Bun, `src/bun/…`)
 - Persistence (SQLite)
 - Provider registry + model discovery
 - AI execution via Vercel AI SDK (streaming, tools, structured output, image/video)
+- Runtime stream manager (in-memory per-chat stream state)
 - Extension host (register tools/commands)
 - Secret manager (Keychain integration)
 
-**Renderer (React, `src/mainview/…`)**
+Renderer (React, `src/mainview/…`)
 - Workspace + chat + folder navigation
-- Chat view (linear + branch selection; later full branch map)
-- Prompt composer, attachments picker
-- Settings pages (app + providers + system prompts + extensions)
+- TanStack Router route tree for `/chat` and `/settings/*`
+- Tabbed chat UI with per-tab streaming indicators
+- Prompt composer and attachments picker
+- Settings pages (app + providers + prompts + extensions)
+- Zustand stores:
+  - durable app/workspace/chat state
+  - live stream/tab indicator state
+  - tab/pane layout state
 
-**Typed RPC bridge**
-- Renderer calls main via a small request/response protocol.
-- Streaming responses emitted as events (token chunks, tool calls, image completion).
+Typed RPC bridge (Electrobun)
+- Renderer -> main: request/command RPC (`startStream`, `cancelStream`, CRUD)
+- Main -> renderer: stream events (`started`, `delta`, `completed`, `failed`, `canceled`)
+- Renderer -> main: session RPC (`getWorkspaceSession`, `saveWorkspaceSessionPatch`)
+
+## Navigation and session model
+
+Route scope (TanStack Router):
+- `/chat`
+- `/settings`
+- `/settings/providers`
+- `/settings/appearance`
+
+Ownership:
+- Router: visible top-level page and settings sub-page history.
+- Zustand: active pane, open tabs, active tab per pane, sidebar/modals.
+
+Session persistence:
+- Session state persisted in main process `session.json`, keyed by `workspaceId`.
+- Session includes panes, tabs, active pane, recent tabs, and last route.
+- Renderer hydrates store from `getWorkspaceSession` during workspace load.
+- Renderer sends debounced session patches through RPC.
+- Main validates session chat IDs against workspace DB before hydrate.
+
+## Streaming model
+
+- One active stream per chat in v1.
+- Main process keeps `Map<chatId, StreamState>` in memory.
+- Stream chunks are emitted to renderer as IPC events.
+- Renderer updates Zustand live state immediately.
+- Final assistant message is persisted to `messages` on completion.
+- Stream partial can be checkpointed to DB on minute interval, tool-call boundaries, and failure paths.
+- Notification is emitted when a stream completes for a non-active tab.
+- `startStream` must return an `already_streaming` error if the chat already has an active stream.
+
+### Event contract (v1)
+
+- `chat.stream.started` `{ chatId, requestId }`
+- `chat.stream.delta` `{ chatId, requestId, textDelta }`
+- `chat.stream.completed` `{ chatId, requestId, messageId, finishedAt }`
+- `chat.stream.failed` `{ chatId, requestId, error }`
+- `chat.stream.canceled` `{ chatId, requestId }`
+- `chat.stream.checkpointed` `{ chatId, requestId, updatedAt }` (optional UI signal)
+
+### Performance constraints (v1)
+
+- Single renderer event channel; route updates by `chatId`.
+- Active chat keeps full partial text.
+- Inactive chats keep minimal live state (`status`, `lastDeltaAt`, `hasUnreadCompletion`).
+- Throttle inactive tab updates if needed.
+- No DB writes per token; persist by checkpoint policy (time-based + tool boundaries + failure + completion).
 
 ## Data model (v1)
 
-We keep content in `messages.parts` (JSON serialized string) and put “queryable” metadata in columns.
+We keep content in `messages.parts` (JSON serialized string) and put queryable stable metadata in columns.
 
-**Global config (`config.toml`)**
+Global config (`config.toml`)
 - app settings (theme, behavior, window state)
 - recent workspaces (paths + display names)
-- extensions enablement + global extension settings (optional)
+- extension enablement + global extension settings (optional)
 
-**Workspace DB**
+Global session (`session.json`)
+- workspace session map keyed by `workspaceId`
+- per-workspace tab/pane layout state
+- per-workspace recent tabs
+- last route (`/chat` or `/settings/*`)
+
+Workspace DB
 - `folders` (nested, for chats)
 - `chats`
-- `chat_membership` (optional if we later support linking chats into multiple folders)
 - `messages`
-- `message_runs` (one row per model invocation; links to assistant message)
 - `assets` (files/images/video references)
-- `providers` (one row per configured AI provider profile; scoped per workspace; user can copy providers when creating a new workspace)
-- `models` (one row per enabled model, FK to provider)
+- `providers` (configured AI provider profiles per workspace)
+- `models` (enabled models, FK to provider)
 - `chat_settings` (per-chat model, system prompt, structured output mode)
 
-**Messages table (minimum fields)**
-- `id` (UUIDv7 suggested)
+Messages table (minimum fields)
+- `id` (UUIDv7)
 - `chat_id`
 - `parent_id` (nullable; root message has NULL)
 - `role` (`system`/`user`/`assistant`/`tool`)
 - `parts` (TEXT; JSON)
+- `metadata` (TEXT JSON; stable run summary only)
 - `created_at`, `updated_at`
-- `provider_profile_id`, `model_id` (nullable for user messages)
-- `tokens_prompt`, `tokens_completion`, `tokens_total` (nullable)
-- `latency_ms` (nullable)
-- `error` (nullable)
 
-**Branch mechanics**
-- Branching comes “for free” with adjacency lists:
+`messages.metadata` stores execution summary
+- `providerId`, `modelId`
+- `tokensPrompt`, `tokensCompletion`, `tokensTotal`
+- `latencyMs`
+- `finishReason`
+- `error` (if failed)
+- checkpoint markers (`checkpointAt`, optional `checkpointReason`)
+
+Not in DB
+- live token-by-token event log
+- per-tab loading indicators
+- renderer-only UI flags
+
+## Branch mechanics
+
+- Branching uses adjacency lists:
   - multiple assistant replies can share the same `parent_id`
-  - editing is a new message node, not mutation (we can add “replace” UX later)
-- For performance and UX:
-  - store a `chat_branch_heads` table or a per-chat `selected_leaf_message_id`
-  - compute the active branch path using `WITH RECURSIVE` queries
-
-**Search (later)**
-- Add FTS5 table keyed by message id with denormalized text extracted from `parts`.
+  - editing creates a new node, no mutation
+- For UX/perf:
+  - store per-chat selected leaf id (or dedicated table)
+  - compute active branch path via recursive query
 
 ## Milestones
 
-### M0 — Naming + foundations (1–2 days)
-- Decide: Workspace naming + storage layout (workspace-only DB + global config).
-- Add docs (this + sketchpad + tasks) and update README to point to them.
-- Establish conventions:
-  - IDs (UUIDv7 vs ULID)
-  - time source and storage (UTC)
-  - where workspace data lives on disk
+### M0 — Foundations (1–2 days)
+- Finalize naming and workspace storage layout.
+- Finalize IPC event contracts and shared RPC types.
+- Finalize Zustand store boundaries (durable state vs live stream state).
+- Scaffold TanStack Router route tree for top-level pages.
+- Define global session schema and session RPC contract.
 
-### M1 — Storage layer + workspace/chats/folders (2–4 days)
-- Create SQLite schema + migrations (Drizzle migrator).
-- Implement CRUD for:
-  - workspaces
-  - folders (nested)
-  - chats (create, rename, move, delete)
-- Add minimal UI shell:
-  - workspace switcher
-  - folder tree + chats list
+### M1 — Storage + workspace/chats/folders (2–4 days)
+- SQLite schema + migrations in place.
+- CRUD for workspaces, folders, chats.
+- Basic renderer shell for workspace switcher + folder/chat list.
 
-Deliverable: user can create a workspace and organize chats in folders; persistence works.
+Deliverable: user can create a workspace and organize chats with persistence.
 
-### M2 — Message tree (branching) + basic chat UI (3–6 days)
-- Implement `messages` CRUD with `parent_id`.
-- UI: render a **linear branch** by default (active leaf), with:
-  - branch selector at fork points
-  - “reply from here” action to create a new branch
-  - “show siblings” affordance
-- Composer: send user message -> append node.
+### M2 — Message tree + tabbed chat UI (3–6 days)
+- Implement message CRUD with `parent_id`.
+- Tabbed chat layout.
+- Session hydrate/restore for tabs and active pane.
+- Linear active-branch rendering + branch selector at forks.
+- Composer submit creates `user` message node.
 
-Deliverable: branching conversations are visible and navigable, persisted.
+Deliverable: branching chats are navigable in tabs.
 
-### M3 — Provider profiles + model discovery (3–6 days)
-- Add provider registry supporting multiple profiles per provider.
-- Provider schema (`providers` table) supports:
-  - `authKind`: `api_key` | `api_key_pair` | `service_account_json` | `none` | `iam_role`
-  - `apiKeyId`: primary Keychain reference (API key, service-account JSON, or AWS accessKeyId)
-  - `apiSecretId`: secondary Keychain reference (AWS secretAccessKey only)
-  - `config` JSON: org/project IDs, region, resource name, custom headers, etc.
-  - See `docs/research/ai-sdk-providers-auth-research-prompt.md` for full provider matrix.
-- Implement:
-  - Ollama discovery (authKind: `none`, baseUrl required)
-  - OpenRouter discovery (authKind: `api_key`)
-  - Model enable/disable per profile
-- Settings UI to manage profiles + pick default model.
-  - Form fields driven by `authKind` + `kind` (provider-aware form)
+### M3 — Providers + model discovery (3–6 days)
+- Provider profiles in workspace DB.
+- Model discovery and model enable/disable.
+- Settings UI for provider profiles and defaults.
 
-Deliverable: user can add providers, pick models, and choose a chat default model.
+Deliverable: user can configure providers/models per workspace.
 
-### M4 — AI execution via Vercel AI SDK (4–8 days)
-- Add “run” pipeline in main process:
-  - build AI SDK messages from DB `parts`
-  - call `streamText` for chat
-  - persist streaming progress (at least final message + run metadata)
-- Tool usage MVP:
-  - built-in tools (e.g., “open url”, “search workspace” later)
-  - support tool call/result parts stored in `parts`
-- Store run metadata:
-  - provider/model, token usage, timings, tool trace (raw JSON)
+### M4 — AI streaming runs (4–8 days)
+- Implement main-process stream pipeline with AI SDK `streamText`.
+- Forward stream events to renderer through Electrobun RPC.
+- Persist final assistant message + final metadata in `messages.metadata`.
+- Persist partial checkpoints on timer/tool-call/failure boundaries.
+- Reject concurrent start for same chat with `already_streaming` error.
+- Support cancel flow.
 
-Deliverable: real chat completions with streaming + persisted metadata.
+Deliverable: live streaming in chat, per-tab loading indicators, completion notifications.
 
 ### M5 — Images (3–6 days)
-- Add image generation pipeline:
-  - `generateImage` in main process
-  - persist asset and add an image part into the chat
-- UI:
-  - render inline images in chat
-  - add a workspace “Media” gallery view
+- Add image generation and asset persistence.
+- Add image parts into chat messages.
+- Render inline images in chat.
 
-Deliverable: image generation works and is browsable.
+Deliverable: image generation is usable in chat.
 
 ### M6 — Structured outputs (2–5 days)
-- Chat setting: “structured output” with JSON schema.
-- Execution:
-  - generate structured output and store parsed result
-- UI:
-  - JSON viewer (collapsed/expand)
-  - schema editor (raw JSON schema for v1)
+- Per-chat structured output mode + schema.
+- Persist parsed structured result in message metadata/parts.
+- JSON viewer in UI.
 
-Deliverable: schema-driven JSON responses in a chat.
+Deliverable: schema-driven responses in a chat.
 
-### M7 — Extensions (MVP) (4–10 days)
+### M7 — Extensions MVP (4–10 days)
 - Extension registry + manifest format.
-- Extension host loads extensions and registers:
-  - AI tools (AI SDK tool definitions)
-  - commands (exporters, transforms)
-- Settings:
-  - enable/disable extension
-  - show declared permissions/capabilities
+- Extension host registers tools/commands.
+- Settings UI for enable/disable and capabilities.
 
-Deliverable: third-party code can add tools/commands in a controlled way.
+Deliverable: third-party extensions can add tools/commands.
 
-### M8 — Video (experimental) (timeboxed spike)
-- Integrate AI SDK experimental video generation behind a feature flag.
+### M8 — Video (experimental)
+- Timeboxed spike behind feature flag.
 - Store video assets + inline preview.
 
-Deliverable: a working prototype; decide whether to ship.
+Deliverable: decide ship/no-ship after prototype.
 
-## Early decisions to make (recommended order)
+## Decisions
 
-1) **Workspace naming**: Workspace vs Project vs Space vs Vault.
-2) **DB layout**: single DB vs per-workspace DB + global DB.
-3) **Branch UX**: "linear view + branch selector" first (recommended) vs always showing full tree.
-4) **ID format**: UUIDv7 (recommended) for ordering and portability.
-5) **Keychain path**: pick a Keychain integration approach and implement a thin `SecretStore` abstraction.
-
-## Decisions made
-
-- **Provider schema**: `providers` table uses `authKind` + `apiKeyId` + `apiSecretId` + `config` JSON.
-  Full provider auth research in `docs/research/ai-sdk-providers-auth-research-prompt.md`.
-- **Schema**: Initial schema in `src/bun/db/schema.ts` covers folders, chats, messages, assets, providers, models, chat_settings.
-- **Global config**: `config.toml` lives at `<AppData>/<appId>/<channel>/config.toml`.
-  - Implemented in `src/bun/config/` (`types.ts`, `defaults.ts`, `store.ts`, `index.ts`).
-  - Serialization via `smol-toml`; deep-merge patch API (`updateConfig(patch)`).
-  - Missing keys fall back to `DEFAULT_CONFIG`; no file = all defaults.
-  - Shared path resolution in `src/bun/utils/paths.ts` (used by both config and workspace modules).
-  - Current fields: `app.theme` (`"dark"`), `chat.message.fontSize` (`14`).
-
-## Suggested next concrete task
-
-Pick M0 decisions (naming + DB layout), then implement:
-- workspace/chats/folders CRUD in main + a basic renderer UI to exercise it
-- Drizzle migration for the current schema (M1-T1)
+- Workspace-first storage with per-workspace SQLite DB.
+- `message.parts` is canonical content format.
+- Streaming is IPC-driven with in-memory runtime state.
+- Zustand is the default state management layer in renderer.
+- TanStack Router is the navigation layer for top-level pages.
+- Hash history (`createHashHistory`) used for Electrobun `views://` protocol compatibility.
+- File-based routing via `@tanstack/router-plugin`; `routeTree.gen.ts` is gitignored.
+- Feature modules live in `src/mainview/features/`; route files in `src/mainview/routes/` are thin wrappers.
+- Tabs/panes/recent-tabs are persisted in main-process `session.json` keyed by workspace.
+- No `message_runs` table; `messages` + runtime stream state is the model.
+- Partial stream checkpoints are persisted in `messages` by policy; no per-token persistence.
+- `startStream` is single-flight per chat and returns `already_streaming` on conflict.
+- Provider schema uses `authKind` + Keychain refs + `config` JSON.
