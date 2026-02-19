@@ -1,6 +1,8 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
+import { getConfig, getConfigPath } from './bun/config';
+import { bootstrapWorkspaceDatabases } from './bun/db';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -25,15 +27,24 @@ const createWindow = () => {
       path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
     );
   }
-
-  // Open the DevTools.
-  mainWindow.webContents.openDevTools();
 };
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on('ready', createWindow);
+app.whenReady().then(() => {
+  const config = getConfig();
+  console.log(
+    `Config loaded from: ${getConfigPath()} — theme: ${config.app.theme}`,
+  );
+
+  const workspaceBootstrap = bootstrapWorkspaceDatabases();
+  console.log(
+    `Workspace DB bootstrap complete. Root: ${workspaceBootstrap.rootDir}. Migrated ${workspaceBootstrap.migratedWorkspaceIds.length}/${workspaceBootstrap.discoveredWorkspaceIds.length} discovered workspaces.`,
+  );
+
+  createWindow();
+});
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits

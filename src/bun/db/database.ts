@@ -1,19 +1,25 @@
-import { Database } from "bun:sqlite";
-import { drizzle, type BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
-import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import Database from "better-sqlite3";
+import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import * as schema from "./schema";
 
-export type WorkspaceDatabase = BunSQLiteDatabase<typeof schema>;
+export type WorkspaceDatabase = BetterSQLite3Database<typeof schema>;
+const moduleDir = dirname(fileURLToPath(import.meta.url));
 
 function resolveMigrationsFolder(): string {
   const candidates = [
-    join(import.meta.dir, "migrations"),
-    join(import.meta.dir, "db", "migrations"),
+    join(moduleDir, "migrations"),
+    join(moduleDir, "db", "migrations"),
     join(process.cwd(), "src", "bun", "db", "migrations"),
   ];
+  if (process.resourcesPath) {
+    candidates.push(join(process.resourcesPath, "migrations"));
+    candidates.push(join(process.resourcesPath, "src", "bun", "db", "migrations"));
+  }
 
   for (const candidate of candidates) {
     if (existsSync(join(candidate, "meta", "_journal.json"))) {
@@ -32,7 +38,7 @@ function openDatabase(dbPath: string): {
 } {
   mkdirSync(dirname(dbPath), { recursive: true });
 
-  const sqlite = new Database(dbPath, { create: true });
+  const sqlite = new Database(dbPath);
   sqlite.run("PRAGMA foreign_keys = ON;");
   sqlite.run("PRAGMA journal_mode = WAL;");
 

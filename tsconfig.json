@@ -1,15 +1,25 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "commonjs",
-    "allowJs": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowJs": false,
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "noImplicitAny": true,
-    "sourceMap": true,
+    "strict": true,
     "baseUrl": ".",
-    "outDir": "dist",
-    "moduleResolution": "node",
-    "resolveJsonModule": true
-  }
+    "paths": {
+      "@/*": ["./src/mainview/*"]
+    },
+    "types": ["node", "vite/client", "@electron-forge/plugin-vite/forge-vite-env"],
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "jsx": "react-jsx"
+  },
+  "include": ["forge.config.ts", "src/**/*.ts", "src/**/*.tsx", "vite.*.config.ts", "forge.env.d.ts"]
 }

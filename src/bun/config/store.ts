@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
 import { parse, stringify } from "smol-toml";
@@ -77,9 +77,10 @@ export class ConfigStore {
   private persist(): void {
     try {
       mkdirSync(dirname(this.configPath), { recursive: true });
-      Bun.write(
+      writeFileSync(
         this.configPath,
         stringify(this.current as unknown as Record<string, unknown>),
+        "utf8",
       );
     } catch (err) {
       console.error(`[config] Failed to write ${this.configPath}:`, err);

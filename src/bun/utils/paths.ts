@@ -1,13 +1,28 @@
 import { join } from "node:path";
+import { createRequire } from "node:module";
 import { homedir } from "node:os";
 
-import electrobunConfig from "../../../electrobun.config";
+const require = createRequire(import.meta.url);
+
+function getElectronApp(): import("electron").App | null {
+  if (!process.versions.electron) {
+    return null;
+  }
+
+  const electron = require("electron") as typeof import("electron");
+  return electron.app;
+}
 
 /**
  * Returns the platform-specific base directory for application data
  * (e.g. ~/Library/Application Support on macOS).
  */
 export function getAppDataDirectory(): string {
+  const electronApp = getElectronApp();
+  if (electronApp) {
+    return electronApp.getPath("appData");
+  }
+
   const home = homedir();
 
   switch (process.platform) {
@@ -30,11 +45,15 @@ export function getUserDataDirectory(): string {
   }
 
   const appIdentifier =
-    process.env["MYNTH_APP_IDENTIFIER"] ?? electrobunConfig.app.identifier;
+    process.env["MYNTH_APP_IDENTIFIER"] ?? "app.mynth.io";
   const channel =
     process.env["MYNTH_APP_CHANNEL"] ??
-    process.env["ELECTROBUN_CHANNEL"] ??
-    "dev";
+    (process.env["NODE_ENV"] === "production" ? "prod" : "dev");
+
+  const electronApp = getElectronApp();
+  if (electronApp) {
+    return join(electronApp.getPath("userData"), channel);
+  }
 
   return join(getAppDataDirectory(), appIdentifier, channel);
 }

@@ -1,7 +1,8 @@
 import { ensureWorkspaceDatabase, listWorkspaceIds } from "../index";
+import { spawn } from "node:child_process";
 
 function getWorkspaceIdFromArgv(): string | undefined {
-  const args = Bun.argv.slice(2);
+  const args = process.argv.slice(2);
   return args.find((arg) => !arg.startsWith("-"));
 }
 
@@ -28,14 +29,17 @@ for (const [key, value] of Object.entries(process.env)) {
 }
 env["DRIZZLE_DB_PATH"] = workspacePaths.dbPath;
 
-const drizzleKitProcess = Bun.spawn(
-  ["node_modules/.bin/drizzle-kit", "studio", "--config=drizzle.config.ts"],
+const command = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+const drizzleKitProcess = spawn(
+  command,
+  ["exec", "drizzle-kit", "studio", "--config=drizzle.config.ts"],
   {
     cwd: process.cwd(),
     env,
-    stdio: ["inherit", "inherit", "inherit"],
+    stdio: "inherit",
   },
 );
 
-const exitCode = await drizzleKitProcess.exited;
-process.exit(exitCode);
+drizzleKitProcess.on("exit", (code) => {
+  process.exit(code ?? 0);
+});

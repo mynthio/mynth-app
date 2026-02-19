@@ -1,8 +1,8 @@
-Project is an AI chat desktop app using Bun and Electrobun.
+Project is an AI chat desktop app using Electron Forge.
 
 # Rules
 
-* Use Bun as package manager
+* Use pnpm as package manager
 * Never run/edit drizzle migrations. User is handling migrations manually.
 * Never run dev server
 
