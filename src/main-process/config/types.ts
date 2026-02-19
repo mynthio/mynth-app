@@ -7,6 +7,7 @@ export type Theme = "dark";
 export interface AppConfig {
   app: {
     theme: Theme;
+    activeWorkspaceId: string;
   };
   chat: {
     message: {

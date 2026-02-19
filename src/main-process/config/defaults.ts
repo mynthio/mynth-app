@@ -3,6 +3,7 @@ import type { AppConfig } from "./types";
 export const DEFAULT_CONFIG: AppConfig = {
   app: {
     theme: "dark",
+    activeWorkspaceId: "default",
   },
   chat: {
     message: {

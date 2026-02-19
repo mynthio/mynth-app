@@ -4,6 +4,7 @@ import started from "electron-squirrel-startup";
 import { getConfig, getConfigPath } from "./main-process/config";
 import { DEFAULT_WORKSPACE_ID, bootstrapWorkspaceDatabases } from "./main-process/db";
 import { closeAllDatabases } from "./main-process/db/database";
+import { registerWorkspaceHandlers } from "./main-process/ipc/workspace-handlers";
 import {
   WINDOW_TOOLBAR_HEIGHT,
   WINDOW_TRAFFIC_LIGHTS_POSITION,
@@ -84,6 +85,7 @@ if (!app.requestSingleInstanceLock()) {
           `Workspace DB bootstrap complete. Root: ${workspaceBootstrap.rootDir}. Migrated ${workspaceBootstrap.migratedWorkspaceIds.length}/${workspaceBootstrap.discoveredWorkspaceIds.length} discovered workspaces.${defaultWorkspaceLog}`,
         );
 
+        registerWorkspaceHandlers();
         createWindow();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

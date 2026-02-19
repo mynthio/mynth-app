@@ -1,12 +1,44 @@
 import { Link } from "@tanstack/react-router";
+import { ChevronDownIcon } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import {
+	Menu,
+	MenuPopup,
+	MenuRadioGroup,
+	MenuRadioItem,
+	MenuTrigger,
+} from "@/components/ui/menu";
 import { WindowChrome } from "@/components/app/window-chrome";
+import { useWorkspaceStore } from "@/stores/workspace-store";
 
 export function ChatPage() {
+	const workspaces = useWorkspaceStore((s) => s.workspaces);
+	const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
+	const setActive = useWorkspaceStore((s) => s.setActive);
+
 	return (
 		<WindowChrome
 			toolbar={
 				<div className="flex items-center gap-3">
-					<h1 className="font-heading text-sm font-semibold tracking-tight">Chat</h1>
+					<Menu>
+						<MenuTrigger render={<Button variant="ghost" size="sm" />}>
+							{activeWorkspace?.name ?? "…"}
+							<ChevronDownIcon />
+						</MenuTrigger>
+						<MenuPopup align="start">
+							<MenuRadioGroup
+								value={activeWorkspace?.id}
+								onValueChange={setActive}
+							>
+								{workspaces.map((ws) => (
+									<MenuRadioItem key={ws.id} value={ws.id}>
+										{ws.name}
+									</MenuRadioItem>
+								))}
+							</MenuRadioGroup>
+						</MenuPopup>
+					</Menu>
 					<Link
 						to="/settings"
 						className="inline-flex h-7 items-center rounded-md border px-2.5 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground"
