@@ -13,9 +13,7 @@ const WORKSPACE_CONFIG_FILENAME = "workspace.toml";
 
 export function getDefaultWorkspaceName(id: string): string {
   if (id === "default") return "Default";
-  return id
-    .replace(/[-_]+/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return id.replace(/[-_]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export function getWorkspaceConfig(workspaceId: string): WorkspaceConfig {
@@ -37,19 +35,12 @@ export function getWorkspaceConfig(workspaceId: string): WorkspaceConfig {
   }
 }
 
-export function updateWorkspaceConfig(
-  workspaceId: string,
-  patch: Partial<WorkspaceConfig>,
-): void {
+export function updateWorkspaceConfig(workspaceId: string, patch: Partial<WorkspaceConfig>): void {
   const { workspaceDir } = getWorkspacePaths(workspaceId);
   const configPath = join(workspaceDir, WORKSPACE_CONFIG_FILENAME);
   const current = getWorkspaceConfig(workspaceId);
   const updated = { ...current, ...patch };
 
   mkdirSync(workspaceDir, { recursive: true });
-  writeFileSync(
-    configPath,
-    stringify(updated as unknown as Record<string, unknown>),
-    "utf-8",
-  );
+  writeFileSync(configPath, stringify(updated as unknown as Record<string, unknown>), "utf-8");
 }

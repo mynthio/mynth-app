@@ -17,6 +17,7 @@
 ## M0 — Foundations
 
 ### M0-T1 — Workspace on-disk spec
+
 - Status: `NEXT`
 - Goal: Define workspace folder layout (DB + assets) and export/backup story.
 - Acceptance:
@@ -24,6 +25,7 @@
   - Workspace export is copying one folder (no secrets)
 
 ### M0-T2 — Global config file (`config.toml`)
+
 - Status: `DONE`
 - Goal: Define and implement a global TOML config file with typed access.
 - Acceptance:
@@ -33,6 +35,7 @@
   - No secrets stored
 
 ### M0-T3 — ID + time conventions
+
 - Status: `NEXT`
 - Goal: Standardize IDs + timestamps.
 - Acceptance:
@@ -40,6 +43,7 @@
   - Timestamps: UTC ms epoch
 
 ### M0-T4 — DB stack decision + scaffolding (Drizzle + better-sqlite3)
+
 - Status: `DONE`
 - Goal: Establish workspace DB access pattern and migrations workflow.
 - Acceptance:
@@ -47,6 +51,7 @@
   - Migration runs against local workspace DB
 
 ### M0-T5 — Spike: Keychain `SecretStore`
+
 - Status: `BLOCKED`
 - Goal: Pick best macOS Keychain integration path for Electron.
 - Acceptance:
@@ -54,6 +59,7 @@
   - Recommended implementation path selected
 
 ### M0-T6 — Shared RPC schema for app IPC
+
 - Status: `NEXT`
 - Goal: Define shared Electron IPC request/message types for chat + streaming.
 - Acceptance:
@@ -62,6 +68,7 @@
   - Includes stream started/delta/completed/failed/canceled messages
 
 ### M0-T7 — Renderer state architecture (Zustand)
+
 - Status: `NEXT`
 - Goal: Settle store boundaries and slices.
 - Acceptance:
@@ -71,6 +78,7 @@
   - Selector pattern documented and used
 
 ### M0-T8 — TanStack Router scaffold
+
 - Status: `DONE`
 - Goal: Add route tree for top-level pages and settings sub-navigation.
 - Acceptance:
@@ -79,6 +87,7 @@
   - Settings sections are routed pages
 
 ### M0-T9 — Global session persistence service (main process)
+
 - Status: `NEXT`
 - Goal: Persist workspace UI session state outside renderer storage.
 - Acceptance:
@@ -88,6 +97,7 @@
   - No `localStorage` usage for workspace session persistence
 
 ### M0-T10 — Session RPC contract
+
 - Status: `NEXT`
 - Goal: Add typed RPC requests for loading/saving workspace session state.
 - Acceptance:
@@ -98,6 +108,7 @@
 ## M1 — Workspace DB + migrations
 
 ### M1-T1 — Workspace DB migrations runner (Drizzle)
+
 - Status: `NEXT`
 - Goal: Apply migrations on workspace open / app start.
 - Acceptance:
@@ -106,6 +117,7 @@
   - Packaged app can find and apply migration files
 
 ### M1-T2 — Schema v1: folders/chats/messages/assets/providers/models/settings
+
 - Status: `IN_PROGRESS`
 - Goal: Create initial schema aligned with message tree + AI SDK parts + provider profiles.
 - Acceptance:
@@ -116,6 +128,7 @@
   - Drizzle migration generated and applied
 
 ### M1-T3 — Workspace CRUD in main process
+
 - Status: `BACKLOG`
 - Goal: Create/open/list/delete workspaces and manage paths.
 - Acceptance:
@@ -125,12 +138,14 @@
 ## M2 — Chat UI (no AI)
 
 ### M2-T1 — Sidebar: folders + chats
+
 - Status: `BACKLOG`
 - Acceptance:
   - Create/rename/delete folder and chat
   - Move chats between folders (nested)
 
 ### M2-T2 — Tabbed chat shell + branch view
+
 - Status: `BACKLOG`
 - Acceptance:
   - Tab strip with open chats
@@ -139,6 +154,7 @@
   - Fork points show branch selector
 
 ### M2-T3 — Composer v1
+
 - Status: `BACKLOG`
 - Acceptance:
   - Submit creates `user` message node with text part
@@ -146,6 +162,7 @@
 ## M3 — Providers (workspace-only)
 
 ### M3-T1 — Provider profiles table + UI
+
 - Status: `BACKLOG`
 - Acceptance:
   - Add/edit/remove provider profiles
@@ -154,6 +171,7 @@
   - Secrets stored as Keychain references only
 
 ### M3-T2 — Model discovery + enable/disable models
+
 - Status: `BACKLOG`
 - Acceptance:
   - Fetch models list per provider profile
@@ -162,6 +180,7 @@
 ## M4 — AI streaming
 
 ### M4-T1 — Main-process stream manager
+
 - Status: `BACKLOG`
 - Goal: In-memory runtime stream state keyed by `chatId`.
 - Acceptance:
@@ -171,6 +190,7 @@
   - Cancel supported
 
 ### M4-T2 — Stream forwarding over Electron IPC
+
 - Status: `BACKLOG`
 - Acceptance:
   - `streamText` deltas emitted to renderer in real time
@@ -178,6 +198,7 @@
   - Renderer receives updates by `chatId`
 
 ### M4-T3 — Persist final assistant message
+
 - Status: `BACKLOG`
 - Acceptance:
   - Final assistant response stored in `messages.parts`
@@ -185,6 +206,7 @@
   - No per-token DB writes
 
 ### M4-T4 — Partial checkpoint persistence policy
+
 - Status: `BACKLOG`
 - Acceptance:
   - Partial assistant content checkpoint persisted at least once per minute while streaming
@@ -193,6 +215,7 @@
   - Checkpoint metadata records reason/timestamp
 
 ### M4-T5 — Tab indicators + completion notifications
+
 - Status: `BACKLOG`
 - Acceptance:
   - Streaming tab shows loading indicator
@@ -200,6 +223,7 @@
   - Background completion triggers desktop notification
 
 ### M4-T6 — Streaming performance guardrails
+
 - Status: `BACKLOG`
 - Acceptance:
   - Inactive chats keep minimal live state
@@ -209,26 +233,32 @@
 ## M5 — Images
 
 ### M5-T1 — Image generation + asset persistence
+
 - Status: `BACKLOG`
 - Acceptance:
   - Generates image and stores under `assets/`
   - Adds image part to chat message
 
 ### M5-T2 — Media gallery view
+
 - Status: `BACKLOG`
 
 ## M6 — Structured outputs
 
 ### M6-T1 — Per-chat JSON schema setting
+
 - Status: `BACKLOG`
 
 ### M6-T2 — Persist parsed JSON result
+
 - Status: `BACKLOG`
 
 ## M7 — Extensions (MVP)
 
 ### M7-T1 — Extension registry + workspace settings
+
 - Status: `BACKLOG`
 
 ### M7-T2 — Extensions as tools/commands host
+
 - Status: `BACKLOG`

@@ -5,32 +5,29 @@ import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-	plugins: [
-		TanStackRouterVite({
-			target: "react",
-			routesDirectory: path.resolve(__dirname, "src/renderer/routes"),
-			generatedRouteTree: path.resolve(
-				__dirname,
-				"src/renderer/routeTree.gen.ts",
-			),
-			autoCodeSplitting: true,
-			quoteStyle: "double",
-		}),
-		react(),
-		tailwindcss(),
-	],
-	root: "src/renderer",
-	resolve: {
-		alias: {
-			"@": path.resolve(__dirname, "src/renderer"),
-		},
-	},
-	build: {
-		outDir: "../../dist",
-		emptyOutDir: true,
-	},
-	server: {
-		port: 5173,
-		strictPort: true,
-	},
+  plugins: [
+    TanStackRouterVite({
+      target: "react",
+      routesDirectory: path.resolve(__dirname, "src/renderer/routes"),
+      generatedRouteTree: path.resolve(__dirname, "src/renderer/routeTree.gen.ts"),
+      autoCodeSplitting: true,
+      quoteStyle: "double",
+    }),
+    react(),
+    tailwindcss(),
+  ],
+  root: "src/renderer",
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "src/renderer"),
+    },
+  },
+  build: {
+    outDir: "../../dist",
+    emptyOutDir: true,
+  },
+  server: {
+    port: 5173,
+    strictPort: true,
+  },
 });

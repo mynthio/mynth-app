@@ -39,10 +39,10 @@ function openDatabase(dbPath: string): { sqlite: BetterSqliteDatabase; db: Works
   const sqlite = new Database(dbPath) as BetterSqliteDatabase;
   sqlite.exec("PRAGMA foreign_keys = ON;");
   sqlite.exec("PRAGMA journal_mode = WAL;");
-  sqlite.exec("PRAGMA synchronous = NORMAL;");  // Safe with WAL, much faster than FULL
-  sqlite.exec("PRAGMA busy_timeout = 5000;");   // Wait up to 5s before SQLITE_BUSY error
-  sqlite.exec("PRAGMA cache_size = -20000;");   // 20 MB page cache
-  sqlite.exec("PRAGMA temp_store = MEMORY;");   // Temp tables and indices in memory
+  sqlite.exec("PRAGMA synchronous = NORMAL;"); // Safe with WAL, much faster than FULL
+  sqlite.exec("PRAGMA busy_timeout = 5000;"); // Wait up to 5s before SQLITE_BUSY error
+  sqlite.exec("PRAGMA cache_size = -20000;"); // 20 MB page cache
+  sqlite.exec("PRAGMA temp_store = MEMORY;"); // Temp tables and indices in memory
 
   const db = drizzle(sqlite, { schema });
   return { sqlite, db };

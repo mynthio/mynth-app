@@ -19,15 +19,12 @@ export function registerWorkspaceHandlers(): void {
     return buildWorkspaceInfo(id);
   });
 
-  ipcMain.handle(
-    "workspaces:setActive",
-    (_event, id: string): WorkspaceInfo => {
-      const ids = listWorkspaceIds();
-      if (!ids.includes(id)) {
-        throw new Error(`Workspace "${id}" does not exist.`);
-      }
-      updateConfig({ app: { activeWorkspaceId: id } });
-      return buildWorkspaceInfo(id);
-    },
-  );
+  ipcMain.handle("workspaces:setActive", (_event, id: string): WorkspaceInfo => {
+    const ids = listWorkspaceIds();
+    if (!ids.includes(id)) {
+      throw new Error(`Workspace "${id}" does not exist.`);
+    }
+    updateConfig({ app: { activeWorkspaceId: id } });
+    return buildWorkspaceInfo(id);
+  });
 }

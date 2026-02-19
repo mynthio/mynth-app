@@ -27,8 +27,8 @@ pnpm make
 ## Linting and formatting (OXC)
 
 ```bash
-pnpm format
-pnpm format:check
+pnpm fmt
+pnpm fmt:check
 pnpm lint
 pnpm lint:fix
 ```

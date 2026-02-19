@@ -31,6 +31,7 @@ Task tracking lives in `docs/TASKS.md`.
 ## Proposed architecture (high level)
 
 Main process (Electron, `src/main-process/…`)
+
 - Persistence (SQLite)
 - Provider registry + model discovery
 - AI execution via Vercel AI SDK (streaming, tools, structured output, image/video)
@@ -39,6 +40,7 @@ Main process (Electron, `src/main-process/…`)
 - Secret manager (Keychain integration)
 
 Renderer (React, `src/mainview/…`)
+
 - Workspace + chat + folder navigation
 - TanStack Router route tree for `/chat` and `/settings/*`
 - Tabbed chat UI with per-tab streaming indicators
@@ -50,6 +52,7 @@ Renderer (React, `src/mainview/…`)
   - tab/pane layout state
 
 Typed IPC bridge (Electron)
+
 - Renderer -> main: request/command RPC (`startStream`, `cancelStream`, CRUD)
 - Main -> renderer: stream events (`started`, `delta`, `completed`, `failed`, `canceled`)
 - Renderer -> main: session RPC (`getWorkspaceSession`, `saveWorkspaceSessionPatch`)
@@ -57,16 +60,19 @@ Typed IPC bridge (Electron)
 ## Navigation and session model
 
 Route scope (TanStack Router):
+
 - `/chat`
 - `/settings`
 - `/settings/providers`
 - `/settings/appearance`
 
 Ownership:
+
 - Router: visible top-level page and settings sub-page history.
 - Zustand: active pane, open tabs, active tab per pane, sidebar/modals.
 
 Session persistence:
+
 - Session state persisted in main process `session.json`, keyed by `workspaceId`.
 - Session includes panes, tabs, active pane, recent tabs, and last route.
 - Renderer hydrates store from `getWorkspaceSession` during workspace load.
@@ -106,17 +112,20 @@ Session persistence:
 We keep content in `messages.parts` (JSON serialized string) and put queryable stable metadata in columns.
 
 Global config (`config.toml`)
+
 - app settings (theme, behavior, window state)
 - recent workspaces (paths + display names)
 - extension enablement + global extension settings (optional)
 
 Global session (`session.json`)
+
 - workspace session map keyed by `workspaceId`
 - per-workspace tab/pane layout state
 - per-workspace recent tabs
 - last route (`/chat` or `/settings/*`)
 
 Workspace DB
+
 - `folders` (nested, for chats)
 - `chats`
 - `messages`
@@ -126,6 +135,7 @@ Workspace DB
 - `chat_settings` (per-chat model, system prompt, structured output mode)
 
 Messages table (minimum fields)
+
 - `id` (UUIDv7)
 - `chat_id`
 - `parent_id` (nullable; root message has NULL)
@@ -135,6 +145,7 @@ Messages table (minimum fields)
 - `created_at`, `updated_at`
 
 `messages.metadata` stores execution summary
+
 - `providerId`, `modelId`
 - `tokensPrompt`, `tokensCompletion`, `tokensTotal`
 - `latencyMs`
@@ -143,6 +154,7 @@ Messages table (minimum fields)
 - checkpoint markers (`checkpointAt`, optional `checkpointReason`)
 
 Not in DB
+
 - live token-by-token event log
 - per-tab loading indicators
 - renderer-only UI flags
@@ -159,6 +171,7 @@ Not in DB
 ## Milestones
 
 ### M0 — Foundations (1–2 days)
+
 - Finalize naming and workspace storage layout.
 - Finalize IPC event contracts and shared RPC types.
 - Finalize Zustand store boundaries (durable state vs live stream state).
@@ -166,6 +179,7 @@ Not in DB
 - Define global session schema and session RPC contract.
 
 ### M1 — Storage + workspace/chats/folders (2–4 days)
+
 - SQLite schema + migrations in place.
 - CRUD for workspaces, folders, chats.
 - Basic renderer shell for workspace switcher + folder/chat list.
@@ -173,6 +187,7 @@ Not in DB
 Deliverable: user can create a workspace and organize chats with persistence.
 
 ### M2 — Message tree + tabbed chat UI (3–6 days)
+
 - Implement message CRUD with `parent_id`.
 - Tabbed chat layout.
 - Session hydrate/restore for tabs and active pane.
@@ -182,6 +197,7 @@ Deliverable: user can create a workspace and organize chats with persistence.
 Deliverable: branching chats are navigable in tabs.
 
 ### M3 — Providers + model discovery (3–6 days)
+
 - Provider profiles in workspace DB.
 - Model discovery and model enable/disable.
 - Settings UI for provider profiles and defaults.
@@ -189,6 +205,7 @@ Deliverable: branching chats are navigable in tabs.
 Deliverable: user can configure providers/models per workspace.
 
 ### M4 — AI streaming runs (4–8 days)
+
 - Implement main-process stream pipeline with AI SDK `streamText`.
 - Forward stream events to renderer through Electron IPC.
 - Persist final assistant message + final metadata in `messages.metadata`.
@@ -199,6 +216,7 @@ Deliverable: user can configure providers/models per workspace.
 Deliverable: live streaming in chat, per-tab loading indicators, completion notifications.
 
 ### M5 — Images (3–6 days)
+
 - Add image generation and asset persistence.
 - Add image parts into chat messages.
 - Render inline images in chat.
@@ -206,6 +224,7 @@ Deliverable: live streaming in chat, per-tab loading indicators, completion noti
 Deliverable: image generation is usable in chat.
 
 ### M6 — Structured outputs (2–5 days)
+
 - Per-chat structured output mode + schema.
 - Persist parsed structured result in message metadata/parts.
 - JSON viewer in UI.
@@ -213,6 +232,7 @@ Deliverable: image generation is usable in chat.
 Deliverable: schema-driven responses in a chat.
 
 ### M7 — Extensions MVP (4–10 days)
+
 - Extension registry + manifest format.
 - Extension host registers tools/commands.
 - Settings UI for enable/disable and capabilities.
@@ -220,6 +240,7 @@ Deliverable: schema-driven responses in a chat.
 Deliverable: third-party extensions can add tools/commands.
 
 ### M8 — Video (experimental)
+
 - Timeboxed spike behind feature flag.
 - Store video assets + inline preview.
 

@@ -31,9 +31,7 @@ export function getConfig(): AppConfig {
 }
 
 /** Deep-merges `patch` into the current config and persists to disk. */
-export function updateConfig(
-  patch: Parameters<ConfigStore["update"]>[0],
-): void {
+export function updateConfig(patch: Parameters<ConfigStore["update"]>[0]): void {
   getStore().update(patch);
 }
 

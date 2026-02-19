@@ -6,6 +6,5 @@ import { contextBridge, ipcRenderer } from "electron";
 contextBridge.exposeInMainWorld("electronAPI", {
   listWorkspaces: () => ipcRenderer.invoke("workspaces:list"),
   getActiveWorkspace: () => ipcRenderer.invoke("workspaces:getActive"),
-  setActiveWorkspace: (id: string) =>
-    ipcRenderer.invoke("workspaces:setActive", id),
+  setActiveWorkspace: (id: string) => ipcRenderer.invoke("workspaces:setActive", id),
 });

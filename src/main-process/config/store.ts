@@ -22,10 +22,7 @@ function deepMerge<T extends object>(base: T, override: DeepPartial<T>): T {
       baseVal !== null &&
       !Array.isArray(baseVal)
     ) {
-      result[key] = deepMerge(
-        baseVal as object,
-        overrideVal as DeepPartial<object>,
-      ) as T[keyof T];
+      result[key] = deepMerge(baseVal as object, overrideVal as DeepPartial<object>) as T[keyof T];
     } else if (overrideVal !== undefined) {
       result[key] = overrideVal as T[keyof T];
     }
@@ -53,10 +50,7 @@ export class ConfigStore {
       const parsed = parse(raw) as DeepPartial<AppConfig>;
       return deepMerge(DEFAULT_CONFIG, parsed);
     } catch (err) {
-      console.warn(
-        `[config] Failed to parse ${this.configPath}, using defaults:`,
-        err,
-      );
+      console.warn(`[config] Failed to parse ${this.configPath}, using defaults:`, err);
       return structuredClone(DEFAULT_CONFIG);
     }
   }

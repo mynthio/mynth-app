@@ -2,14 +2,14 @@ Project is an AI chat desktop app using Electron Forge.
 
 # Rules
 
-* Use pnpm as package manager
-* Never run/edit drizzle migrations. User is handling migrations manually.
-* Never run dev server
+- Use pnpm as package manager
+- Never run/edit drizzle migrations. User is handling migrations manually.
+- Never run dev server
 
 # Documentation
 
-* Due to early stage, we do not write explanation or `why` behind the changes, we just overwrite notes and plan with new decisions. No fallback and no backward compatibility.
+- Due to early stage, we do not write explanation or `why` behind the changes, we just overwrite notes and plan with new decisions. No fallback and no backward compatibility.
 
 # Notes
 
-* Ignore all TSC errors from node_modules and do not try to fix TS config
+- Ignore all TSC errors from node_modules and do not try to fix TS config

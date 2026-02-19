@@ -136,9 +136,7 @@ export const providers = sqliteTable(
     // Arbitrary provider-specific config stored as JSON (headers, org ID, region, etc.).
     config: text("config").notNull().default("{}"),
     // Whether this provider is currently active / usable.
-    isEnabled: integer("is_enabled", { mode: "boolean" })
-      .notNull()
-      .default(true),
+    isEnabled: integer("is_enabled", { mode: "boolean" }).notNull().default(true),
     createdAt: integer("created_at").notNull().default(nowMs),
     updatedAt: integer("updated_at").notNull().default(nowMs),
   },
@@ -163,18 +161,13 @@ export const models = sqliteTable(
     canonicalModelId: text("canonical_model_id").notNull(),
     displayName: text("display_name"),
     // Whether this model is visible in the model picker.
-    isEnabled: integer("is_enabled", { mode: "boolean" })
-      .notNull()
-      .default(true),
+    isEnabled: integer("is_enabled", { mode: "boolean" }).notNull().default(true),
     metadata: text("metadata").notNull().default("{}"),
     createdAt: integer("created_at").notNull().default(nowMs),
     updatedAt: integer("updated_at").notNull().default(nowMs),
   },
   (table) => [
-    uniqueIndex("models_provider_model_unique").on(
-      table.providerId,
-      table.providerModelId,
-    ),
+    uniqueIndex("models_provider_model_unique").on(table.providerId, table.providerModelId),
     index("models_canonical_model_id_idx").on(table.canonicalModelId),
     index("models_provider_id_idx").on(table.providerId),
     index("models_is_enabled_idx").on(table.isEnabled),

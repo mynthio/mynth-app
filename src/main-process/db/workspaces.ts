@@ -61,9 +61,7 @@ export function listWorkspaceIds(): string[] {
   const entries = readdirSync(rootDir, { withFileTypes: true });
 
   return entries
-    .filter(
-      (entry) => entry.isDirectory() && WORKSPACE_ID_PATTERN.test(entry.name),
-    )
+    .filter((entry) => entry.isDirectory() && WORKSPACE_ID_PATTERN.test(entry.name))
     .map((entry) => entry.name)
     .sort((a, b) => a.localeCompare(b));
 }

@@ -1,11 +1,15 @@
 {
   "name": "mynth-app",
-  "productName": "mynth-app",
   "version": "1.0.0",
-  "description": "Local-first AI chat desktop app",
-  "main": ".vite/build/main.js",
   "private": true,
-  "packageManager": "pnpm@10.14.0",
+  "description": "Local-first AI chat desktop app",
+  "keywords": [],
+  "license": "MIT",
+  "author": {
+    "name": "Tomasz Szczucinski",
+    "email": "tomasz.szczucinski@mynth.io"
+  },
+  "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
@@ -14,18 +18,12 @@
     "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
     "db:check": "drizzle-kit check --config=drizzle.config.ts",
     "db:studio": "drizzle-kit studio --config=drizzle.config.ts",
-    "format": "oxfmt --ignore-path .oxfmtignore --write .",
-    "format:check": "oxfmt --ignore-path .oxfmtignore --check .",
-    "lint": "oxlint .",
-    "lint:fix": "oxlint --fix .",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
     "typecheck": "tsc --noEmit"
   },
-  "keywords": [],
-  "author": {
-    "name": "Tomasz Szczucinski",
-    "email": "tomasz.szczucinski@mynth.io"
-  },
-  "license": "MIT",
   "dependencies": {
     "@base-ui/react": "^1.2.0",
     "@tanstack/react-router": "^1.161.1",
@@ -67,5 +65,7 @@
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",
     "vite": "^7.3.1"
-  }
+  },
+  "packageManager": "pnpm@10.14.0",
+  "productName": "mynth-app"
 }

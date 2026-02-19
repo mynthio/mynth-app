@@ -5,10 +5,7 @@ import { getConfig, getConfigPath } from "./main-process/config";
 import { DEFAULT_WORKSPACE_ID, bootstrapWorkspaceDatabases } from "./main-process/db";
 import { closeAllDatabases } from "./main-process/db/database";
 import { registerWorkspaceHandlers } from "./main-process/ipc/workspace-handlers";
-import {
-  WINDOW_TOOLBAR_HEIGHT,
-  WINDOW_TRAFFIC_LIGHTS_POSITION,
-} from "./shared/window-chrome";
+import { WINDOW_TOOLBAR_HEIGHT, WINDOW_TRAFFIC_LIGHTS_POSITION } from "./shared/window-chrome";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -54,9 +51,7 @@ if (!app.requestSingleInstanceLock()) {
     if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
       mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
     } else {
-      mainWindow.loadFile(
-        path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
-      );
+      mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
     }
   }
 
@@ -73,9 +68,7 @@ if (!app.requestSingleInstanceLock()) {
     .then(() => {
       try {
         const config = getConfig();
-        console.log(
-          `Config loaded from: ${getConfigPath()} — theme: ${config.app.theme}`,
-        );
+        console.log(`Config loaded from: ${getConfigPath()} — theme: ${config.app.theme}`);
 
         const workspaceBootstrap = bootstrapWorkspaceDatabases();
         const defaultWorkspaceLog = workspaceBootstrap.createdDefaultWorkspace
@@ -89,10 +82,7 @@ if (!app.requestSingleInstanceLock()) {
         createWindow();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        dialog.showErrorBox(
-          "Startup failed",
-          `The app could not initialize.\n\n${message}`,
-        );
+        dialog.showErrorBox("Startup failed", `The app could not initialize.\n\n${message}`);
         app.quit();
       }
     })
