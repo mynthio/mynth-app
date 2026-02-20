@@ -1,57 +1,91 @@
-import { Link, Outlet } from "@tanstack/react-router";
+import { Link, Outlet, useMatchRoute } from "@tanstack/react-router";
+import {
+  ArrowLeft01Icon,
+  BotIcon,
+  PaintBrush02Icon,
+  SlidersHorizontalIcon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { WindowChrome } from "@/components/app/window-chrome";
+import { Button } from "@/components/ui/button";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarSeparator,
+} from "@/components/ui/sidebar";
 
 const navItems = [
-  { to: "/settings", label: "General", exact: true },
-  { to: "/settings/providers", label: "Providers" },
-  { to: "/settings/appearance", label: "Appearance" },
+  { to: "/settings", label: "General", icon: SlidersHorizontalIcon, exact: true },
+  { to: "/settings/providers", label: "Providers", icon: BotIcon },
+  { to: "/settings/appearance", label: "Appearance", icon: PaintBrush02Icon },
 ] as const;
 
 export function SettingsLayout() {
+  const matchRoute = useMatchRoute();
+
   return (
     <WindowChrome
       toolbar={
-        <div className="flex items-center gap-3">
-          <Link
-            to="/chat"
-            className="inline-flex h-7 items-center rounded-md border px-2.5 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-          >
-            Chat
-          </Link>
+        <div className="flex w-full items-center justify-between gap-3">
+          <Button size="sm" variant="ghost" render={<Link to="/chat" />}>
+            <HugeiconsIcon icon={ArrowLeft01Icon} />
+            <span>Chat</span>
+          </Button>
           <div className="font-heading text-sm font-semibold tracking-tight">Settings</div>
-          <div className="ml-2 flex items-center gap-1">
-            {navItems.map((item) => (
-              <Link
-                key={`toolbar-${item.to}`}
-                to={item.to}
-                activeOptions={{ exact: "exact" in item }}
-                className="inline-flex h-7 items-center rounded-md px-2.5 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground [&.active]:bg-accent [&.active]:text-accent-foreground"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </div>
+          <div className="w-14" />
         </div>
       }
       contentClassName="overflow-hidden"
     >
-      <div className="mx-auto flex h-full min-h-0 w-full gap-6 px-6 py-6">
-        <nav className="w-48 shrink-0 space-y-1 overflow-auto">
-          {navItems.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              activeOptions={{ exact: "exact" in item }}
-              className="block rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground [&.active]:bg-accent [&.active]:text-accent-foreground"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+      <SidebarProvider className="h-full min-h-0">
+        <Sidebar collapsible="none" className="border-r">
+          <SidebarHeader>
+            <div className="space-y-1 px-2 py-1">
+              <p className="font-medium text-sm">Configuration</p>
+              <p className="text-sidebar-foreground/70 text-xs">Manage app settings.</p>
+            </div>
+          </SidebarHeader>
+          <SidebarSeparator />
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupLabel>Sections</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {navItems.map((item) => (
+                    <SidebarMenuItem key={item.to}>
+                      <SidebarMenuButton
+                        isActive={Boolean(
+                          matchRoute({
+                            to: item.to,
+                            fuzzy: !("exact" in item),
+                          }),
+                        )}
+                        render={<Link to={item.to} activeOptions={{ exact: "exact" in item }} />}
+                      >
+                        <HugeiconsIcon icon={item.icon} />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+        </Sidebar>
         <main className="min-h-0 flex-1 overflow-auto">
-          <Outlet />
+          <div className="mx-auto w-full max-w-5xl px-6 py-6">
+            <Outlet />
+          </div>
         </main>
-      </div>
+      </SidebarProvider>
     </WindowChrome>
   );
 }

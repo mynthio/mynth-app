@@ -23,23 +23,23 @@ export function WindowChrome({
 
   return (
     <div
-      className={cn("flex h-full min-h-0 flex-col", className)}
+      className={cn("flex h-full min-h-0 flex-col w-full", className)}
       data-slot="window-chrome"
       style={chromeStyle}
     >
       <header
-        className="relative isolate h-[var(--window-toolbar-height)] shrink-0 border-b bg-background/90 supports-[backdrop-filter]:bg-background/75 supports-[backdrop-filter]:backdrop-blur"
+        className="relative isolate h-(--window-toolbar-height) shrink-0 bg-background/90 w-full supports-backdrop-filter:bg-background/75 supports-backdrop-filter:backdrop-blur"
         data-slot="window-chrome-toolbar"
       >
         <div className="absolute inset-0 [-webkit-app-region:drag]" />
-        <div className="pointer-events-none relative z-10 flex h-full items-center px-3">
+        <div className="pointer-events-none relative z-10 flex h-full items-center px-3 w-full">
           <div
             aria-hidden
             className="shrink-0"
             style={{ width: "var(--window-traffic-lights-spacer)" }}
           />
           {toolbar ? (
-            <div className="pointer-events-auto max-w-full [-webkit-app-region:no-drag]">
+            <div className="pointer-events-auto max-w-full w-full [-webkit-app-region:no-drag]">
               {toolbar}
             </div>
           ) : null}

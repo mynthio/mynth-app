@@ -1,4 +1,6 @@
 import { Link } from "@tanstack/react-router";
+import { ArrowDown01Icon, Setting07Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { ChevronDownIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -14,11 +16,11 @@ export function ChatPage() {
   return (
     <WindowChrome
       toolbar={
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 justify-between w-full">
           <Menu>
             <MenuTrigger render={<Button variant="ghost" size="sm" />}>
               {activeWorkspace?.name ?? "…"}
-              <ChevronDownIcon />
+              <HugeiconsIcon icon={ArrowDown01Icon} />
             </MenuTrigger>
             <MenuPopup align="start">
               <MenuRadioGroup value={activeWorkspace?.id} onValueChange={setActive}>
@@ -30,12 +32,14 @@ export function ChatPage() {
               </MenuRadioGroup>
             </MenuPopup>
           </Menu>
-          <Link
-            to="/settings"
-            className="inline-flex h-7 items-center rounded-md border px-2.5 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            render={<Link to="/settings" aria-label="Settings" />}
           >
-            Settings
-          </Link>
+            <HugeiconsIcon icon={Setting07Icon} />
+          </Button>
         </div>
       }
       contentClassName="overflow-auto"

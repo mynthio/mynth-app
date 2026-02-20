@@ -5,6 +5,11 @@ Project is an AI chat desktop app using Electron Forge.
 - Use pnpm as package manager
 - Never run/edit drizzle migrations. User is handling migrations manually.
 - Never run dev server
+- When running `pnpm install ...` run outside sandbox (not sandboxed).
+- Always run lint and format at the end of each task using `pnpm lint` and `pnpm fmt`
+- Always use Coss UI components and patterns from https://coss.com/ui/llms.txt.
+- Always use Coss UI styling; do not add custom styles unless the user explicitly asks for custom styles.
+- Use Hugeicons for icons only.
 
 # Documentation
 
