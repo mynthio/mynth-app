@@ -2,6 +2,7 @@ Project is an AI chat desktop app using Electron Forge.
 
 # Rules
 
+- This is pre-alpha stage, which means we do not do any backward comatiblity etc. we just make changes, even breaking ones, not worrying about anything
 - Use pnpm as package manager
 - Never run/edit drizzle migrations. User is handling migrations manually.
 - Never run dev server
@@ -9,7 +10,7 @@ Project is an AI chat desktop app using Electron Forge.
 - Always run lint and format at the end of each task using `pnpm lint` and `pnpm fmt`
 - Always use Coss UI components and patterns from https://coss.com/ui/llms.txt.
 - Always use Coss UI styling; do not add custom styles unless the user explicitly asks for custom styles.
-- Use Hugeicons for icons only.
+- Use Hugeicons for icons only. If MCP is available use it to find icons.
 
 # Documentation
 

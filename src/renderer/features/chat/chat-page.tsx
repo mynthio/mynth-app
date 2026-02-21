@@ -1,10 +1,16 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowDown01Icon, Setting07Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrowDown01Icon, Setting07Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ChevronDownIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Menu, MenuPopup, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "@/components/ui/menu";
+import {
+  Menu,
+  MenuPopup,
+  MenuRadioGroup,
+  MenuRadioItem,
+  MenuSeparator,
+  MenuTrigger,
+} from "@/components/ui/menu";
 import { WindowChrome } from "@/components/app/window-chrome";
 import { useWorkspaceStore } from "@/stores/workspace-store";
 
@@ -23,6 +29,16 @@ export function ChatPage() {
               <HugeiconsIcon icon={ArrowDown01Icon} />
             </MenuTrigger>
             <MenuPopup align="start">
+              <Button
+                className="w-full justify-start"
+                size="xs"
+                variant="ghost"
+                render={<Link to="/settings/workspaces/new" />}
+              >
+                <HugeiconsIcon icon={Add01Icon} />
+                <span>Create Workspace</span>
+              </Button>
+              <MenuSeparator />
               <MenuRadioGroup value={activeWorkspace?.id} onValueChange={setActive}>
                 {workspaces.map((ws) => (
                   <MenuRadioItem key={ws.id} value={ws.id}>

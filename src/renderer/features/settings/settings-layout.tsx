@@ -1,5 +1,6 @@
 import { Link, Outlet, useMatchRoute } from "@tanstack/react-router";
 import {
+  Add01Icon,
   ArrowLeft01Icon,
   BotIcon,
   PaintBrush02Icon,
@@ -21,8 +22,9 @@ import {
   SidebarProvider,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
+import { useWorkspaceStore } from "@/stores/workspace-store";
 
-const navItems = [
+const globalNavItems = [
   { to: "/settings", label: "General", icon: SlidersHorizontalIcon, exact: true },
   { to: "/settings/providers", label: "Providers", icon: BotIcon },
   { to: "/settings/appearance", label: "Appearance", icon: PaintBrush02Icon },
@@ -30,6 +32,8 @@ const navItems = [
 
 export function SettingsLayout() {
   const matchRoute = useMatchRoute();
+  const workspaces = useWorkspaceStore((s) => s.workspaces);
+  const hasWorkspaces = workspaces.length > 0;
 
   return (
     <WindowChrome
@@ -50,16 +54,18 @@ export function SettingsLayout() {
           <SidebarHeader>
             <div className="space-y-1 px-2 py-1">
               <p className="font-medium text-sm">Configuration</p>
-              <p className="text-sidebar-foreground/70 text-xs">Manage app settings.</p>
+              <p className="text-sidebar-foreground/70 text-xs">
+                Manage global and workspace settings.
+              </p>
             </div>
           </SidebarHeader>
           <SidebarSeparator />
           <SidebarContent>
             <SidebarGroup>
-              <SidebarGroupLabel>Sections</SidebarGroupLabel>
+              <SidebarGroupLabel>Global</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {navItems.map((item) => (
+                  {globalNavItems.map((item) => (
                     <SidebarMenuItem key={item.to}>
                       <SidebarMenuButton
                         isActive={Boolean(
@@ -76,6 +82,48 @@ export function SettingsLayout() {
                     </SidebarMenuItem>
                   ))}
                 </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel className="justify-between gap-2">
+                <span>Workspaces</span>
+                <Button size="xs" variant="ghost" render={<Link to="/settings/workspaces/new" />}>
+                  <HugeiconsIcon icon={Add01Icon} />
+                  <span>New</span>
+                </Button>
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                {hasWorkspaces ? (
+                  <SidebarMenu>
+                    {workspaces.map((workspace) => (
+                      <SidebarMenuItem key={workspace.id}>
+                        <SidebarMenuButton
+                          isActive={Boolean(
+                            matchRoute({
+                              to: "/settings/$workspaceId",
+                              params: { workspaceId: workspace.id },
+                              fuzzy: true,
+                            }),
+                          )}
+                          render={
+                            <Link
+                              to="/settings/$workspaceId"
+                              params={{ workspaceId: workspace.id }}
+                            />
+                          }
+                        >
+                          <HugeiconsIcon icon={SlidersHorizontalIcon} />
+                          <span>{workspace.name}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                ) : (
+                  <p className="px-2 py-1 text-sidebar-foreground/70 text-xs">
+                    No workspaces found.
+                  </p>
+                )}
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
