@@ -1,13 +1,11 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 
-import { parseWorkspaceId } from "../../shared/workspace-id";
+import { parseWorkspaceId } from "../../shared/workspace/workspace-id";
 import { getUserDataDirectory } from "../system/paths";
 
 const WORKSPACES_DIRECTORY_NAME = "workspaces";
 const WORKSPACE_ASSETS_DIRECTORY_NAME = "assets";
-
-export const DEFAULT_WORKSPACE_ID = "default";
 
 export interface WorkspacePaths {
   workspaceId: string;

@@ -1,8 +1,8 @@
 import { asc, eq } from "drizzle-orm";
 
+import { DEFAULT_WORKSPACE_ID } from "../../shared/workspace/workspace-id";
 import { getAppDatabase } from "../db/database";
 import { workspaces } from "../db/schema";
-import { DEFAULT_WORKSPACE_ID } from "./filesystem";
 
 export type WorkspaceSettings = Record<string, unknown>;
 

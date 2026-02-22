@@ -1,7 +1,9 @@
-import { registerChatTreeHandlers } from "./chat-tree-handlers";
-import { registerWorkspaceHandlers } from "./workspace-handlers";
+import type { IpcHandlerContext } from "./core/context";
+import { registerChatTreeIpcModule } from "./modules/chat-tree";
+import { registerWorkspaceIpcModule } from "./modules/workspaces";
 
-export function registerIpcHandlers(): void {
-  registerWorkspaceHandlers();
-  registerChatTreeHandlers();
+export function registerIpcHandlers(context: IpcHandlerContext): void {
+  const registeredChannels = new Set<string>();
+  registerWorkspaceIpcModule(context, registeredChannels);
+  registerChatTreeIpcModule(context, registeredChannels);
 }

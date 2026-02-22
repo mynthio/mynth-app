@@ -1,4 +1,4 @@
-import { parseUuidV7 } from "./uuidv7";
+import { parseUuidV7 } from "../uuidv7";
 
 type ParseChatIdResult = ReturnType<typeof parseUuidV7>;
 

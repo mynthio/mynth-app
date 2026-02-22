@@ -4,13 +4,44 @@ import { getAppDatabase } from "../db/database";
 import { createUuidV7 } from "../db/uuidv7";
 import { chats, folders } from "../db/schema";
 import { getWorkspaceById } from "../workspaces/repository";
-import type { ChatInfo, ChatTreeFolderNode, ChatTreeSnapshot, FolderInfo } from "../../shared/ipc";
 
 type FolderTableRow = typeof folders.$inferSelect;
 type ChatTableRow = typeof chats.$inferSelect;
 
-export type FolderRow = FolderInfo;
-export type ChatRow = ChatInfo;
+export interface FolderRow {
+  id: string;
+  workspaceId: string;
+  parentId: string | null;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ChatRow {
+  id: string;
+  workspaceId: string;
+  folderId: string | null;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ChatTreeFolderNode {
+  id: string;
+  workspaceId: string;
+  parentId: string | null;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+  folders: ChatTreeFolderNode[];
+  chats: ChatRow[];
+}
+
+export interface ChatTreeSnapshot {
+  workspaceId: string;
+  rootFolders: ChatTreeFolderNode[];
+  rootChats: ChatRow[];
+}
 
 function toFolderRow(row: FolderTableRow): FolderRow {
   return {
@@ -235,7 +266,7 @@ export function getChatTree(workspaceId: string): ChatTreeSnapshot {
     parentNode.folders.push(node);
   }
 
-  const rootChats: ChatInfo[] = [];
+  const rootChats: ChatRow[] = [];
 
   for (const row of chatRows) {
     const chat = toChatRow(row);

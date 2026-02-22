@@ -8,7 +8,7 @@ import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui
 import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useWorkspaceStore } from "@/stores/workspace-store";
-import { parseWorkspaceName, workspaceNameSchema } from "../../../shared/workspace-name";
+import { parseWorkspaceName, workspaceNameSchema } from "../../../shared/workspace/workspace-name";
 
 export function CreateWorkspacePage() {
   const navigate = useNavigate();
