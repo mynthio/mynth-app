@@ -6,14 +6,14 @@ import { mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
+import { getUserDataDirectory } from "../system/paths";
 import * as schema from "./schema";
 
-export type WorkspaceDatabase = BetterSQLite3Database<typeof schema>;
+export type AppDatabase = BetterSQLite3Database<typeof schema>;
 
 const _require = createRequire(import.meta.url);
-
-// Long-lived connections keyed by absolute DB path, reused across IPC calls.
-const connections = new Map<string, { sqlite: BetterSqliteDatabase; db: WorkspaceDatabase }>();
+const APP_DATABASE_FILENAME = "app.sqlite";
+let connection: { sqlite: BetterSqliteDatabase; db: AppDatabase } | null = null;
 
 function resolveMigrationsFolder(): string {
   if (process.versions.electron) {
@@ -33,7 +33,7 @@ function resolveMigrationsFolder(): string {
   return join(process.cwd(), "src", "main-process", "db", "migrations");
 }
 
-function openDatabase(dbPath: string): { sqlite: BetterSqliteDatabase; db: WorkspaceDatabase } {
+function openDatabase(dbPath: string): { sqlite: BetterSqliteDatabase; db: AppDatabase } {
   mkdirSync(dirname(dbPath), { recursive: true });
 
   const sqlite = new Database(dbPath) as BetterSqliteDatabase;
@@ -48,8 +48,12 @@ function openDatabase(dbPath: string): { sqlite: BetterSqliteDatabase; db: Works
   return { sqlite, db };
 }
 
-export function migrateDatabaseFile(dbPath: string): void {
-  const { sqlite, db } = openDatabase(dbPath);
+export function getAppDatabasePath(): string {
+  return join(getUserDataDirectory(), APP_DATABASE_FILENAME);
+}
+
+export function migrateAppDatabase(): void {
+  const { sqlite, db } = openDatabase(getAppDatabasePath());
 
   try {
     migrate(db, { migrationsFolder: resolveMigrationsFolder() });
@@ -59,25 +63,23 @@ export function migrateDatabaseFile(dbPath: string): void {
 }
 
 /**
- * Returns a long-lived Drizzle connection for the given workspace DB path,
- * opening it on first access. Reuse this for all IPC query handlers.
+ * Returns the long-lived app database connection, opening it on first access.
+ * Reuse this for all IPC query handlers.
  */
-export function getOrOpenDatabase(dbPath: string): WorkspaceDatabase {
-  let entry = connections.get(dbPath);
-  if (!entry) {
-    entry = openDatabase(dbPath);
-    connections.set(dbPath, entry);
+export function getAppDatabase(): AppDatabase {
+  if (!connection) {
+    connection = openDatabase(getAppDatabasePath());
   }
-  return entry.db;
+  return connection.db;
 }
 
 /**
- * Closes all open SQLite connections. Call this from the `before-quit`
+ * Closes the app SQLite connection. Call this from the `before-quit`
  * app event to ensure WAL checkpointing completes cleanly.
  */
-export function closeAllDatabases(): void {
-  for (const { sqlite } of connections.values()) {
-    sqlite.close();
+export function closeAppDatabase(): void {
+  if (connection) {
+    connection.sqlite.close();
+    connection = null;
   }
-  connections.clear();
 }

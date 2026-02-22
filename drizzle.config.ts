@@ -1,6 +1,6 @@
 import { defineConfig } from "drizzle-kit";
 
-const drizzleDbPath = process.env["DRIZZLE_DB_PATH"] ?? "./tmp/drizzle-workspace-dev.sqlite";
+const drizzleDbPath = process.env["DRIZZLE_DB_PATH"] ?? "./tmp/drizzle-app-dev.sqlite";
 
 export default defineConfig({
   dialect: "sqlite",

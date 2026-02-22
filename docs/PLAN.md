@@ -77,7 +77,7 @@ Session persistence:
 - Session includes panes, tabs, active pane, recent tabs, and last route.
 - Renderer hydrates store from `getWorkspaceSession` during workspace load.
 - Renderer sends debounced session patches through RPC.
-- Main validates session chat IDs against workspace DB before hydrate.
+- Main validates session chat IDs against app DB before hydrate.
 
 ## Streaming model
 
@@ -114,7 +114,7 @@ We keep content in `messages.parts` (JSON serialized string) and put queryable s
 Global config (`config.toml`)
 
 - app settings (theme, behavior, window state)
-- recent workspaces (paths + display names)
+- active workspace id + app-level preferences
 - extension enablement + global extension settings (optional)
 
 Global session (`session.json`)
@@ -124,14 +124,18 @@ Global session (`session.json`)
 - per-workspace recent tabs
 - last route (`/chat` or `/settings/*`)
 
-Workspace DB
+App DB (single SQLite file)
 
-- `folders` (nested, for chats)
-- `chats`
+- `workspaces` (workspace metadata + settings JSON)
+- `workspace_provider_overrides` (per-workspace provider enable/disable)
+- `workspace_model_overrides` (per-workspace model enable/disable)
+
+- `folders` (nested, for chats; workspace-scoped)
+- `chats` (workspace-scoped)
 - `messages`
-- `assets` (files/images/video references)
-- `providers` (configured AI provider profiles per workspace)
-- `models` (enabled models, FK to provider)
+- `assets` (files/images/video references; workspace-scoped files on disk)
+- `providers` (app-global configured AI provider profiles)
+- `models` (app-global model entries, FK to provider)
 - `chat_settings` (per-chat model, system prompt, structured output mode)
 
 Messages table (minimum fields)
@@ -198,11 +202,11 @@ Deliverable: branching chats are navigable in tabs.
 
 ### M3 — Providers + model discovery (3–6 days)
 
-- Provider profiles in workspace DB.
-- Model discovery and model enable/disable.
+- Provider profiles in app DB (global).
+- Model discovery and per-workspace model enable/disable via overrides.
 - Settings UI for provider profiles and defaults.
 
-Deliverable: user can configure providers/models per workspace.
+Deliverable: user can configure global providers/models and workspace-specific enablement.
 
 ### M4 — AI streaming runs (4–8 days)
 
@@ -248,7 +252,7 @@ Deliverable: decide ship/no-ship after prototype.
 
 ## Decisions
 
-- Workspace-first storage with per-workspace SQLite DB.
+- Workspace-first UX with a single app SQLite DB and per-workspace asset directories.
 - `message.parts` is canonical content format.
 - Streaming is IPC-driven with in-memory runtime state.
 - Zustand is the default state management layer in renderer.

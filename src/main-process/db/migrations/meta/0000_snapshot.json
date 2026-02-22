@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "d29ced87-82e7-4886-93e0-790a3270bf8f",
+  "id": "d9f3d165-006e-4d04-8666-0a789a5b69e7",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "assets": {
@@ -11,6 +11,13 @@
           "name": "id",
           "type": "text",
           "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
@@ -87,6 +94,11 @@
         }
       },
       "indexes": {
+        "assets_workspace_id_idx": {
+          "name": "assets_workspace_id_idx",
+          "columns": ["workspace_id"],
+          "isUnique": false
+        },
         "assets_chat_id_idx": {
           "name": "assets_chat_id_idx",
           "columns": ["chat_id"],
@@ -99,6 +111,15 @@
         }
       },
       "foreignKeys": {
+        "assets_workspace_id_workspaces_id_fk": {
+          "name": "assets_workspace_id_workspaces_id_fk",
+          "tableFrom": "assets",
+          "tableTo": "workspaces",
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
         "assets_chat_id_chats_id_fk": {
           "name": "assets_chat_id_chats_id_fk",
           "tableFrom": "assets",
@@ -205,6 +226,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "folder_id": {
           "name": "folder_id",
           "type": "text",
@@ -237,6 +265,11 @@
         }
       },
       "indexes": {
+        "chats_workspace_id_idx": {
+          "name": "chats_workspace_id_idx",
+          "columns": ["workspace_id"],
+          "isUnique": false
+        },
         "chats_folder_id_idx": {
           "name": "chats_folder_id_idx",
           "columns": ["folder_id"],
@@ -244,6 +277,15 @@
         }
       },
       "foreignKeys": {
+        "chats_workspace_id_workspaces_id_fk": {
+          "name": "chats_workspace_id_workspaces_id_fk",
+          "tableFrom": "chats",
+          "tableTo": "workspaces",
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
         "chats_folder_id_folders_id_fk": {
           "name": "chats_folder_id_folders_id_fk",
           "tableFrom": "chats",
@@ -265,6 +307,13 @@
           "name": "id",
           "type": "text",
           "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
@@ -300,6 +349,11 @@
         }
       },
       "indexes": {
+        "folders_workspace_id_idx": {
+          "name": "folders_workspace_id_idx",
+          "columns": ["workspace_id"],
+          "isUnique": false
+        },
         "folders_parent_id_idx": {
           "name": "folders_parent_id_idx",
           "columns": ["parent_id"],
@@ -307,6 +361,15 @@
         }
       },
       "foreignKeys": {
+        "folders_workspace_id_workspaces_id_fk": {
+          "name": "folders_workspace_id_workspaces_id_fk",
+          "tableFrom": "folders",
+          "tableTo": "workspaces",
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
         "folders_parent_id_folders_id_fk": {
           "name": "folders_parent_id_folders_id_fk",
           "tableFrom": "folders",
@@ -463,14 +526,6 @@
           "notNull": false,
           "autoincrement": false
         },
-        "is_enabled": {
-          "name": "is_enabled",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": true
-        },
         "metadata": {
           "name": "metadata",
           "type": "text",
@@ -510,11 +565,6 @@
         "models_provider_id_idx": {
           "name": "models_provider_id_idx",
           "columns": ["provider_id"],
-          "isUnique": false
-        },
-        "models_is_enabled_idx": {
-          "name": "models_is_enabled_idx",
-          "columns": ["is_enabled"],
           "isUnique": false
         }
       },
@@ -594,14 +644,6 @@
           "autoincrement": false,
           "default": "'{}'"
         },
-        "is_enabled": {
-          "name": "is_enabled",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": true
-        },
         "created_at": {
           "name": "created_at",
           "type": "integer",
@@ -624,13 +666,198 @@
           "name": "providers_kind_idx",
           "columns": ["kind"],
           "isUnique": false
-        },
-        "providers_is_enabled_idx": {
-          "name": "providers_is_enabled_idx",
-          "columns": ["is_enabled"],
-          "isUnique": false
         }
       },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "workspace_model_overrides": {
+      "name": "workspace_model_overrides",
+      "columns": {
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "model_id": {
+          "name": "model_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "is_enabled": {
+          "name": "is_enabled",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "workspace_model_overrides_workspace_id_workspaces_id_fk": {
+          "name": "workspace_model_overrides_workspace_id_workspaces_id_fk",
+          "tableFrom": "workspace_model_overrides",
+          "tableTo": "workspaces",
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "workspace_model_overrides_model_id_models_id_fk": {
+          "name": "workspace_model_overrides_model_id_models_id_fk",
+          "tableFrom": "workspace_model_overrides",
+          "tableTo": "models",
+          "columnsFrom": ["model_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "workspace_model_overrides_workspace_id_model_id_pk": {
+          "columns": ["workspace_id", "model_id"],
+          "name": "workspace_model_overrides_workspace_id_model_id_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "workspace_provider_overrides": {
+      "name": "workspace_provider_overrides",
+      "columns": {
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider_id": {
+          "name": "provider_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "is_enabled": {
+          "name": "is_enabled",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "workspace_provider_overrides_workspace_id_workspaces_id_fk": {
+          "name": "workspace_provider_overrides_workspace_id_workspaces_id_fk",
+          "tableFrom": "workspace_provider_overrides",
+          "tableTo": "workspaces",
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "workspace_provider_overrides_provider_id_providers_id_fk": {
+          "name": "workspace_provider_overrides_provider_id_providers_id_fk",
+          "tableFrom": "workspace_provider_overrides",
+          "tableTo": "providers",
+          "columnsFrom": ["provider_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "workspace_provider_overrides_workspace_id_provider_id_pk": {
+          "columns": ["workspace_id", "provider_id"],
+          "name": "workspace_provider_overrides_workspace_id_provider_id_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "workspaces": {
+      "name": "workspaces",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "settings": {
+          "name": "settings",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'{}'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        }
+      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},

@@ -45,10 +45,10 @@
 ### M0-T4 — DB stack decision + scaffolding (Drizzle + better-sqlite3)
 
 - Status: `DONE`
-- Goal: Establish workspace DB access pattern and migrations workflow.
+- Goal: Establish app DB access pattern and migrations workflow.
 - Acceptance:
   - `drizzle.config.ts` present and runnable via pnpm scripts
-  - Migration runs against local workspace DB
+  - Migration runs against local app DB
 
 ### M0-T5 — Spike: Keychain `SecretStore`
 
@@ -105,15 +105,15 @@
   - `saveWorkspaceSessionPatch(workspaceId, patch)` request implemented
   - Main validates and writes debounced session updates
 
-## M1 — Workspace DB + migrations
+## M1 — App DB + workspace storage
 
-### M1-T1 — Workspace DB migrations runner (Drizzle)
+### M1-T1 — App DB migrations runner (Drizzle)
 
 - Status: `NEXT`
-- Goal: Apply migrations on workspace open / app start.
+- Goal: Apply migrations on app start for the single app DB.
 - Acceptance:
   - Migrations table used consistently
-  - Idempotent open/create workspace DB
+  - Idempotent open/create app DB
   - Packaged app can find and apply migration files
 
 ### M1-T2 — Schema v1: folders/chats/messages/assets/providers/models/settings
@@ -132,8 +132,8 @@
 - Status: `BACKLOG`
 - Goal: Create/open/list/delete workspaces and manage paths.
 - Acceptance:
-  - Create workspace creates folder + `workspace.sqlite` + `assets/`
-  - Open workspace validates schema version and migrates if needed
+  - Create workspace creates DB row + workspace folder + `assets/`
+  - Workspace metadata (name/settings) is read from app DB `workspaces` table
 
 ## M2 — Chat UI (no AI)
 

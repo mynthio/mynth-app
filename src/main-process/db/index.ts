@@ -1,51 +1,43 @@
-import { migrateDatabaseFile } from "./database";
-import {
+import { getAppDatabasePath, migrateAppDatabase } from "./database";
+import { ensureDefaultWorkspace, listWorkspaces } from "../workspaces/repository";
+import { ensureWorkspaceFilesystem, ensureWorkspaceRootDirectory } from "../workspaces/filesystem";
+
+export type { WorkspacePaths } from "../workspaces/filesystem";
+export {
   DEFAULT_WORKSPACE_ID,
   ensureWorkspaceFilesystem,
   ensureWorkspaceRootDirectory,
-  listWorkspaceIds,
-  type WorkspacePaths,
-} from "./workspaces";
-
-export type { WorkspacePaths } from "./workspaces";
-export {
-  DEFAULT_WORKSPACE_ID,
   getWorkspacePaths,
   getWorkspacesRootDirectory,
-  listWorkspaceIds,
-} from "./workspaces";
+} from "../workspaces/filesystem";
 
-export interface WorkspaceBootstrapResult {
-  rootDir: string;
-  discoveredWorkspaceIds: string[];
-  migratedWorkspaceIds: string[];
+export interface StorageBootstrapResult {
+  dbPath: string;
+  workspacesRootDir: string;
+  workspaceIds: string[];
   createdDefaultWorkspace: boolean;
 }
 
-export function ensureWorkspaceDatabase(workspaceId: string): WorkspacePaths {
-  const workspacePaths = ensureWorkspaceFilesystem(workspaceId);
-  migrateDatabaseFile(workspacePaths.dbPath);
-  return workspacePaths;
-}
+export function bootstrapStorage(): StorageBootstrapResult {
+  migrateAppDatabase();
 
-export function bootstrapWorkspaceDatabases(): WorkspaceBootstrapResult {
-  const rootDir = ensureWorkspaceRootDirectory();
-  const discoveredWorkspaceIds = listWorkspaceIds();
-  const createdDefaultWorkspace = discoveredWorkspaceIds.length === 0;
-  const workspaceIdsToBootstrap = createdDefaultWorkspace
-    ? [DEFAULT_WORKSPACE_ID]
-    : discoveredWorkspaceIds;
-  const migratedWorkspaceIds: string[] = [];
+  const discoveredWorkspaces = listWorkspaces();
+  const createdDefaultWorkspace = discoveredWorkspaces.length === 0;
+  if (createdDefaultWorkspace) {
+    ensureDefaultWorkspace();
+  }
 
-  for (const workspaceId of workspaceIdsToBootstrap) {
-    ensureWorkspaceDatabase(workspaceId);
-    migratedWorkspaceIds.push(workspaceId);
+  const workspaces = listWorkspaces();
+  const workspacesRootDir = ensureWorkspaceRootDirectory();
+
+  for (const workspace of workspaces) {
+    ensureWorkspaceFilesystem(workspace.id);
   }
 
   return {
-    rootDir,
-    discoveredWorkspaceIds: workspaceIdsToBootstrap,
-    migratedWorkspaceIds,
+    dbPath: getAppDatabasePath(),
+    workspacesRootDir,
+    workspaceIds: workspaces.map((workspace) => workspace.id),
     createdDefaultWorkspace,
   };
 }

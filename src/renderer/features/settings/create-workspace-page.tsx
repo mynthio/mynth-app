@@ -44,7 +44,9 @@ export function CreateWorkspacePage() {
     <div className="space-y-6">
       <div className="space-y-2">
         <h1 className="font-heading text-3xl font-semibold tracking-tight">Create Workspace</h1>
-        <p className="text-muted-foreground">Create a new workspace with its own database.</p>
+        <p className="text-muted-foreground">
+          Create a new workspace with its own assets folder and settings.
+        </p>
       </div>
 
       <Card>

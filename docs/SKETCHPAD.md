@@ -145,15 +145,18 @@ Non-goals for message persistence:
 
 ## Storage layout
 
+App DB:
+
+- `app.sqlite`
+
 Per-workspace layout:
 
-- `workspace.sqlite`
 - `assets/<assetId>.<ext>`
 - optional thumbnails cache
 
 Global config:
 
-- `config.toml` for app-level settings and recent workspaces
+- `config.toml` for app-level settings (workspace list/settings live in DB)
 
 ## Providers
 
@@ -173,7 +176,7 @@ Provider profile fields:
 
 Scope:
 
-- providers are workspace-local
+- providers/models are app-global; workspace enable/disable is stored in override tables
 
 ## Extensions
 

@@ -3,6 +3,7 @@ import {
   type AnySQLiteColumn,
   index,
   integer,
+  primaryKey,
   sqliteTable,
   text,
   uniqueIndex,
@@ -10,10 +11,22 @@ import {
 
 const nowMs = sql`(cast((julianday('now') - 2440587.5) * 86400000 as integer))`;
 
+export const workspaces = sqliteTable("workspaces", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  // JSON object stored as TEXT in SQLite (parsed by app code).
+  settings: text("settings").notNull().default("{}"),
+  createdAt: integer("created_at").notNull().default(nowMs),
+  updatedAt: integer("updated_at").notNull().default(nowMs),
+});
+
 export const folders = sqliteTable(
   "folders",
   {
     id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
     parentId: text("parent_id").references((): AnySQLiteColumn => folders.id, {
       onDelete: "set null",
     }),
@@ -21,13 +34,19 @@ export const folders = sqliteTable(
     createdAt: integer("created_at").notNull().default(nowMs),
     updatedAt: integer("updated_at").notNull().default(nowMs),
   },
-  (table) => [index("folders_parent_id_idx").on(table.parentId)],
+  (table) => [
+    index("folders_workspace_id_idx").on(table.workspaceId),
+    index("folders_parent_id_idx").on(table.parentId),
+  ],
 );
 
 export const chats = sqliteTable(
   "chats",
   {
     id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
     folderId: text("folder_id").references(() => folders.id, {
       onDelete: "set null",
     }),
@@ -35,7 +54,10 @@ export const chats = sqliteTable(
     createdAt: integer("created_at").notNull().default(nowMs),
     updatedAt: integer("updated_at").notNull().default(nowMs),
   },
-  (table) => [index("chats_folder_id_idx").on(table.folderId)],
+  (table) => [
+    index("chats_workspace_id_idx").on(table.workspaceId),
+    index("chats_folder_id_idx").on(table.folderId),
+  ],
 );
 
 export const messages = sqliteTable(
@@ -65,6 +87,10 @@ export const assets = sqliteTable(
   "assets",
   {
     id: text("id").primaryKey(),
+    // Explicit workspace scope is required because files live in per-workspace asset directories.
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
     chatId: text("chat_id").references(() => chats.id, {
       onDelete: "set null",
     }),
@@ -73,6 +99,7 @@ export const assets = sqliteTable(
     }),
     kind: text("kind").notNull(),
     mimeType: text("mime_type").notNull(),
+    // Path relative to the workspace asset directory identified by `workspace_id`.
     relativePath: text("relative_path").notNull(),
     sizeBytes: integer("size_bytes"),
     width: integer("width"),
@@ -81,13 +108,14 @@ export const assets = sqliteTable(
     createdAt: integer("created_at").notNull().default(nowMs),
   },
   (table) => [
+    index("assets_workspace_id_idx").on(table.workspaceId),
     index("assets_chat_id_idx").on(table.chatId),
     index("assets_message_id_idx").on(table.messageId),
   ],
 );
 
 /**
- * Provider profiles — one row per configured AI provider instance.
+ * Provider profiles — app-global rows shared across workspaces.
  *
  * `kind` identifies the provider type (e.g. "openai", "anthropic", "ollama",
  * "openrouter", "custom_openai_compatible").
@@ -114,6 +142,8 @@ export const assets = sqliteTable(
  *
  * `config` holds provider-specific non-secret fields as JSON:
  * org/project IDs, region, resource name, custom headers, etc.
+ *
+ * Workspace-specific enable/disable state lives in `workspace_provider_overrides`.
  */
 export const providers = sqliteTable(
   "providers",
@@ -135,15 +165,10 @@ export const providers = sqliteTable(
     apiSecretId: text("api_secret_id"),
     // Arbitrary provider-specific config stored as JSON (headers, org ID, region, etc.).
     config: text("config").notNull().default("{}"),
-    // Whether this provider is currently active / usable.
-    isEnabled: integer("is_enabled", { mode: "boolean" }).notNull().default(true),
     createdAt: integer("created_at").notNull().default(nowMs),
     updatedAt: integer("updated_at").notNull().default(nowMs),
   },
-  (table) => [
-    index("providers_kind_idx").on(table.kind),
-    index("providers_is_enabled_idx").on(table.isEnabled),
-  ],
+  (table) => [index("providers_kind_idx").on(table.kind)],
 );
 
 export const models = sqliteTable(
@@ -160,8 +185,7 @@ export const models = sqliteTable(
     // Internal cross-provider identity for grouping semantically equivalent models.
     canonicalModelId: text("canonical_model_id").notNull(),
     displayName: text("display_name"),
-    // Whether this model is visible in the model picker.
-    isEnabled: integer("is_enabled", { mode: "boolean" }).notNull().default(true),
+    // Workspace-specific enable/disable state lives in `workspace_model_overrides`.
     metadata: text("metadata").notNull().default("{}"),
     createdAt: integer("created_at").notNull().default(nowMs),
     updatedAt: integer("updated_at").notNull().default(nowMs),
@@ -170,7 +194,46 @@ export const models = sqliteTable(
     uniqueIndex("models_provider_model_unique").on(table.providerId, table.providerModelId),
     index("models_canonical_model_id_idx").on(table.canonicalModelId),
     index("models_provider_id_idx").on(table.providerId),
-    index("models_is_enabled_idx").on(table.isEnabled),
+  ],
+);
+
+export const workspaceProviderOverrides = sqliteTable(
+  "workspace_provider_overrides",
+  {
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    providerId: text("provider_id")
+      .notNull()
+      .references(() => providers.id, { onDelete: "cascade" }),
+    isEnabled: integer("is_enabled", { mode: "boolean" }).notNull(),
+    createdAt: integer("created_at").notNull().default(nowMs),
+    updatedAt: integer("updated_at").notNull().default(nowMs),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.workspaceId, table.providerId],
+    }),
+  ],
+);
+
+export const workspaceModelOverrides = sqliteTable(
+  "workspace_model_overrides",
+  {
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    modelId: text("model_id")
+      .notNull()
+      .references(() => models.id, { onDelete: "cascade" }),
+    isEnabled: integer("is_enabled", { mode: "boolean" }).notNull(),
+    createdAt: integer("created_at").notNull().default(nowMs),
+    updatedAt: integer("updated_at").notNull().default(nowMs),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.workspaceId, table.modelId],
+    }),
   ],
 );
 

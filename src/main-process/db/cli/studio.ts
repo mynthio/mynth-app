@@ -1,25 +1,10 @@
-import { ensureWorkspaceDatabase, listWorkspaceIds } from "../index";
+import { getAppDatabasePath, migrateAppDatabase } from "../database";
 import { spawn } from "node:child_process";
 
-function getWorkspaceIdFromArgv(): string | undefined {
-  const args = process.argv.slice(2);
-  return args.find((arg) => !arg.startsWith("-"));
-}
-
-const workspaceId = getWorkspaceIdFromArgv();
-
-if (!workspaceId) {
-  const discoveredIds = listWorkspaceIds();
-  const discoveredMessage = discoveredIds.length > 0 ? discoveredIds.join(", ") : "(none)";
-
-  console.error("Usage: bun run db:studio -- <workspace-id>");
-  console.error(`Discovered workspace IDs: ${discoveredMessage}`);
-  process.exit(1);
-}
-
-const workspacePaths = ensureWorkspaceDatabase(workspaceId);
-console.log(`Launching Drizzle Studio for workspace "${workspaceId}"`);
-console.log(`SQLite DB path: ${workspacePaths.dbPath}`);
+migrateAppDatabase();
+const appDbPath = getAppDatabasePath();
+console.log("Launching Drizzle Studio for app database");
+console.log(`SQLite DB path: ${appDbPath}`);
 
 const env: Record<string, string> = {};
 for (const [key, value] of Object.entries(process.env)) {
@@ -27,7 +12,7 @@ for (const [key, value] of Object.entries(process.env)) {
     env[key] = value;
   }
 }
-env["DRIZZLE_DB_PATH"] = workspacePaths.dbPath;
+env["DRIZZLE_DB_PATH"] = appDbPath;
 
 const command = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const drizzleKitProcess = spawn(

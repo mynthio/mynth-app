@@ -14,7 +14,14 @@ type ParseWorkspaceNameResult =
       error: string;
     };
 
-export function parseWorkspaceName(input: string): ParseWorkspaceNameResult {
+export function parseWorkspaceName(input: unknown): ParseWorkspaceNameResult {
+  if (typeof input !== "string") {
+    return {
+      ok: false,
+      error: "Workspace name must be a string.",
+    };
+  }
+
   const normalized = input.trim();
   const parsed = workspaceNameSchema(normalized);
 

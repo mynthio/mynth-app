@@ -2,9 +2,10 @@ import { app, BrowserWindow, dialog } from "electron";
 import path from "node:path";
 import started from "electron-squirrel-startup";
 import { getConfig, getConfigPath } from "./main-process/config";
-import { DEFAULT_WORKSPACE_ID, bootstrapWorkspaceDatabases } from "./main-process/db";
-import { closeAllDatabases } from "./main-process/db/database";
-import { registerWorkspaceHandlers } from "./main-process/ipc/workspace-handlers";
+import { DEFAULT_WORKSPACE_ID, bootstrapStorage } from "./main-process/db";
+import { closeAppDatabase } from "./main-process/db/database";
+import { registerIpcHandlers } from "./main-process/ipc";
+import { isTrustedRendererUrl } from "./main-process/ipc/trusted-sender";
 import { WINDOW_TOOLBAR_HEIGHT, WINDOW_TRAFFIC_LIGHTS_POSITION } from "./shared/window-chrome";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -48,6 +49,13 @@ if (!app.requestSingleInstanceLock()) {
       mainWindow = null;
     });
 
+    mainWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+    mainWindow.webContents.on("will-navigate", (event, url) => {
+      if (!isTrustedRendererUrl(url)) {
+        event.preventDefault();
+      }
+    });
+
     if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
       mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
     } else {
@@ -70,15 +78,15 @@ if (!app.requestSingleInstanceLock()) {
         const config = getConfig();
         console.log(`Config loaded from: ${getConfigPath()} — theme: ${config.app.theme}`);
 
-        const workspaceBootstrap = bootstrapWorkspaceDatabases();
-        const defaultWorkspaceLog = workspaceBootstrap.createdDefaultWorkspace
+        const storageBootstrap = bootstrapStorage();
+        const defaultWorkspaceLog = storageBootstrap.createdDefaultWorkspace
           ? ` Created default workspace "${DEFAULT_WORKSPACE_ID}".`
           : "";
         console.log(
-          `Workspace DB bootstrap complete. Root: ${workspaceBootstrap.rootDir}. Migrated ${workspaceBootstrap.migratedWorkspaceIds.length}/${workspaceBootstrap.discoveredWorkspaceIds.length} discovered workspaces.${defaultWorkspaceLog}`,
+          `Storage bootstrap complete. App DB: ${storageBootstrap.dbPath}. Workspace assets root: ${storageBootstrap.workspacesRootDir}. Workspaces: ${storageBootstrap.workspaceIds.length}.${defaultWorkspaceLog}`,
         );
 
-        registerWorkspaceHandlers();
+        registerIpcHandlers();
         createWindow();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -103,9 +111,9 @@ if (!app.requestSingleInstanceLock()) {
     }
   });
 
-  // Close all SQLite connections before the process exits so WAL is
+  // Close the SQLite connection before the process exits so WAL is
   // checkpointed and no data is left in a partial write state.
   app.on("before-quit", () => {
-    closeAllDatabases();
+    closeAppDatabase();
   });
 }

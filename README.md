@@ -7,6 +7,7 @@ Local-first AI chat desktop app (Electron Forge + React). Early stage.
 - `docs/SKETCHPAD.md` — ideas, open questions, design notes
 - `docs/PLAN.md` — concrete implementation plan and milestones
 - `docs/TASKS.md` — repo-local tickets (step-by-step)
+- `docs/IPC.md` — IPC structure and contributor rules
 
 ## Getting Started
 
