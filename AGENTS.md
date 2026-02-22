@@ -11,6 +11,7 @@ Project is an AI chat desktop app using Electron Forge.
 - Always use Coss UI components and patterns from https://coss.com/ui/llms.txt.
 - Always use Coss UI styling; do not add custom styles unless the user explicitly asks for custom styles.
 - Use Hugeicons for icons only. If MCP is available use it to find icons.
+- When possible use well known libraries. Avoid implementing custom solutions if a package that does it exists
 
 # Documentation
 
