@@ -1,7 +1,9 @@
 import {
   IPC_CHANNELS,
   type ChatInfo,
+  type ChatTreeChildrenSlice,
   type ChatTreeSnapshot,
+  type ChatTreeUiState,
   type FolderInfo,
 } from "../../../shared/ipc";
 import { parseChatId } from "../../../shared/chat/chat-id";
@@ -74,6 +76,23 @@ function parseValidChatTitle(input: unknown): string {
   return parsed.value;
 }
 
+function parseStringArray(input: unknown, label: string): string[] {
+  if (!Array.isArray(input)) {
+    throw AppError.badRequest(`${label} must be an array.`);
+  }
+
+  const values: string[] = [];
+  for (const entry of input) {
+    if (typeof entry !== "string") {
+      throw AppError.badRequest(`${label} must contain only strings.`);
+    }
+
+    values.push(entry);
+  }
+
+  return values;
+}
+
 export function registerChatTreeIpcModule(
   context: IpcHandlerContext,
   registeredChannels: Set<string>,
@@ -85,6 +104,40 @@ export function registerChatTreeIpcModule(
       return [parseValidWorkspaceId(args[0])];
     },
     handler: ({ services }, _event, workspaceId) => services.chatTree.getChatTree(workspaceId),
+  });
+
+  registerInvokeHandler<[string, string | null], ChatTreeChildrenSlice>(
+    context,
+    registeredChannels,
+    {
+      channel: IPC_CHANNELS.chatTree.getChildren,
+      parseArgs: (args) => {
+        expectArgCount(args, 1, 2);
+        return [parseValidWorkspaceId(args[0]), parseNullableFolderId(args[1])];
+      },
+      handler: ({ services }, _event, workspaceId, parentFolderId) =>
+        services.chatTree.getChatTreeChildren(workspaceId, parentFolderId),
+    },
+  );
+
+  registerInvokeHandler<[string], ChatTreeUiState>(context, registeredChannels, {
+    channel: IPC_CHANNELS.chatTree.getUiState,
+    parseArgs: (args) => {
+      expectArgCount(args, 1);
+      return [parseValidWorkspaceId(args[0])];
+    },
+    handler: ({ services }, _event, workspaceId) =>
+      services.chatTree.getChatTreeUiState(workspaceId),
+  });
+
+  registerInvokeHandler<[string, string[]], ChatTreeUiState>(context, registeredChannels, {
+    channel: IPC_CHANNELS.chatTree.setUiState,
+    parseArgs: (args) => {
+      expectArgCount(args, 2);
+      return [parseValidWorkspaceId(args[0]), parseStringArray(args[1], "Expanded folder IDs")];
+    },
+    handler: ({ services }, _event, workspaceId, expandedFolderIds) =>
+      services.chatTree.setChatTreeUiState(workspaceId, expandedFolderIds),
   });
 
   registerInvokeHandler<[string, string, string | null], FolderInfo>(context, registeredChannels, {

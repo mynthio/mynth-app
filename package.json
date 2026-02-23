@@ -18,6 +18,7 @@
     "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
     "db:check": "drizzle-kit check --config=drizzle.config.ts",
     "db:studio": "drizzle-kit studio --config=drizzle.config.ts",
+    "seed:chat-tree": "node ./scripts/seed-chat-tree.mjs",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "lint": "oxlint",

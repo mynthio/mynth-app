@@ -8,6 +8,9 @@ export const IPC_CHANNELS = {
   },
   chatTree: {
     get: "chatTree:get",
+    getChildren: "chatTree:getChildren",
+    getUiState: "chatTree:getUiState",
+    setUiState: "chatTree:setUiState",
   },
   folders: {
     create: "folders:create",
@@ -57,6 +60,22 @@ export interface ChatTreeSnapshot {
   rootChats: ChatInfo[];
 }
 
+export interface ChatTreeFolderListItem extends FolderInfo {
+  childFolderCount: number;
+  childChatCount: number;
+}
+
+export interface ChatTreeChildrenSlice {
+  workspaceId: string;
+  parentFolderId: string | null;
+  folders: ChatTreeFolderListItem[];
+  chats: ChatInfo[];
+}
+
+export interface ChatTreeUiState {
+  expandedFolderIds: string[];
+}
+
 export interface IpcApi {
   listWorkspaces: () => Promise<WorkspaceInfo[]>;
   getActiveWorkspace: () => Promise<WorkspaceInfo>;
@@ -64,6 +83,15 @@ export interface IpcApi {
   setActiveWorkspace: (id: string) => Promise<WorkspaceInfo>;
   updateWorkspaceName: (id: string, name: string) => Promise<WorkspaceInfo>;
   getChatTree: (workspaceId: string) => Promise<ChatTreeSnapshot>;
+  getChatTreeChildren: (
+    workspaceId: string,
+    parentFolderId?: string | null,
+  ) => Promise<ChatTreeChildrenSlice>;
+  getChatTreeUiState: (workspaceId: string) => Promise<ChatTreeUiState>;
+  setChatTreeUiState: (
+    workspaceId: string,
+    expandedFolderIds: string[],
+  ) => Promise<ChatTreeUiState>;
   createFolder: (
     workspaceId: string,
     name: string,

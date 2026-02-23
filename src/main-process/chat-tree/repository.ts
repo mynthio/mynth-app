@@ -1,4 +1,4 @@
-import { asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 
 import { getAppDatabase } from "../db/database";
 import { createUuidV7 } from "../db/uuidv7";
@@ -41,6 +41,23 @@ export interface ChatTreeSnapshot {
   workspaceId: string;
   rootFolders: ChatTreeFolderNode[];
   rootChats: ChatRow[];
+}
+
+export interface ChatTreeFolderListItem extends FolderRow {
+  childFolderCount: number;
+  childChatCount: number;
+}
+
+export interface ChatTreeChildrenSlice {
+  workspaceId: string;
+  parentFolderId: string | null;
+  folders: ChatTreeFolderListItem[];
+  chats: ChatRow[];
+}
+
+export interface DeleteFolderRecursiveResult {
+  workspaceId: string;
+  deletedFolderIds: string[];
 }
 
 function toFolderRow(row: FolderTableRow): FolderRow {
@@ -293,6 +310,115 @@ export function getChatTree(workspaceId: string): ChatTreeSnapshot {
   };
 }
 
+export function getChatTreeChildren(
+  workspaceId: string,
+  parentFolderId: string | null,
+): ChatTreeChildrenSlice {
+  requireWorkspaceExists(workspaceId);
+
+  if (parentFolderId !== null) {
+    const parentFolder = requireFolderById(parentFolderId);
+    if (parentFolder.workspaceId !== workspaceId) {
+      throw new Error(`Parent folder "${parentFolderId}" belongs to a different workspace.`);
+    }
+  }
+
+  const folderRows =
+    parentFolderId === null
+      ? getAppDatabase()
+          .select()
+          .from(folders)
+          .where(and(eq(folders.workspaceId, workspaceId), isNull(folders.parentId)))
+          .orderBy(asc(folders.id))
+          .all()
+      : getAppDatabase()
+          .select()
+          .from(folders)
+          .where(and(eq(folders.workspaceId, workspaceId), eq(folders.parentId, parentFolderId)))
+          .orderBy(asc(folders.id))
+          .all();
+
+  const chatRows =
+    parentFolderId === null
+      ? getAppDatabase()
+          .select()
+          .from(chats)
+          .where(and(eq(chats.workspaceId, workspaceId), isNull(chats.folderId)))
+          .orderBy(asc(chats.id))
+          .all()
+      : getAppDatabase()
+          .select()
+          .from(chats)
+          .where(and(eq(chats.workspaceId, workspaceId), eq(chats.folderId, parentFolderId)))
+          .orderBy(asc(chats.id))
+          .all();
+
+  const childFolderIds = folderRows.map((row) => row.id);
+  const childFolderCountsByParentId = new Map<string, number>();
+  const childChatCountsByFolderId = new Map<string, number>();
+
+  if (childFolderIds.length > 0) {
+    const folderCountRows = getAppDatabase()
+      .select({
+        parentId: folders.parentId,
+        count: sql<number>`count(*)`,
+      })
+      .from(folders)
+      .where(inArray(folders.parentId, childFolderIds))
+      .groupBy(folders.parentId)
+      .all();
+
+    for (const row of folderCountRows) {
+      if (typeof row.parentId === "string") {
+        childFolderCountsByParentId.set(row.parentId, Number(row.count) || 0);
+      }
+    }
+
+    const chatCountRows = getAppDatabase()
+      .select({
+        folderId: chats.folderId,
+        count: sql<number>`count(*)`,
+      })
+      .from(chats)
+      .where(inArray(chats.folderId, childFolderIds))
+      .groupBy(chats.folderId)
+      .all();
+
+    for (const row of chatCountRows) {
+      if (typeof row.folderId === "string") {
+        childChatCountsByFolderId.set(row.folderId, Number(row.count) || 0);
+      }
+    }
+  }
+
+  return {
+    workspaceId,
+    parentFolderId,
+    folders: folderRows.map((row) => ({
+      ...toFolderRow(row),
+      childFolderCount: childFolderCountsByParentId.get(row.id) ?? 0,
+      childChatCount: childChatCountsByFolderId.get(row.id) ?? 0,
+    })),
+    chats: chatRows.map(toChatRow),
+  };
+}
+
+export function listWorkspaceFolderIds(workspaceId: string, ids: readonly string[]): string[] {
+  requireWorkspaceExists(workspaceId);
+
+  if (ids.length === 0) {
+    return [];
+  }
+
+  return getAppDatabase()
+    .select({ id: folders.id })
+    .from(folders)
+    .where(and(eq(folders.workspaceId, workspaceId), inArray(folders.id, [...ids])))
+    .orderBy(asc(folders.id))
+    .all()
+    .map((row) => row.id);
+}
+
 export function createFolder(input: {
   workspaceId: string;
   name: string;
@@ -385,8 +511,8 @@ export function moveFolder(id: string, parentId: string | null): FolderRow {
   });
 }
 
-export function deleteFolderRecursive(id: string): void {
-  getAppDatabase().transaction((tx) => {
+export function deleteFolderRecursive(id: string): DeleteFolderRecursiveResult {
+  return getAppDatabase().transaction((tx) => {
     const folder = tx.select().from(folders).where(eq(folders.id, id)).get();
     if (!folder) {
       throw new Error(`Folder "${id}" does not exist.`);
@@ -400,11 +526,19 @@ export function deleteFolderRecursive(id: string): void {
     const subtreeFolderIds = collectFolderSubtreeIds(workspaceFolders, id);
 
     if (subtreeFolderIds.length === 0) {
-      return;
+      return {
+        workspaceId: folder.workspaceId,
+        deletedFolderIds: [],
+      };
     }
 
     tx.delete(chats).where(inArray(chats.folderId, subtreeFolderIds)).run();
     tx.delete(folders).where(inArray(folders.id, subtreeFolderIds)).run();
+
+    return {
+      workspaceId: folder.workspaceId,
+      deletedFolderIds: subtreeFolderIds,
+    };
   });
 }
 

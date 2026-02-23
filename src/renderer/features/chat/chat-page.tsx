@@ -12,6 +12,8 @@ import {
   MenuTrigger,
 } from "@/components/ui/menu";
 import { WindowChrome } from "@/components/app/window-chrome";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { ChatSidebarTree } from "@/features/chat/chat-sidebar-tree";
 import { useWorkspaceStore } from "@/stores/workspace-store";
 
 export function ChatPage() {
@@ -58,17 +60,25 @@ export function ChatPage() {
           </Button>
         </div>
       }
-      contentClassName="overflow-auto"
+      contentClassName="overflow-hidden"
     >
-      <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-6">
-        <p className="text-muted-foreground">Chat interface coming soon.</p>
-        <Link
-          to="/settings"
-          className="inline-flex w-fit rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          Go to Settings
-        </Link>
-      </main>
+      <SidebarProvider className="h-full min-h-0">
+        <ChatSidebarTree
+          workspaceId={activeWorkspace?.id ?? null}
+          workspaceName={activeWorkspace?.name ?? null}
+        />
+        <main className="min-h-0 flex-1 overflow-auto">
+          <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-6">
+            <p className="text-muted-foreground">Chat interface coming soon.</p>
+            <Link
+              to="/settings"
+              className="inline-flex w-fit rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              Go to Settings
+            </Link>
+          </div>
+        </main>
+      </SidebarProvider>
     </WindowChrome>
   );
 }

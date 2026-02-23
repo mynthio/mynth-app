@@ -4,6 +4,9 @@ import { invokeIpc } from "../invoke";
 type ChatTreeApi = Pick<
   IpcApi,
   | "getChatTree"
+  | "getChatTreeChildren"
+  | "getChatTreeUiState"
+  | "setChatTreeUiState"
   | "createFolder"
   | "updateFolderName"
   | "moveFolder"
@@ -17,6 +20,11 @@ type ChatTreeApi = Pick<
 export function createChatTreeApi(): ChatTreeApi {
   return {
     getChatTree: (workspaceId) => invokeIpc(IPC_CHANNELS.chatTree.get, workspaceId),
+    getChatTreeChildren: (workspaceId, parentFolderId) =>
+      invokeIpc(IPC_CHANNELS.chatTree.getChildren, workspaceId, parentFolderId),
+    getChatTreeUiState: (workspaceId) => invokeIpc(IPC_CHANNELS.chatTree.getUiState, workspaceId),
+    setChatTreeUiState: (workspaceId, expandedFolderIds) =>
+      invokeIpc(IPC_CHANNELS.chatTree.setUiState, workspaceId, expandedFolderIds),
     createFolder: (workspaceId, name, parentId) =>
       invokeIpc(IPC_CHANNELS.folders.create, workspaceId, name, parentId),
     updateFolderName: (id, name) => invokeIpc(IPC_CHANNELS.folders.updateName, id, name),
