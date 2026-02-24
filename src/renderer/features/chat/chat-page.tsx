@@ -1,5 +1,10 @@
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Add01Icon, ArrowDown01Icon, Setting07Icon } from "@hugeicons/core-free-icons";
+import {
+  Add01Icon,
+  ArrowDown01Icon,
+  Setting07Icon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Button } from "@/components/ui/button";
@@ -14,21 +19,24 @@ import {
 import { WindowChrome } from "@/components/app/window-chrome";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ChatSidebarTree } from "@/features/chat/chat-sidebar-tree";
-import { useWorkspaceStore } from "@/stores/workspace-store";
+import { useSetActiveWorkspace } from "@/mutations/workspaces";
+import {
+  activeWorkspaceQueryOptions,
+  listWorkspacesQueryOptions,
+} from "@/queries/workspaces";
 
 export function ChatPage() {
-  const workspaces = useWorkspaceStore((s) => s.workspaces);
-  const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
-  const setActive = useWorkspaceStore((s) => s.setActive);
+  const { data: workspaces = [] } = useQuery(listWorkspacesQueryOptions);
+  const { data: activeWorkspace } = useQuery(activeWorkspaceQueryOptions);
+  const setActiveWorkspace = useSetActiveWorkspace();
 
   return (
     <WindowChrome
       toolbar={
         <div className="flex items-center gap-3 justify-between w-full">
           <Menu>
-            <MenuTrigger render={<Button variant="ghost" size="sm" />}>
+            <MenuTrigger render={<Button variant="default" size="sm" />}>
               {activeWorkspace?.name ?? "…"}
-              <HugeiconsIcon icon={ArrowDown01Icon} />
             </MenuTrigger>
             <MenuPopup align="start">
               <Button
@@ -41,7 +49,12 @@ export function ChatPage() {
                 <span>Create Workspace</span>
               </Button>
               <MenuSeparator />
-              <MenuRadioGroup value={activeWorkspace?.id} onValueChange={setActive}>
+              <MenuRadioGroup
+                value={activeWorkspace?.id}
+                onValueChange={(workspaceId) => {
+                  void setActiveWorkspace.mutateAsync(workspaceId);
+                }}
+              >
                 {workspaces.map((ws) => (
                   <MenuRadioItem key={ws.id} value={ws.id}>
                     {ws.name}
@@ -63,10 +76,7 @@ export function ChatPage() {
       contentClassName="overflow-hidden"
     >
       <SidebarProvider className="h-full min-h-0">
-        <ChatSidebarTree
-          workspaceId={activeWorkspace?.id ?? null}
-          workspaceName={activeWorkspace?.name ?? null}
-        />
+        <ChatSidebarTree workspaceId={activeWorkspace?.id ?? null} />
         <main className="min-h-0 flex-1 overflow-auto">
           <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-6">
             <p className="text-muted-foreground">Chat interface coming soon.</p>

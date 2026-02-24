@@ -7,12 +7,12 @@ import { Card, CardDescription, CardHeader, CardPanel, CardTitle } from "@/compo
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useWorkspaceStore } from "@/stores/workspace-store";
+import { useCreateWorkspace } from "@/mutations/workspaces";
 import { parseWorkspaceName, workspaceNameSchema } from "../../../shared/workspace/workspace-name";
 
 export function CreateWorkspacePage() {
   const navigate = useNavigate();
-  const createWorkspace = useWorkspaceStore((s) => s.createWorkspace);
+  const createWorkspace = useCreateWorkspace();
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm({
@@ -28,7 +28,7 @@ export function CreateWorkspacePage() {
       }
 
       try {
-        const createdWorkspace = await createWorkspace(parsedName.value);
+        const createdWorkspace = await createWorkspace.mutateAsync(parsedName.value);
         formApi.reset({ name: "" });
         await navigate({
           to: "/settings/$workspaceId",

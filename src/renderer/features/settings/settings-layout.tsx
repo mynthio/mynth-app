@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { Link, Outlet, useMatchRoute } from "@tanstack/react-router";
 import {
   Add01Icon,
@@ -22,7 +23,7 @@ import {
   SidebarProvider,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { useWorkspaceStore } from "@/stores/workspace-store";
+import { listWorkspacesQueryOptions } from "@/queries/workspaces";
 
 const globalNavItems = [
   { to: "/settings", label: "General", icon: SlidersHorizontalIcon, exact: true },
@@ -32,7 +33,7 @@ const globalNavItems = [
 
 export function SettingsLayout() {
   const matchRoute = useMatchRoute();
-  const workspaces = useWorkspaceStore((s) => s.workspaces);
+  const { data: workspaces = [] } = useQuery(listWorkspacesQueryOptions);
   const hasWorkspaces = workspaces.length > 0;
 
   return (

@@ -1,18 +1,14 @@
+import { useQuery } from "@tanstack/react-query";
 import { createRootRoute, Outlet } from "@tanstack/react-router";
-import { useEffect } from "react";
-
-import { useWorkspaceStore } from "@/stores/workspace-store";
+import { activeWorkspaceQueryOptions, listWorkspacesQueryOptions } from "@/queries/workspaces";
 
 export const Route = createRootRoute({
   component: RootLayout,
 });
 
 function RootLayout() {
-  const initialize = useWorkspaceStore((s) => s.initialize);
-
-  useEffect(() => {
-    void initialize();
-  }, [initialize]);
+  useQuery(listWorkspacesQueryOptions);
+  useQuery(activeWorkspaceQueryOptions);
 
   return (
     <div className="theme flex h-full min-h-0 flex-col bg-background text-foreground">

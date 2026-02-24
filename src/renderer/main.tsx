@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider, createHashHistory, createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
+import { QueryProvider } from "./providers/query-provider";
 import "./index.css";
 
 const hashHistory = createHashHistory();
@@ -29,6 +30,8 @@ rootElement.classList.add("theme");
 
 createRoot(rootElement).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <QueryProvider>
+      <RouterProvider router={router} />
+    </QueryProvider>
   </StrictMode>,
 );

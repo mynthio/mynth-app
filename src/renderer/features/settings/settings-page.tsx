@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useForm } from "@tanstack/react-form";
 
@@ -6,7 +7,8 @@ import { Card, CardDescription, CardHeader, CardPanel, CardTitle } from "@/compo
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useWorkspaceStore } from "@/stores/workspace-store";
+import { useUpdateWorkspaceName } from "@/mutations/workspaces";
+import { findWorkspaceById, listWorkspacesQueryOptions } from "@/queries/workspaces";
 import { parseWorkspaceName, workspaceNameSchema } from "../../../shared/workspace/workspace-name";
 
 interface SettingsPageProps {
@@ -14,9 +16,8 @@ interface SettingsPageProps {
 }
 
 export function SettingsPage({ workspaceId }: SettingsPageProps) {
-  const workspace = useWorkspaceStore((s) =>
-    workspaceId ? s.workspaces.find((candidate) => candidate.id === workspaceId) : null,
-  );
+  const { data: workspaces } = useQuery(listWorkspacesQueryOptions);
+  const workspace = findWorkspaceById(workspaces, workspaceId);
 
   if (workspaceId && !workspace) {
     return (
@@ -54,7 +55,7 @@ interface WorkspaceNameFormProps {
 }
 
 function WorkspaceNameForm({ workspaceId, workspaceName }: WorkspaceNameFormProps) {
-  const updateWorkspaceName = useWorkspaceStore((s) => s.updateWorkspaceName);
+  const updateWorkspaceName = useUpdateWorkspaceName();
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm({
@@ -70,7 +71,10 @@ function WorkspaceNameForm({ workspaceId, workspaceName }: WorkspaceNameFormProp
       }
 
       try {
-        const updatedWorkspace = await updateWorkspaceName(workspaceId, parsedName.value);
+        const updatedWorkspace = await updateWorkspaceName.mutateAsync({
+          id: workspaceId,
+          name: parsedName.value,
+        });
         formApi.reset({ name: updatedWorkspace.name });
       } catch (error) {
         setSubmitError(error instanceof Error ? error.message : "Failed to update workspace name.");
