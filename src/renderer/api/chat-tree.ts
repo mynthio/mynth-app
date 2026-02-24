@@ -28,4 +28,32 @@ export const chatTreeApi = {
 
     return window.electronAPI.setChatTreeUiState(parsedWorkspaceId.value, expandedFolderIds);
   },
+
+  renameFolder(id: string, name: string) {
+    return window.electronAPI.updateFolderName(id, name);
+  },
+
+  renameChat(id: string, title: string) {
+    return window.electronAPI.updateChatTitle(id, title);
+  },
+
+  deleteFolder(id: string) {
+    return window.electronAPI.deleteFolder(id);
+  },
+
+  deleteChat(id: string) {
+    return window.electronAPI.deleteChat(id);
+  },
+
+  moveFolder(id: string, parentId: string | null) {
+    return window.electronAPI.moveFolder(id, parentId);
+  },
+
+  moveChat(id: string, folderId: string | null) {
+    return window.electronAPI.moveChat(id, folderId);
+  },
+
+  showContextMenu(itemId: string, itemKind: "folder" | "chat") {
+    return window.electronAPI.showChatTreeItemContextMenu(itemId, itemKind);
+  },
 };

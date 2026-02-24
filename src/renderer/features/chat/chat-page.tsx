@@ -1,10 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import {
-  Add01Icon,
-  ArrowDown01Icon,
-  Setting07Icon,
-} from "@hugeicons/core-free-icons";
+import { Add01Icon, Setting07Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Button } from "@/components/ui/button";
@@ -28,6 +24,7 @@ import {
 export function ChatPage() {
   const { data: workspaces = [] } = useQuery(listWorkspacesQueryOptions);
   const { data: activeWorkspace } = useQuery(activeWorkspaceQueryOptions);
+
   const setActiveWorkspace = useSetActiveWorkspace();
 
   return (
@@ -35,7 +32,7 @@ export function ChatPage() {
       toolbar={
         <div className="flex items-center gap-3 justify-between w-full">
           <Menu>
-            <MenuTrigger render={<Button variant="default" size="sm" />}>
+            <MenuTrigger render={<Button variant="secondary" size="sm" />}>
               {activeWorkspace?.name ?? "…"}
             </MenuTrigger>
             <MenuPopup align="start">

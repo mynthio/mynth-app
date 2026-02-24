@@ -11,6 +11,7 @@ export const IPC_CHANNELS = {
     getChildren: "chatTree:getChildren",
     getUiState: "chatTree:getUiState",
     setUiState: "chatTree:setUiState",
+    showContextMenu: "chatTree:showContextMenu",
   },
   folders: {
     create: "folders:create",
@@ -104,4 +105,8 @@ export interface IpcApi {
   updateChatTitle: (id: string, title: string) => Promise<ChatInfo>;
   moveChat: (id: string, folderId: string | null) => Promise<ChatInfo>;
   deleteChat: (id: string) => Promise<void>;
+  showChatTreeItemContextMenu: (
+    itemId: string,
+    itemKind: "folder" | "chat",
+  ) => Promise<"rename" | "delete" | null>;
 }

@@ -15,6 +15,7 @@ type ChatTreeApi = Pick<
   | "updateChatTitle"
   | "moveChat"
   | "deleteChat"
+  | "showChatTreeItemContextMenu"
 >;
 
 export function createChatTreeApi(): ChatTreeApi {
@@ -35,5 +36,7 @@ export function createChatTreeApi(): ChatTreeApi {
     updateChatTitle: (id, title) => invokeIpc(IPC_CHANNELS.chats.updateTitle, id, title),
     moveChat: (id, folderId) => invokeIpc(IPC_CHANNELS.chats.move, id, folderId),
     deleteChat: (id) => invokeIpc(IPC_CHANNELS.chats.delete, id),
+    showChatTreeItemContextMenu: (itemId, itemKind) =>
+      invokeIpc(IPC_CHANNELS.chatTree.showContextMenu, itemId, itemKind),
   };
 }

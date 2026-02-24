@@ -114,6 +114,22 @@ function TreeItemAction({ className, render, ...props }: useRender.ComponentProp
   });
 }
 
+function TreeItemRenameInput({ className, render, ...props }: useRender.ComponentProps<"input">) {
+  const defaultProps = {
+    className: cn(
+      "h-6 w-full min-w-0 rounded border border-ring bg-background px-1.5 text-sm outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
+      className,
+    ),
+    "data-slot": "tree-item-rename-input",
+  };
+
+  return useRender({
+    defaultTagName: "input",
+    props: mergeProps<"input">(defaultProps, props),
+    render,
+  });
+}
+
 function TreeDragLine({ className, render, ...props }: useRender.ComponentProps<"div">) {
   const defaultProps = {
     className: cn("pointer-events-none absolute left-0 right-0 h-0.5 bg-primary", className),
@@ -135,4 +151,5 @@ export {
   TreeItemActions,
   TreeItemIcon,
   TreeItemLabel,
+  TreeItemRenameInput,
 };
