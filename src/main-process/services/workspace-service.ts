@@ -4,23 +4,27 @@ import { ensureWorkspaceFilesystem } from "../workspaces/filesystem";
 import {
   createWorkspace,
   deleteWorkspace,
-  getWorkspaceById,
-  listWorkspaces,
-  updateWorkspaceName,
+  getWorkspaceInfoById as getWorkspaceInfoRowById,
+  listWorkspaceInfoRows,
+  updateWorkspace as updateWorkspaceRecord,
   type WorkspaceRow,
 } from "../workspaces/repository";
-import type { WorkspaceInfo } from "../../shared/ipc";
+import type { WorkspaceInfo, WorkspaceUpdateInput } from "../../shared/ipc";
 
 export interface WorkspaceService {
   listWorkspaces(): WorkspaceInfo[];
   getActiveWorkspace(): WorkspaceInfo;
   createWorkspace(name: string): WorkspaceInfo;
   setActiveWorkspace(id: string): WorkspaceInfo;
-  updateWorkspaceName(id: string, name: string): WorkspaceInfo;
+  updateWorkspace(id: string, input: WorkspaceUpdateInput): WorkspaceInfo;
 }
 
-function toWorkspaceInfo(workspace: Pick<WorkspaceRow, "id" | "name">): WorkspaceInfo {
-  return { id: workspace.id, name: workspace.name };
+function toWorkspaceInfo(workspace: Pick<WorkspaceRow, "id" | "name" | "color">): WorkspaceInfo {
+  return {
+    id: workspace.id,
+    name: workspace.name,
+    color: workspace.color ?? undefined,
+  };
 }
 
 function createWorkspaceId(existingIds: readonly string[]): string {
@@ -34,7 +38,7 @@ function createWorkspaceId(existingIds: readonly string[]): string {
 }
 
 function getWorkspaceInfoById(id: string): WorkspaceInfo {
-  const workspace = getWorkspaceById(id);
+  const workspace = getWorkspaceInfoRowById(id);
   if (!workspace) {
     throw new Error(`Workspace "${id}" does not exist.`);
   }
@@ -44,11 +48,11 @@ function getWorkspaceInfoById(id: string): WorkspaceInfo {
 export function createWorkspaceService(): WorkspaceService {
   return {
     listWorkspaces(): WorkspaceInfo[] {
-      return listWorkspaces().map(toWorkspaceInfo);
+      return listWorkspaceInfoRows().map(toWorkspaceInfo);
     },
 
     getActiveWorkspace(): WorkspaceInfo {
-      const workspaceInfos = listWorkspaces().map(toWorkspaceInfo);
+      const workspaceInfos = listWorkspaceInfoRows().map(toWorkspaceInfo);
       const configuredActiveWorkspaceId = getConfig().app.activeWorkspaceId;
 
       const activeWorkspace = workspaceInfos.find(
@@ -68,11 +72,14 @@ export function createWorkspaceService(): WorkspaceService {
     },
 
     createWorkspace(name: string): WorkspaceInfo {
-      const workspaceId = createWorkspaceId(listWorkspaces().map((workspace) => workspace.id));
+      const workspaceId = createWorkspaceId(
+        listWorkspaceInfoRows().map((workspace) => workspace.id),
+      );
 
       const createdWorkspace = createWorkspace({
         id: workspaceId,
         name,
+        color: null,
         settings: {},
       });
 
@@ -95,7 +102,7 @@ export function createWorkspaceService(): WorkspaceService {
     },
 
     setActiveWorkspace(id: string): WorkspaceInfo {
-      if (!getWorkspaceById(id)) {
+      if (!getWorkspaceInfoRowById(id)) {
         throw new Error(`Workspace "${id}" does not exist.`);
       }
 
@@ -103,12 +110,22 @@ export function createWorkspaceService(): WorkspaceService {
       return getWorkspaceInfoById(id);
     },
 
-    updateWorkspaceName(id: string, name: string): WorkspaceInfo {
-      if (!getWorkspaceById(id)) {
+    updateWorkspace(id: string, input: WorkspaceUpdateInput): WorkspaceInfo {
+      const existingWorkspace = getWorkspaceInfoRowById(id);
+      if (!existingWorkspace) {
         throw new Error(`Workspace "${id}" does not exist.`);
       }
 
-      return toWorkspaceInfo(updateWorkspaceName(id, name));
+      if (input.name === undefined && input.color === undefined) {
+        return toWorkspaceInfo(existingWorkspace);
+      }
+
+      return toWorkspaceInfo(
+        updateWorkspaceRecord(id, {
+          name: input.name,
+          color: input.color,
+        }),
+      );
     },
   };
 }

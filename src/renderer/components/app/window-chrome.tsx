@@ -71,8 +71,11 @@ export function WindowChrome({
           ) : null}
         </div>
       </header>
-      <div className={cn("min-h-0 flex-1", contentClassName)} data-slot="window-chrome-content">
-        {children}
+      <div
+        className={cn("min-h-0 flex-1 w-full", contentClassName)}
+        data-slot="window-chrome-content"
+      >
+        <main className="min-h-0 h-full w-full flex-1 overflow-hidden">{children}</main>
       </div>
     </div>
   );

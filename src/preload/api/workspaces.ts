@@ -7,7 +7,7 @@ type WorkspaceApi = Pick<
   | "getActiveWorkspace"
   | "createWorkspace"
   | "setActiveWorkspace"
-  | "updateWorkspaceName"
+  | "updateWorkspace"
 >;
 
 export function createWorkspaceApi(): WorkspaceApi {
@@ -16,6 +16,6 @@ export function createWorkspaceApi(): WorkspaceApi {
     getActiveWorkspace: () => invokeIpc(IPC_CHANNELS.workspaces.getActive),
     createWorkspace: (name) => invokeIpc(IPC_CHANNELS.workspaces.create, name),
     setActiveWorkspace: (id) => invokeIpc(IPC_CHANNELS.workspaces.setActive, id),
-    updateWorkspaceName: (id, name) => invokeIpc(IPC_CHANNELS.workspaces.updateName, id, name),
+    updateWorkspace: (id, input) => invokeIpc(IPC_CHANNELS.workspaces.update, id, input),
   };
 }

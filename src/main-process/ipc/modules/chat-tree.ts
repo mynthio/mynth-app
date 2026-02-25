@@ -223,41 +223,62 @@ export function registerChatTreeIpcModule(
     handler: ({ services }, _event, id) => services.chatTree.deleteChat(id),
   });
 
-  registerInvokeHandler<[string, string], "rename" | "delete" | null>(context, registeredChannels, {
-    channel: IPC_CHANNELS.chatTree.showContextMenu,
-    parseArgs: (args) => {
-      expectArgCount(args, 2);
-      if (typeof args[0] !== "string") throw AppError.badRequest("itemId must be a string.");
-      if (args[1] !== "folder" && args[1] !== "chat")
-        throw AppError.badRequest("itemKind must be 'folder' or 'chat'.");
-      return [args[0], args[1]];
-    },
-    handler: (_context, event) => {
-      return new Promise<"rename" | "delete" | null>((resolve) => {
-        let selected: "rename" | "delete" | null = null;
+  registerInvokeHandler<[string, string], "add-folder" | "add-chat" | "rename" | "delete" | null>(
+    context,
+    registeredChannels,
+    {
+      channel: IPC_CHANNELS.chatTree.showContextMenu,
+      parseArgs: (args) => {
+        expectArgCount(args, 2);
+        if (typeof args[0] !== "string") throw AppError.badRequest("itemId must be a string.");
+        if (args[1] !== "folder" && args[1] !== "chat")
+          throw AppError.badRequest("itemKind must be 'folder' or 'chat'.");
+        return [args[0], args[1]];
+      },
+      handler: (_context, event, _itemId, itemKind) => {
+        return new Promise<"add-folder" | "add-chat" | "rename" | "delete" | null>((resolve) => {
+          let selected: "add-folder" | "add-chat" | "rename" | "delete" | null = null;
 
-        const menu = Menu.buildFromTemplate([
-          {
-            label: "Rename",
-            click: () => {
-              selected = "rename";
+          const menu = Menu.buildFromTemplate([
+            ...(itemKind === "folder"
+              ? ([
+                  {
+                    label: "Add Folder",
+                    click: () => {
+                      selected = "add-folder";
+                    },
+                  },
+                  {
+                    label: "Add Chat",
+                    click: () => {
+                      selected = "add-chat";
+                    },
+                  },
+                  { type: "separator" as const },
+                ] as const)
+              : []),
+            {
+              label: "Rename",
+              click: () => {
+                selected = "rename";
+              },
             },
-          },
-          { type: "separator" },
-          {
-            label: "Delete",
-            click: () => {
-              selected = "delete";
+            { type: "separator" },
+            {
+              label: "Delete",
+              click: () => {
+                selected = "delete";
+              },
             },
-          },
-        ]);
+          ]);
 
-        const win = BrowserWindow.fromWebContents(event.sender) ?? undefined;
-        menu.popup({
-          window: win,
-          callback: () => resolve(selected),
+          const win = BrowserWindow.fromWebContents(event.sender) ?? undefined;
+          menu.popup({
+            window: win,
+            callback: () => resolve(selected),
+          });
         });
-      });
+      },
     },
-  });
+  );
 }

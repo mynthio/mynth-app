@@ -90,17 +90,14 @@ CREATE INDEX `models_provider_id_idx` ON `models` (`provider_id`);--> statement-
 CREATE TABLE `providers` (
 	`id` text PRIMARY KEY NOT NULL,
 	`display_name` text NOT NULL,
-	`kind` text NOT NULL,
-	`auth_kind` text DEFAULT 'api_key' NOT NULL,
+	`catalog_id` text NOT NULL,
 	`base_url` text,
-	`api_key_id` text,
-	`api_secret_id` text,
 	`config` text DEFAULT '{}' NOT NULL,
 	`created_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL,
 	`updated_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL
 );
 --> statement-breakpoint
-CREATE INDEX `providers_kind_idx` ON `providers` (`kind`);--> statement-breakpoint
+CREATE INDEX `providers_catalog_id_idx` ON `providers` (`catalog_id`);--> statement-breakpoint
 CREATE TABLE `workspace_model_overrides` (
 	`workspace_id` text NOT NULL,
 	`model_id` text NOT NULL,

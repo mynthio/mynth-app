@@ -63,12 +63,13 @@ export function useSetActiveWorkspace() {
   });
 }
 
-export function useUpdateWorkspaceName() {
+export function useUpdateWorkspace() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, name }: { id: string; name: string }) => workspaceApi.updateName(id, name),
-    onMutate: async ({ id, name }) => {
+    mutationFn: ({ id, ...input }: { id: string; name?: string; color?: string | null }) =>
+      workspaceApi.update(id, input),
+    onMutate: async ({ id, ...input }) => {
       await Promise.all([
         queryClient.cancelQueries({ queryKey: queryKeys.workspaces.list(), exact: true }),
         queryClient.cancelQueries({ queryKey: queryKeys.workspaces.active(), exact: true }),
@@ -81,13 +82,13 @@ export function useUpdateWorkspaceName() {
         queryClient.setQueryData(
           queryKeys.workspaces.list(),
           previousList.map((workspace) =>
-            workspace.id === id ? { ...workspace, name } : workspace,
+            workspace.id === id ? { ...workspace, ...input } : workspace,
           ),
         );
       }
 
       if (previousActive?.id === id) {
-        queryClient.setQueryData(queryKeys.workspaces.active(), { ...previousActive, name });
+        queryClient.setQueryData(queryKeys.workspaces.active(), { ...previousActive, ...input });
       }
 
       return { previousList, previousActive };

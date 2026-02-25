@@ -1,10 +1,12 @@
+import type { ProviderId } from "../providers/catalog";
+
 export const IPC_CHANNELS = {
   workspaces: {
     list: "workspaces:list",
     getActive: "workspaces:getActive",
     create: "workspaces:create",
     setActive: "workspaces:setActive",
-    updateName: "workspaces:updateName",
+    update: "workspaces:update",
   },
   chatTree: {
     get: "chatTree:get",
@@ -25,11 +27,26 @@ export const IPC_CHANNELS = {
     move: "chats:move",
     delete: "chats:delete",
   },
+  providers: {
+    list: "providers:list",
+    listModels: "providers:listModels",
+    testCredentials: "providers:testCredentials",
+    save: "providers:save",
+  },
+  models: {
+    update: "models:update",
+  },
 } as const;
 
 export interface WorkspaceInfo {
   id: string;
   name: string;
+  color?: string;
+}
+
+export interface WorkspaceUpdateInput {
+  name?: string;
+  color?: string | null;
 }
 
 export interface FolderInfo {
@@ -77,12 +94,66 @@ export interface ChatTreeUiState {
   expandedFolderIds: string[];
 }
 
+export interface ProviderCredentialTestInput {
+  providerId: ProviderId;
+  config: Record<string, unknown>;
+}
+
+export interface ProviderCredentialTestResult {
+  providerId: ProviderId;
+  ok: boolean;
+  message: string;
+}
+
+export interface ProviderInfo {
+  id: string;
+  displayName: string;
+  catalogId: ProviderId;
+}
+
+export type ProviderModelStatus = "active" | "deprecated" | "removed";
+
+export interface ProviderModelInfo {
+  id: string;
+  providerId: string;
+  providerModelId: string;
+  displayName: string | null;
+  isEnabled: boolean;
+  status: ProviderModelStatus;
+}
+
+export interface SaveProviderInput {
+  catalogId: ProviderId;
+  displayName?: string;
+  config: Record<string, unknown>;
+}
+
+export interface SaveProviderResult {
+  id: string;
+  displayName: string;
+  catalogId: ProviderId;
+}
+
+export interface UpdateModelInput {
+  isEnabled?: boolean;
+  displayName?: string | null;
+}
+
+export interface UpdateModelResult {
+  id: string;
+  providerId: string;
+  providerModelId: string;
+  displayName: string | null;
+  isEnabled: boolean;
+  status: ProviderModelStatus;
+}
+
 export interface IpcApi {
   listWorkspaces: () => Promise<WorkspaceInfo[]>;
   getActiveWorkspace: () => Promise<WorkspaceInfo>;
   createWorkspace: (name: string) => Promise<WorkspaceInfo>;
   setActiveWorkspace: (id: string) => Promise<WorkspaceInfo>;
-  updateWorkspaceName: (id: string, name: string) => Promise<WorkspaceInfo>;
+  updateWorkspace: (id: string, input: WorkspaceUpdateInput) => Promise<WorkspaceInfo>;
   getChatTree: (workspaceId: string) => Promise<ChatTreeSnapshot>;
   getChatTreeChildren: (
     workspaceId: string,
@@ -108,5 +179,12 @@ export interface IpcApi {
   showChatTreeItemContextMenu: (
     itemId: string,
     itemKind: "folder" | "chat",
-  ) => Promise<"rename" | "delete" | null>;
+  ) => Promise<"add-folder" | "add-chat" | "rename" | "delete" | null>;
+  listProviders: () => Promise<ProviderInfo[]>;
+  listProviderModels: (providerId: string) => Promise<ProviderModelInfo[]>;
+  testProviderCredentials: (
+    input: ProviderCredentialTestInput,
+  ) => Promise<ProviderCredentialTestResult>;
+  saveProvider: (input: SaveProviderInput) => Promise<SaveProviderResult>;
+  updateModel: (modelId: string, input: UpdateModelInput) => Promise<UpdateModelResult>;
 }

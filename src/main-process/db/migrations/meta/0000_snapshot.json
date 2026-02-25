@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "d9f3d165-006e-4d04-8666-0a789a5b69e7",
+  "id": "c125a836-f6f3-4878-954d-ce4f86729268",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "assets": {
@@ -600,37 +600,15 @@
           "notNull": true,
           "autoincrement": false
         },
-        "kind": {
-          "name": "kind",
+        "catalog_id": {
+          "name": "catalog_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
-        },
-        "auth_kind": {
-          "name": "auth_kind",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'api_key'"
         },
         "base_url": {
           "name": "base_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "api_key_id": {
-          "name": "api_key_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "api_secret_id": {
-          "name": "api_secret_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -662,9 +640,9 @@
         }
       },
       "indexes": {
-        "providers_kind_idx": {
-          "name": "providers_kind_idx",
-          "columns": ["kind"],
+        "providers_catalog_id_idx": {
+          "name": "providers_catalog_id_idx",
+          "columns": ["catalog_id"],
           "isUnique": false
         }
       },

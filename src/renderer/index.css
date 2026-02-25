@@ -145,3 +145,36 @@
     @apply m-0 bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  .scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+    --scrollbar-thumb: color-mix(in srgb, var(--color-neutral-400) 50%, transparent);
+    --scrollbar-track: transparent;
+    --scrollbar-radius: var(--radius);
+
+    &::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: var(--scrollbar-track);
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--scrollbar-thumb);
+      border-radius: var(--scrollbar-radius);
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      --scrollbar-thumb: var(--color-neutral-500);
+    }
+  }
+
+  .dark .scrollbar,
+  .scrollbar:is(.dark *) {
+    --scrollbar-thumb: color-mix(in srgb, var(--color-neutral-600) 50%, transparent);
+  }
+}

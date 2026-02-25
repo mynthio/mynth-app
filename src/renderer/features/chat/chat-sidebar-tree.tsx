@@ -11,9 +11,11 @@ import {
 } from "@headless-tree/core";
 import type { ItemInstance } from "@headless-tree/core";
 import {
+  Add01Icon,
   ArrowDown01Icon,
   ArrowRight01Icon,
   Chat01Icon,
+  FolderAddIcon,
   Folder01Icon,
   Folder02Icon,
 } from "@hugeicons/core-free-icons";
@@ -21,10 +23,24 @@ import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Button } from "@/components/ui/button";
 import { Sidebar, SidebarContent } from "@/components/ui/sidebar";
-import { Tree, TreeDragLine, TreeItem, TreeItemIcon, TreeItemLabel, TreeItemRenameInput } from "@/components/ui/tree";
+import {
+  Tree,
+  TreeDragLine,
+  TreeItem,
+  TreeItemIcon,
+  TreeItemLabel,
+  TreeItemRenameInput,
+} from "@/components/ui/tree";
 import { chatTreeApi } from "@/api/chat-tree";
 import { cn } from "@/lib/utils";
-import { useSetChatTreeUiState, useRenameChatTreeItem, useMoveFolder, useMoveChat } from "@/mutations/chat-tree";
+import {
+  useSetChatTreeUiState,
+  useRenameChatTreeItem,
+  useMoveFolder,
+  useMoveChat,
+} from "@/mutations/chat-tree";
+import { useCreateChat } from "@/mutations/chats";
+import { useCreateFolder } from "@/mutations/folders";
 import { DeleteChatDialog } from "@/features/chat/delete-chat-dialog";
 import { DeleteFolderDialog } from "@/features/chat/delete-folder-dialog";
 import { getChatTreeUiStateQueryOptions } from "@/queries/chat-tree";
@@ -94,6 +110,8 @@ function ChatSidebarTreeInner({
   const renameChatTreeItem = useRenameChatTreeItem();
   const moveFolderMutation = useMoveFolder();
   const moveChatMutation = useMoveChat();
+  const createChatMutation = useCreateChat();
+  const createFolderMutation = useCreateFolder();
 
   const [expandedItems, setExpandedItems] = React.useState<string[]>(() =>
     initialExpandedFolderIds.map((id) => `folder:${id}`),
@@ -102,7 +120,13 @@ function ChatSidebarTreeInner({
   const [renamingValue, setRenamingValueRaw] = React.useState<string | undefined>("");
 
   const setRenamingItem = React.useCallback(
-    (updater: string | null | undefined | ((old: string | null | undefined) => string | null | undefined)) => {
+    (
+      updater:
+        | string
+        | null
+        | undefined
+        | ((old: string | null | undefined) => string | null | undefined),
+    ) => {
       setRenamingItemRaw((prev) => (typeof updater === "function" ? updater(prev) : updater));
     },
     [],
@@ -131,7 +155,13 @@ function ChatSidebarTreeInner({
 
   const tree = useTree<ChatTreeNodeData>({
     rootItemId: ROOT_ITEM_ID,
-    features: [asyncDataLoaderFeature, selectionFeature, hotkeysCoreFeature, renamingFeature, dragAndDropFeature],
+    features: [
+      asyncDataLoaderFeature,
+      selectionFeature,
+      hotkeysCoreFeature,
+      renamingFeature,
+      dragAndDropFeature,
+    ],
     state: { expandedItems, renamingItem, renamingValue },
     setExpandedItems,
     setRenamingItem,
@@ -156,9 +186,7 @@ function ChatSidebarTreeInner({
     },
     onDrop: async (items, target) => {
       const targetId = target.item.getId();
-      const targetFolderId = targetId === ROOT_ITEM_ID
-        ? null
-        : targetId.slice("folder:".length);
+      const targetFolderId = targetId === ROOT_ITEM_ID ? null : targetId.slice("folder:".length);
 
       for (const item of items) {
         const itemId = item.getId();
@@ -232,6 +260,7 @@ function ChatSidebarTreeInner({
   const visibleItems = items.filter((item) => item.getId() !== ROOT_ITEM_ID);
 
   const invalidateTree = React.useCallback(() => {
+    void tree.getRootItem().invalidateChildrenIds();
     for (const item of tree.getItems()) {
       if (item.isFolder()) {
         void item.invalidateChildrenIds();
@@ -239,116 +268,178 @@ function ChatSidebarTreeInner({
     }
   }, [tree]);
 
-  if (visibleItems.length === 0) {
-    return (
-      <>
-        <p className="px-2 py-2 text-sidebar-foreground/70 text-xs">No chats or folders yet.</p>
-        <DeleteChatDialog chatId={deleteChat} onSuccess={invalidateTree} />
-        <DeleteFolderDialog folderId={deleteFolder} onSuccess={invalidateTree} />
-      </>
-    );
-  }
+  const createChat = React.useCallback(
+    async (folderId: string | null) => {
+      await createChatMutation.mutateAsync({
+        workspaceId,
+        title: "New chat",
+        folderId,
+      });
+      invalidateTree();
+    },
+    [createChatMutation, invalidateTree, workspaceId],
+  );
+
+  const createFolder = React.useCallback(
+    async (parentId: string | null) => {
+      const folder = await createFolderMutation.mutateAsync({
+        workspaceId,
+        name: "New Folder",
+        parentId,
+      });
+      setRenamingItem(`folder:${folder.id}`);
+      setRenamingValue("New Folder");
+      invalidateTree();
+    },
+    [createFolderMutation, invalidateTree, setRenamingItem, setRenamingValue, workspaceId],
+  );
 
   return (
     <>
-    <Tree className="relative min-h-0 flex-1 gap-0.5 pb-8" {...tree.getContainerProps("Chat tree")}>
-      <TreeDragLine style={tree.getDragLineStyle()} />
-      {visibleItems.map((item) => {
-        const data = item.getItemData();
-        const depth = getItemDepth(item);
+      <div className="flex items-center gap-1 px-1 pb-1">
+        <Button
+          size="icon-xs"
+          variant="ghost"
+          aria-label="Add chat to root"
+          onClick={() => {
+            void createChat(null);
+          }}
+        >
+          <HugeiconsIcon icon={Add01Icon} />
+        </Button>
+        <Button
+          size="icon-xs"
+          variant="ghost"
+          aria-label="Add folder to root"
+          onClick={() => {
+            void createFolder(null);
+          }}
+        >
+          <HugeiconsIcon icon={FolderAddIcon} />
+        </Button>
+      </div>
+      {visibleItems.length === 0 ? (
+        <p className="px-2 py-2 text-sidebar-foreground/70 text-xs">No chats or folders yet.</p>
+      ) : (
+        <Tree
+          className="relative min-h-0 flex-1 gap-0.5 pb-8"
+          {...tree.getContainerProps("Chat tree")}
+        >
+          <TreeDragLine style={tree.getDragLineStyle()} />
+          {visibleItems.map((item) => {
+            const data = item.getItemData();
+            const depth = getItemDepth(item);
 
-        if (data.kind === "loading" || !item.hasLoadedData()) {
-          return null;
-        }
-
-        const handleContextMenu = (e: React.MouseEvent) => {
-          e.preventDefault();
-          const itemKind = data.kind === "folder" ? "folder" : "chat";
-          void chatTreeApi.showContextMenu(item.getId(), itemKind).then((action) => {
-            if (action === "rename") {
-              item.startRenaming();
-            } else if (action === "delete") {
-              const rawId = item.getId();
-              if (itemKind === "folder") {
-                void navigate({ to: "/chat", search: { deleteFolder: rawId.slice("folder:".length) } });
-              } else {
-                void navigate({ to: "/chat", search: { deleteChat: rawId.slice("chat:".length) } });
-              }
+            if (data.kind === "loading" || !item.hasLoadedData()) {
+              return null;
             }
-          });
-        };
 
-        if (item.isRenaming()) {
-          return (
-            <TreeItem
-              key={item.getKey()}
-              level={depth}
-              {...item.getProps()}
-            >
-              {data.kind === "chat" ? (
-                <TreeItemIcon className="text-muted-foreground">
-                  <HugeiconsIcon icon={Chat01Icon} />
-                </TreeItemIcon>
-              ) : data.kind === "folder" ? (
-                <>
-                  <TreeItemIcon className="text-muted-foreground opacity-50">
-                    <HugeiconsIcon icon={ArrowRight01Icon} />
+            const handleContextMenu = (e: React.MouseEvent) => {
+              e.preventDefault();
+              const itemKind = data.kind === "folder" ? "folder" : "chat";
+              void chatTreeApi.showContextMenu(item.getId(), itemKind).then((action) => {
+                const ensureFolderExpanded = () => {
+                  const folderItemId = item.getId();
+                  setExpandedItems((prev) =>
+                    prev.includes(folderItemId) ? prev : [...prev, folderItemId],
+                  );
+                };
+
+                if (action === "add-folder" && itemKind === "folder") {
+                  ensureFolderExpanded();
+                  void createFolder(item.getId().slice("folder:".length));
+                } else if (action === "add-chat" && itemKind === "folder") {
+                  ensureFolderExpanded();
+                  void createChat(item.getId().slice("folder:".length));
+                } else if (action === "rename") {
+                  item.startRenaming();
+                } else if (action === "delete") {
+                  const rawId = item.getId();
+                  if (itemKind === "folder") {
+                    void navigate({
+                      to: "/chat",
+                      search: { deleteFolder: rawId.slice("folder:".length) },
+                    });
+                  } else {
+                    void navigate({
+                      to: "/chat",
+                      search: { deleteChat: rawId.slice("chat:".length) },
+                    });
+                  }
+                }
+              });
+            };
+
+            if (item.isRenaming()) {
+              return (
+                <TreeItem key={item.getKey()} level={depth} {...item.getProps()}>
+                  {data.kind === "chat" ? (
+                    <TreeItemIcon className="text-muted-foreground">
+                      <HugeiconsIcon icon={Chat01Icon} />
+                    </TreeItemIcon>
+                  ) : data.kind === "folder" ? (
+                    <>
+                      <TreeItemIcon className="text-muted-foreground opacity-50">
+                        <HugeiconsIcon icon={ArrowRight01Icon} />
+                      </TreeItemIcon>
+                      <TreeItemIcon className="text-muted-foreground">
+                        <HugeiconsIcon icon={Folder01Icon} />
+                      </TreeItemIcon>
+                    </>
+                  ) : null}
+                  <TreeItemRenameInput {...item.getRenameInputProps()} />
+                </TreeItem>
+              );
+            }
+
+            if (data.kind === "chat") {
+              return (
+                <TreeItem
+                  key={item.getKey()}
+                  level={depth}
+                  {...item.getProps()}
+                  data-selected={item.isSelected() || undefined}
+                  onContextMenu={handleContextMenu}
+                >
+                  <TreeItemIcon className="text-muted-foreground">
+                    <HugeiconsIcon icon={Chat01Icon} />
+                  </TreeItemIcon>
+                  <TreeItemLabel>{data.chat.title}</TreeItemLabel>
+                </TreeItem>
+              );
+            }
+
+            if (data.kind === "folder") {
+              const isExpanded = item.isExpanded();
+              const hasChildren = data.folder.childFolderCount + data.folder.childChatCount > 0;
+
+              return (
+                <TreeItem
+                  key={item.getKey()}
+                  level={depth}
+                  {...item.getProps()}
+                  data-selected={item.isSelected() || undefined}
+                  onContextMenu={handleContextMenu}
+                >
+                  <TreeItemIcon
+                    className={cn("text-muted-foreground", !hasChildren && "opacity-50")}
+                  >
+                    <HugeiconsIcon icon={isExpanded ? ArrowDown01Icon : ArrowRight01Icon} />
                   </TreeItemIcon>
                   <TreeItemIcon className="text-muted-foreground">
-                    <HugeiconsIcon icon={Folder01Icon} />
+                    <HugeiconsIcon icon={isExpanded ? Folder02Icon : Folder01Icon} />
                   </TreeItemIcon>
-                </>
-              ) : null}
-              <TreeItemRenameInput {...item.getRenameInputProps()} />
-            </TreeItem>
-          );
-        }
+                  <TreeItemLabel>{data.folder.name}</TreeItemLabel>
+                </TreeItem>
+              );
+            }
 
-        if (data.kind === "chat") {
-          return (
-            <TreeItem
-              key={item.getKey()}
-              level={depth}
-              {...item.getProps()}
-              data-selected={item.isSelected() || undefined}
-              onContextMenu={handleContextMenu}
-            >
-              <TreeItemIcon className="text-muted-foreground">
-                <HugeiconsIcon icon={Chat01Icon} />
-              </TreeItemIcon>
-              <TreeItemLabel>{data.chat.title}</TreeItemLabel>
-            </TreeItem>
-          );
-        }
-
-        if (data.kind === "folder") {
-          const isExpanded = item.isExpanded();
-          const hasChildren = data.folder.childFolderCount + data.folder.childChatCount > 0;
-
-          return (
-            <TreeItem
-              key={item.getKey()}
-              level={depth}
-              {...item.getProps()}
-              data-selected={item.isSelected() || undefined}
-              onContextMenu={handleContextMenu}
-            >
-              <TreeItemIcon className={cn("text-muted-foreground", !hasChildren && "opacity-50")}>
-                <HugeiconsIcon icon={isExpanded ? ArrowDown01Icon : ArrowRight01Icon} />
-              </TreeItemIcon>
-              <TreeItemIcon className="text-muted-foreground">
-                <HugeiconsIcon icon={isExpanded ? Folder02Icon : Folder01Icon} />
-              </TreeItemIcon>
-              <TreeItemLabel>{data.folder.name}</TreeItemLabel>
-            </TreeItem>
-          );
-        }
-
-        return null;
-      })}
-    </Tree>
-    <DeleteChatDialog chatId={deleteChat} onSuccess={invalidateTree} />
-    <DeleteFolderDialog folderId={deleteFolder} onSuccess={invalidateTree} />
+            return null;
+          })}
+        </Tree>
+      )}
+      <DeleteChatDialog chatId={deleteChat} onSuccess={invalidateTree} />
+      <DeleteFolderDialog folderId={deleteFolder} onSuccess={invalidateTree} />
     </>
   );
 }

@@ -16,10 +16,7 @@ import { WindowChrome } from "@/components/app/window-chrome";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ChatSidebarTree } from "@/features/chat/chat-sidebar-tree";
 import { useSetActiveWorkspace } from "@/mutations/workspaces";
-import {
-  activeWorkspaceQueryOptions,
-  listWorkspacesQueryOptions,
-} from "@/queries/workspaces";
+import { activeWorkspaceQueryOptions, listWorkspacesQueryOptions } from "@/queries/workspaces";
 
 export function ChatPage() {
   const { data: workspaces = [] } = useQuery(listWorkspacesQueryOptions);
@@ -32,7 +29,11 @@ export function ChatPage() {
       toolbar={
         <div className="flex items-center gap-3 justify-between w-full">
           <Menu>
-            <MenuTrigger render={<Button variant="secondary" size="sm" />}>
+            <MenuTrigger
+              render={<Button variant="secondary" size="sm" />}
+              style={{ "--from-color": activeWorkspace?.color }}
+              className={`bg-linear-to-tr from-(--from-color) via-transparent to-transparent border-none`}
+            >
               {activeWorkspace?.name ?? "…"}
             </MenuTrigger>
             <MenuPopup align="start">

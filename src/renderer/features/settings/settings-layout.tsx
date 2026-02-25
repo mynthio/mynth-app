@@ -4,6 +4,7 @@ import {
   Add01Icon,
   ArrowLeft01Icon,
   BotIcon,
+  CircleIcon,
   PaintBrush02Icon,
   SlidersHorizontalIcon,
 } from "@hugeicons/core-free-icons";
@@ -16,25 +17,30 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-  SidebarSeparator,
 } from "@/components/ui/sidebar";
+import { listProvidersQueryOptions } from "@/queries/providers";
 import { listWorkspacesQueryOptions } from "@/queries/workspaces";
 
 const globalNavItems = [
-  { to: "/settings", label: "General", icon: SlidersHorizontalIcon, exact: true },
-  { to: "/settings/providers", label: "Providers", icon: BotIcon },
+  {
+    to: "/settings",
+    label: "General",
+    icon: SlidersHorizontalIcon,
+    exact: true,
+  },
   { to: "/settings/appearance", label: "Appearance", icon: PaintBrush02Icon },
 ] as const;
 
 export function SettingsLayout() {
   const matchRoute = useMatchRoute();
   const { data: workspaces = [] } = useQuery(listWorkspacesQueryOptions);
+  const { data: providers = [] } = useQuery(listProvidersQueryOptions);
   const hasWorkspaces = workspaces.length > 0;
+  const hasProviders = providers.length > 0;
 
   return (
     <WindowChrome
@@ -51,16 +57,7 @@ export function SettingsLayout() {
       contentClassName="overflow-hidden"
     >
       <SidebarProvider className="h-full min-h-0">
-        <Sidebar collapsible="none" className="border-r">
-          <SidebarHeader>
-            <div className="space-y-1 px-2 py-1">
-              <p className="font-medium text-sm">Configuration</p>
-              <p className="text-sidebar-foreground/70 text-xs">
-                Manage global and workspace settings.
-              </p>
-            </div>
-          </SidebarHeader>
-          <SidebarSeparator />
+        <Sidebar collapsible="none">
           <SidebarContent>
             <SidebarGroup>
               <SidebarGroupLabel>Global</SidebarGroupLabel>
@@ -114,7 +111,11 @@ export function SettingsLayout() {
                             />
                           }
                         >
-                          <HugeiconsIcon icon={SlidersHorizontalIcon} />
+                          <HugeiconsIcon
+                            icon={CircleIcon}
+                            color={workspace.color ?? "current"}
+                            fill={workspace.color ?? "current"}
+                          />
                           <span>{workspace.name}</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -127,13 +128,52 @@ export function SettingsLayout() {
                 )}
               </SidebarGroupContent>
             </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel className="justify-between gap-2">
+                <span>Providers</span>
+                <Button size="xs" variant="ghost" render={<Link to="/settings/providers/new" />}>
+                  <HugeiconsIcon icon={Add01Icon} />
+                  <span>New</span>
+                </Button>
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                {hasProviders ? (
+                  <SidebarMenu>
+                    {providers.map((provider) => (
+                      <SidebarMenuItem key={provider.id}>
+                        <SidebarMenuButton
+                          isActive={Boolean(
+                            matchRoute({
+                              to: "/settings/providers/$providerId",
+                              params: { providerId: provider.id },
+                              fuzzy: true,
+                            }),
+                          )}
+                          render={
+                            <Link
+                              to="/settings/providers/$providerId"
+                              params={{ providerId: provider.id }}
+                            />
+                          }
+                        >
+                          <HugeiconsIcon icon={BotIcon} />
+                          <span>{provider.displayName}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                ) : (
+                  <p className="px-2 py-1 text-sidebar-foreground/70 text-xs">
+                    No providers found.
+                  </p>
+                )}
+              </SidebarGroupContent>
+            </SidebarGroup>
           </SidebarContent>
         </Sidebar>
-        <main className="min-h-0 flex-1 overflow-auto">
-          <div className="mx-auto w-full max-w-5xl px-6 py-6">
-            <Outlet />
-          </div>
-        </main>
+
+        <Outlet />
       </SidebarProvider>
     </WindowChrome>
   );

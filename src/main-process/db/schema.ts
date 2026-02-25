@@ -14,6 +14,7 @@ const nowMs = sql`(cast((julianday('now') - 2440587.5) * 86400000 as integer))`;
 export const workspaces = sqliteTable("workspaces", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  color: text("color"),
   // JSON object stored as TEXT in SQLite (parsed by app code).
   settings: text("settings").notNull().default("{}"),
   createdAt: integer("created_at").notNull().default(nowMs),
@@ -117,31 +118,14 @@ export const assets = sqliteTable(
 /**
  * Provider profiles — app-global rows shared across workspaces.
  *
- * `kind` identifies the provider type (e.g. "openai", "anthropic", "ollama",
- * "openrouter", "custom_openai_compatible").
- *
- * `authKind` drives which form fields and Keychain items are used:
- *   - "api_key"             — single bearer token / API key (most providers)
- *   - "api_key_pair"        — two secrets, e.g. AWS accessKeyId + secretAccessKey
- *   - "service_account_json"— JSON blob stored as one Keychain item (Google Vertex)
- *   - "none"                — no auth required (Ollama, LM Studio local)
- *   - "iam_role"            — ambient IAM / workload identity; no stored secret
- *
- * `apiKeyId` is a reference to a macOS Keychain item ID (not the secret
- * itself). The actual key is fetched at runtime via SecretStore.
- *   - api_key              → the API key string
- *   - api_key_pair         → the primary key (e.g. AWS accessKeyId)
- *   - service_account_json → the full service-account JSON blob
- *   - none / iam_role      → null
- *
- * `apiSecretId` is a secondary Keychain item reference used only for
- * `api_key_pair` providers (e.g. AWS secretAccessKey stored separately).
+ * `catalogId` references the internal provider definition from the app catalog
+ * (e.g. "openrouter"). The catalog handles mapping to the appropriate AI SDK.
  *
  * `baseUrl` is optional; used for self-hosted / custom-endpoint providers
  * (e.g. Ollama at http://localhost:11434).
  *
- * `config` holds provider-specific non-secret fields as JSON:
- * org/project IDs, region, resource name, custom headers, etc.
+ * `config` holds provider-specific config as JSON, including encrypted secret
+ * values for fields marked as `secret` in the provider catalog.
  *
  * Workspace-specific enable/disable state lives in `workspace_provider_overrides`.
  */
@@ -151,24 +135,20 @@ export const providers = sqliteTable(
     id: text("id").primaryKey(),
     // Human-readable label chosen by the user (e.g. "My OpenRouter account").
     displayName: text("display_name").notNull(),
-    // Provider type slug — drives which AI SDK adapter to use.
-    kind: text("kind").notNull(),
-    // Auth method — drives which form fields / Keychain items to use.
-    // Values: 'api_key' | 'api_key_pair' | 'service_account_json' | 'none' | 'iam_role'
-    authKind: text("auth_kind").notNull().default("api_key"),
+    // References a ProviderId from the app's provider catalog.
+    catalogId: text("catalog_id").notNull(),
     // Optional base URL override (Ollama, LM Studio, custom OpenAI-compatible).
     baseUrl: text("base_url"),
-    // Keychain item ID for the primary secret — null for no-auth providers.
-    apiKeyId: text("api_key_id"),
-    // Keychain item ID for the secondary secret (api_key_pair only).
-    // e.g. AWS secretAccessKey stored separately from accessKeyId.
-    apiSecretId: text("api_secret_id"),
-    // Arbitrary provider-specific config stored as JSON (headers, org ID, region, etc.).
+    // Arbitrary provider-specific config stored as JSON (including encrypted secret wrappers).
     config: text("config").notNull().default("{}"),
+    // Operational provider metadata (non-config), such as model sync diagnostics.
+    metadata: text("metadata").notNull().default("{}"),
+    // Background model sync status for this provider profile.
+    modelsSyncStatus: text("models_sync_status").notNull().default("idle"),
     createdAt: integer("created_at").notNull().default(nowMs),
     updatedAt: integer("updated_at").notNull().default(nowMs),
   },
-  (table) => [index("providers_kind_idx").on(table.kind)],
+  (table) => [index("providers_catalog_id_idx").on(table.catalogId)],
 );
 
 export const models = sqliteTable(
@@ -185,8 +165,11 @@ export const models = sqliteTable(
     // Internal cross-provider identity for grouping semantically equivalent models.
     canonicalModelId: text("canonical_model_id").notNull(),
     displayName: text("display_name"),
+    // App-wide enable/disable flag for this model.
+    isEnabled: integer("is_enabled", { mode: "boolean" }).notNull().default(true),
     // Workspace-specific enable/disable state lives in `workspace_model_overrides`.
     metadata: text("metadata").notNull().default("{}"),
+    lifecycleStatus: text("lifecycle_status").notNull().default("active"),
     createdAt: integer("created_at").notNull().default(nowMs),
     updatedAt: integer("updated_at").notNull().default(nowMs),
   },

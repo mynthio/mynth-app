@@ -9,18 +9,32 @@ export type WorkspaceSettings = Record<string, unknown>;
 export interface WorkspaceRow {
   id: string;
   name: string;
+  color: string | null;
   settings: WorkspaceSettings;
   createdAt: number;
   updatedAt: number;
 }
 
+export interface WorkspaceInfoRow {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
 interface CreateWorkspaceInput {
   id: string;
   name: string;
+  color?: string | null;
   settings?: WorkspaceSettings;
 }
 
+interface UpdateWorkspaceInput {
+  name?: string;
+  color?: string | null;
+}
+
 type WorkspaceTableRow = typeof workspaces.$inferSelect;
+type WorkspaceInfoTableRow = Pick<WorkspaceTableRow, "id" | "name" | "color">;
 
 function isWorkspaceSettings(value: unknown): value is WorkspaceSettings {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -56,14 +70,31 @@ function toWorkspaceRow(row: WorkspaceTableRow): WorkspaceRow {
   return {
     id: row.id,
     name: row.name,
+    color: row.color,
     settings: parseWorkspaceSettings(row.settings, row.id),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
 }
 
+function toWorkspaceInfoRow(row: WorkspaceInfoTableRow): WorkspaceInfoRow {
+  return {
+    id: row.id,
+    name: row.name,
+    color: row.color,
+  };
+}
+
 function requireWorkspaceById(id: string): WorkspaceRow {
   const workspace = getWorkspaceById(id);
+  if (!workspace) {
+    throw new Error(`Workspace "${id}" does not exist.`);
+  }
+  return workspace;
+}
+
+function requireWorkspaceInfoById(id: string): WorkspaceInfoRow {
+  const workspace = getWorkspaceInfoById(id);
   if (!workspace) {
     throw new Error(`Workspace "${id}" does not exist.`);
   }
@@ -83,9 +114,37 @@ export function listWorkspaces(): WorkspaceRow[] {
   return rows.map(toWorkspaceRow);
 }
 
+export function listWorkspaceInfoRows(): WorkspaceInfoRow[] {
+  const rows = getAppDatabase()
+    .select({
+      id: workspaces.id,
+      name: workspaces.name,
+      color: workspaces.color,
+    })
+    .from(workspaces)
+    .orderBy(asc(workspaces.id))
+    .all();
+
+  return rows.map(toWorkspaceInfoRow);
+}
+
 export function getWorkspaceById(id: string): WorkspaceRow | null {
   const row = getAppDatabase().select().from(workspaces).where(eq(workspaces.id, id)).get();
   return row ? toWorkspaceRow(row) : null;
+}
+
+export function getWorkspaceInfoById(id: string): WorkspaceInfoRow | null {
+  const row = getAppDatabase()
+    .select({
+      id: workspaces.id,
+      name: workspaces.name,
+      color: workspaces.color,
+    })
+    .from(workspaces)
+    .where(eq(workspaces.id, id))
+    .get();
+
+  return row ? toWorkspaceInfoRow(row) : null;
 }
 
 export function createWorkspace(input: CreateWorkspaceInput): WorkspaceRow {
@@ -96,6 +155,7 @@ export function createWorkspace(input: CreateWorkspaceInput): WorkspaceRow {
     .values({
       id: input.id,
       name: input.name,
+      color: input.color ?? null,
       settings: serializeWorkspaceSettings(settings),
     })
     .run();
@@ -107,17 +167,26 @@ export function deleteWorkspace(id: string): void {
   getAppDatabase().delete(workspaces).where(eq(workspaces.id, id)).run();
 }
 
-export function updateWorkspaceName(id: string, name: string): WorkspaceRow {
-  getAppDatabase()
-    .update(workspaces)
-    .set({
-      name,
-      updatedAt: Date.now(),
-    })
-    .where(eq(workspaces.id, id))
-    .run();
+export function updateWorkspace(id: string, patch: UpdateWorkspaceInput): WorkspaceInfoRow {
+  const nextValues: Partial<typeof workspaces.$inferInsert> = {};
 
-  return requireWorkspaceById(id);
+  if (patch.name !== undefined) {
+    nextValues.name = patch.name;
+  }
+
+  if (patch.color !== undefined) {
+    nextValues.color = patch.color;
+  }
+
+  if (Object.keys(nextValues).length === 0) {
+    return requireWorkspaceInfoById(id);
+  }
+
+  nextValues.updatedAt = Date.now();
+
+  getAppDatabase().update(workspaces).set(nextValues).where(eq(workspaces.id, id)).run();
+
+  return requireWorkspaceInfoById(id);
 }
 
 export function getWorkspaceSettings(id: string): WorkspaceSettings {

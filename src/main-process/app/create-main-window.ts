@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { isTrustedRendererUrl, type TrustedSenderRegistry } from "../ipc/trusted-senders";
 import { WINDOW_TOOLBAR_HEIGHT, WINDOW_TRAFFIC_LIGHTS_POSITION } from "../../shared/window-chrome";
+import { createPersistentWindowState } from "../lib/persistent-window-state";
 
 export interface CreateMainWindowOptions {
   trustedSenders: TrustedSenderRegistry;
@@ -11,10 +12,16 @@ export interface CreateMainWindowOptions {
 
 export function createMainWindow(options: CreateMainWindowOptions): BrowserWindow {
   const isMac = process.platform === "darwin";
+  const windowState = createPersistentWindowState({
+    windowId: "main",
+    defaultSize: {
+      width: 800,
+      height: 600,
+    },
+  });
 
   const mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    ...windowState.browserWindowOptions,
     ...(isMac
       ? {
           titleBarStyle: "hiddenInset" as const,
@@ -35,6 +42,8 @@ export function createMainWindow(options: CreateMainWindowOptions): BrowserWindo
   });
 
   options.trustedSenders.registerTrustedWebContents(mainWindow.webContents);
+
+  windowState.attach(mainWindow);
 
   mainWindow.on("closed", () => {
     options.onClosed?.();

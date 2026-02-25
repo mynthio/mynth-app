@@ -19,4 +19,10 @@ export const queryKeys = {
     detail: (workspaceId: string, folderId: string) =>
       [...queryKeys.folders.all, "detail", workspaceId, folderId] as const,
   },
+  providers: {
+    all: ["providers"] as const,
+    list: () => [...queryKeys.providers.all, "list"] as const,
+    models: (providerId: string) => [...queryKeys.providers.all, "models", providerId] as const,
+    detail: (id: string) => [...queryKeys.providers.all, "detail", id] as const,
+  },
 } as const;
