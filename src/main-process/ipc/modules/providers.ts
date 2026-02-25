@@ -126,4 +126,10 @@ export function registerProvidersIpcModule(
     parseArgs: parseSaveProviderInput,
     handler: ({ services }, _event, input) => services.providers.saveProvider(input),
   });
+
+  registerInvokeHandler<[string], void>(context, registeredChannels, {
+    channel: IPC_CHANNELS.providers.delete,
+    parseArgs: parseProviderRecordIdArg,
+    handler: ({ services }, _event, providerId) => services.providers.deleteProvider(providerId),
+  });
 }

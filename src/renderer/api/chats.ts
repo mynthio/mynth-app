@@ -2,6 +2,10 @@ import "../lib/electron-api";
 import { parseWorkspaceId } from "../../shared/workspace/workspace-id";
 
 export const chatsApi = {
+  get(id: string) {
+    return window.electronAPI.getChat(id);
+  },
+
   create(workspaceId: string, title: string, folderId?: string | null) {
     const parsedWorkspaceId = parseWorkspaceId(workspaceId);
     if (!parsedWorkspaceId.ok) {

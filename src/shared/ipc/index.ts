@@ -13,6 +13,8 @@ export const IPC_CHANNELS = {
     getChildren: "chatTree:getChildren",
     getUiState: "chatTree:getUiState",
     setUiState: "chatTree:setUiState",
+    getTabsUiState: "chatTree:getTabsUiState",
+    setTabsUiState: "chatTree:setTabsUiState",
     showContextMenu: "chatTree:showContextMenu",
   },
   folders: {
@@ -22,6 +24,7 @@ export const IPC_CHANNELS = {
     delete: "folders:delete",
   },
   chats: {
+    get: "chats:get",
     create: "chats:create",
     updateTitle: "chats:updateTitle",
     move: "chats:move",
@@ -32,9 +35,11 @@ export const IPC_CHANNELS = {
     listModels: "providers:listModels",
     testCredentials: "providers:testCredentials",
     save: "providers:save",
+    delete: "providers:delete",
   },
   models: {
     update: "models:update",
+    setProviderEnabled: "models:setProviderEnabled",
   },
 } as const;
 
@@ -94,6 +99,14 @@ export interface ChatTreeUiState {
   expandedFolderIds: string[];
 }
 
+export interface ChatTabStateItem {
+  chatId: string;
+}
+
+export interface ChatTabsUiState {
+  tabs: ChatTabStateItem[];
+}
+
 export interface ProviderCredentialTestInput {
   providerId: ProviderId;
   config: Record<string, unknown>;
@@ -148,6 +161,13 @@ export interface UpdateModelResult {
   status: ProviderModelStatus;
 }
 
+export interface SetProviderModelsEnabledResult {
+  providerId: string;
+  isEnabled: boolean;
+  matchedCount: number;
+  updatedCount: number;
+}
+
 export interface IpcApi {
   listWorkspaces: () => Promise<WorkspaceInfo[]>;
   getActiveWorkspace: () => Promise<WorkspaceInfo>;
@@ -164,6 +184,9 @@ export interface IpcApi {
     workspaceId: string,
     expandedFolderIds: string[],
   ) => Promise<ChatTreeUiState>;
+  getChatTabsUiState: (workspaceId: string) => Promise<ChatTabsUiState>;
+  setChatTabsUiState: (workspaceId: string, tabs: ChatTabStateItem[]) => Promise<ChatTabsUiState>;
+  getChat: (id: string) => Promise<ChatInfo>;
   createFolder: (
     workspaceId: string,
     name: string,
@@ -186,5 +209,10 @@ export interface IpcApi {
     input: ProviderCredentialTestInput,
   ) => Promise<ProviderCredentialTestResult>;
   saveProvider: (input: SaveProviderInput) => Promise<SaveProviderResult>;
+  deleteProvider: (providerId: string) => Promise<void>;
   updateModel: (modelId: string, input: UpdateModelInput) => Promise<UpdateModelResult>;
+  setProviderModelsEnabled: (
+    providerId: string,
+    isEnabled: boolean,
+  ) => Promise<SetProviderModelsEnabledResult>;
 }

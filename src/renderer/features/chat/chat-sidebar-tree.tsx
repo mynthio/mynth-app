@@ -35,6 +35,7 @@ import { chatTreeApi } from "@/api/chat-tree";
 import { cn } from "@/lib/utils";
 import {
   useSetChatTreeUiState,
+  useSetChatTabsUiState,
   useRenameChatTreeItem,
   useMoveFolder,
   useMoveChat,
@@ -107,6 +108,7 @@ function ChatSidebarTreeInner({
   const navigate = useNavigate();
   const { deleteChat, deleteFolder } = useSearch({ from: "/chat/" });
   const setChatTreeUiState = useSetChatTreeUiState();
+  const setChatTabsUiState = useSetChatTabsUiState();
   const renameChatTreeItem = useRenameChatTreeItem();
   const moveFolderMutation = useMoveFolder();
   const moveChatMutation = useMoveChat();
@@ -294,6 +296,26 @@ function ChatSidebarTreeInner({
     [createFolderMutation, invalidateTree, setRenamingItem, setRenamingValue, workspaceId],
   );
 
+  const openChatInSingleTab = React.useCallback(
+    (chatId: string) => {
+      setChatTabsUiState.mutate({
+        workspaceId,
+        tabs: [{ chatId }],
+      });
+
+      void navigate({
+        to: "/chat",
+        search: (prev) => ({
+          ...prev,
+          deleteChat: undefined,
+          deleteFolder: undefined,
+          tabChatId: chatId,
+        }),
+      });
+    },
+    [navigate, setChatTabsUiState, workspaceId],
+  );
+
   return (
     <>
       <div className="flex items-center gap-1 px-1 pb-1">
@@ -399,6 +421,9 @@ function ChatSidebarTreeInner({
                   level={depth}
                   {...item.getProps()}
                   data-selected={item.isSelected() || undefined}
+                  onClickCapture={() => {
+                    openChatInSingleTab(data.chat.id);
+                  }}
                   onContextMenu={handleContextMenu}
                 >
                   <TreeItemIcon className="text-muted-foreground">

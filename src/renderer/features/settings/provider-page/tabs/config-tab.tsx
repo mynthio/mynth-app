@@ -1,10 +1,23 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { getSupportedProviderById } from "../../../../../shared/providers/catalog";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogPopup,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardPanel, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useDeleteProvider } from "@/mutations/providers";
 import { listProvidersQueryOptions } from "@/queries/providers";
 
 interface ProviderConfigTabProps {
@@ -12,9 +25,25 @@ interface ProviderConfigTabProps {
 }
 
 export function ProviderConfigTab({ providerId }: ProviderConfigTabProps) {
+  const navigate = useNavigate();
   const providersQuery = useQuery(listProvidersQueryOptions);
+  const deleteProvider = useDeleteProvider();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const provider = providersQuery.data?.find((item) => item.id === providerId);
   const catalogProvider = provider ? getSupportedProviderById(provider.catalogId) : null;
+
+  function handleDeleteConfirm(): void {
+    if (!provider) {
+      return;
+    }
+
+    deleteProvider.mutate(provider.id, {
+      onSuccess: () => {
+        setIsDeleteDialogOpen(false);
+        void navigate({ to: "/settings" });
+      },
+    });
+  }
 
   return (
     <Card>
@@ -94,9 +123,64 @@ export function ProviderConfigTab({ providerId }: ProviderConfigTabProps) {
                 credentials.
               </AlertDescription>
             </Alert>
+
+            {deleteProvider.isError ? (
+              <Alert variant="error">
+                <AlertTitle>Failed to delete provider</AlertTitle>
+                <AlertDescription>{getErrorMessage(deleteProvider.error)}</AlertDescription>
+              </Alert>
+            ) : null}
+
+            <Alert variant="warning">
+              <AlertTitle>Delete provider</AlertTitle>
+              <AlertDescription>
+                Deleting this provider permanently removes the provider profile and all connected
+                models.
+              </AlertDescription>
+              <AlertAction>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    deleteProvider.reset();
+                    setIsDeleteDialogOpen(true);
+                  }}
+                  disabled={deleteProvider.isPending}
+                >
+                  Delete Provider
+                </Button>
+              </AlertAction>
+            </Alert>
           </>
         )}
       </CardPanel>
+
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={(open) => {
+          setIsDeleteDialogOpen(open);
+        }}
+      >
+        <AlertDialogPopup>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Provider</AlertDialogTitle>
+            <AlertDialogDescription>
+              {provider
+                ? `Delete "${provider.displayName}" and all models connected to it? This action cannot be undone.`
+                : "Delete this provider and all models connected to it? This action cannot be undone."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose render={<Button variant="secondary" />}>Cancel</AlertDialogClose>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={!provider || deleteProvider.isPending}
+            >
+              Delete Provider
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogPopup>
+      </AlertDialog>
     </Card>
   );
 }

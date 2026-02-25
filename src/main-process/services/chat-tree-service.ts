@@ -3,8 +3,10 @@ import {
   createFolder,
   deleteChat,
   deleteFolderRecursive,
+  getChatById,
   getChatTreeChildren,
   getChatTree,
+  listWorkspaceChatIds,
   listWorkspaceFolderIds,
   moveChat,
   moveFolder,
@@ -17,9 +19,12 @@ import {
   type ChatTreeSnapshot as ChatTreeSnapshotRecord,
   type FolderRow,
 } from "../chat-tree/repository";
+import { parseChatId } from "../../shared/chat/chat-id";
 import { parseFolderId } from "../../shared/folder/folder-id";
 import type {
   ChatInfo,
+  ChatTabsUiState,
+  ChatTabStateItem,
   ChatTreeChildrenSlice,
   ChatTreeFolderListItem,
   ChatTreeFolderNode,
@@ -30,13 +35,18 @@ import type {
 import { getWorkspaceSettings, updateWorkspaceSettings } from "../workspaces/repository";
 
 const CHAT_TREE_EXPANDED_FOLDER_IDS_SETTINGS_KEY = "chatTreeExpandedFolderIds";
+const CHAT_TABS_SETTINGS_KEY = "chatTabs";
 const MAX_PERSISTED_EXPANDED_FOLDER_IDS = 2000;
+const MAX_PERSISTED_TABS = 20;
 
 export interface ChatTreeService {
+  getChat(id: string): ChatInfo;
   getChatTree(workspaceId: string): ChatTreeSnapshot;
   getChatTreeChildren(workspaceId: string, parentFolderId: string | null): ChatTreeChildrenSlice;
   getChatTreeUiState(workspaceId: string): ChatTreeUiState;
   setChatTreeUiState(workspaceId: string, expandedFolderIds: string[]): ChatTreeUiState;
+  getChatTabsUiState(workspaceId: string): ChatTabsUiState;
+  setChatTabsUiState(workspaceId: string, tabs: ChatTabStateItem[]): ChatTabsUiState;
   createFolder(input: { workspaceId: string; name: string; parentId: string | null }): FolderInfo;
   updateFolderName(id: string, name: string): FolderInfo;
   moveFolder(id: string, parentId: string | null): FolderInfo;
@@ -125,6 +135,36 @@ function normalizeExpandedFolderIds(value: unknown): string[] {
   return [...uniqueFolderIds].sort((left, right) => left.localeCompare(right));
 }
 
+function normalizeChatTabs(value: unknown): ChatTabStateItem[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const seenChatIds = new Set<string>();
+  const normalizedTabs: ChatTabStateItem[] = [];
+
+  for (const entry of value) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      continue;
+    }
+
+    const record = entry as Record<string, unknown>;
+    const parsedChatId = parseChatId(record.chatId);
+    if (!parsedChatId.ok || seenChatIds.has(parsedChatId.value)) {
+      continue;
+    }
+
+    seenChatIds.add(parsedChatId.value);
+    normalizedTabs.push({ chatId: parsedChatId.value });
+
+    if (normalizedTabs.length >= MAX_PERSISTED_TABS) {
+      break;
+    }
+  }
+
+  return normalizedTabs;
+}
+
 function pruneExpandedFolderIdsForWorkspace(workspaceId: string, ids: readonly string[]): string[] {
   if (ids.length === 0) {
     return [];
@@ -132,6 +172,23 @@ function pruneExpandedFolderIdsForWorkspace(workspaceId: string, ids: readonly s
 
   const existingFolderIds = new Set(listWorkspaceFolderIds(workspaceId, ids));
   return ids.filter((id) => existingFolderIds.has(id));
+}
+
+function pruneTabsForWorkspace(
+  workspaceId: string,
+  tabs: readonly ChatTabStateItem[],
+): ChatTabStateItem[] {
+  if (tabs.length === 0) {
+    return [];
+  }
+
+  const existingChatIds = new Set(
+    listWorkspaceChatIds(
+      workspaceId,
+      tabs.map((tab) => tab.chatId),
+    ),
+  );
+  return tabs.filter((tab) => existingChatIds.has(tab.chatId));
 }
 
 export function createChatTreeService(): ChatTreeService {
@@ -159,7 +216,38 @@ export function createChatTreeService(): ChatTreeService {
     };
   }
 
+  function readChatTabsUiState(workspaceId: string): ChatTabsUiState {
+    const workspaceSettings = getWorkspaceSettings(workspaceId);
+    const normalizedTabs = normalizeChatTabs(workspaceSettings[CHAT_TABS_SETTINGS_KEY]);
+
+    return {
+      tabs: pruneTabsForWorkspace(workspaceId, normalizedTabs),
+    };
+  }
+
+  function writeChatTabsUiState(workspaceId: string, tabs: unknown): ChatTabsUiState {
+    const normalizedTabs = normalizeChatTabs(tabs);
+    const prunedTabs = pruneTabsForWorkspace(workspaceId, normalizedTabs);
+
+    updateWorkspaceSettings(workspaceId, {
+      [CHAT_TABS_SETTINGS_KEY]: prunedTabs,
+    });
+
+    return {
+      tabs: prunedTabs,
+    };
+  }
+
   return {
+    getChat(id: string): ChatInfo {
+      const chat = getChatById(id);
+      if (!chat) {
+        throw new Error(`Chat "${id}" does not exist.`);
+      }
+
+      return toChatInfo(chat);
+    },
+
     getChatTree(workspaceId: string): ChatTreeSnapshot {
       return toChatTreeSnapshot(getChatTree(workspaceId));
     },
@@ -174,6 +262,14 @@ export function createChatTreeService(): ChatTreeService {
 
     setChatTreeUiState(workspaceId: string, expandedFolderIds: string[]): ChatTreeUiState {
       return writeChatTreeUiState(workspaceId, expandedFolderIds);
+    },
+
+    getChatTabsUiState(workspaceId: string): ChatTabsUiState {
+      return readChatTabsUiState(workspaceId);
+    },
+
+    setChatTabsUiState(workspaceId: string, tabs: ChatTabStateItem[]): ChatTabsUiState {
+      return writeChatTabsUiState(workspaceId, tabs);
     },
 
     createFolder(input): FolderInfo {
@@ -218,7 +314,13 @@ export function createChatTreeService(): ChatTreeService {
     },
 
     deleteChat(id: string): void {
-      deleteChat(id);
+      const deletedChat = deleteChat(id);
+      const currentTabsUiState = readChatTabsUiState(deletedChat.workspaceId);
+      const nextTabs = currentTabsUiState.tabs.filter((tab) => tab.chatId !== deletedChat.id);
+
+      if (nextTabs.length !== currentTabsUiState.tabs.length) {
+        writeChatTabsUiState(deletedChat.workspaceId, nextTabs);
+      }
     },
   };
 }

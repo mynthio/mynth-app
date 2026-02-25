@@ -3,7 +3,11 @@ import { invokeIpc } from "../invoke";
 
 type ProvidersApi = Pick<
   IpcApi,
-  "listProviders" | "listProviderModels" | "testProviderCredentials" | "saveProvider"
+  | "listProviders"
+  | "listProviderModels"
+  | "testProviderCredentials"
+  | "saveProvider"
+  | "deleteProvider"
 >;
 
 export function createProvidersApi(): ProvidersApi {
@@ -12,5 +16,6 @@ export function createProvidersApi(): ProvidersApi {
     listProviderModels: (providerId) => invokeIpc(IPC_CHANNELS.providers.listModels, providerId),
     testProviderCredentials: (input) => invokeIpc(IPC_CHANNELS.providers.testCredentials, input),
     saveProvider: (input) => invokeIpc(IPC_CHANNELS.providers.save, input),
+    deleteProvider: (providerId) => invokeIpc(IPC_CHANNELS.providers.delete, providerId),
   };
 }

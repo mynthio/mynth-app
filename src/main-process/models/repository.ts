@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 
 import { getAppDatabase } from "../db/database";
 import { models } from "../db/schema";
@@ -17,6 +17,14 @@ export interface SyncProviderModelInput {
 }
 
 export type UpdateModelInput = Partial<Pick<ModelTableRow, ModelMutableField>>;
+export type ProviderModelSyncContext = "provider-added" | "startup";
+export interface SyncProviderModelsOptions {
+  context: ProviderModelSyncContext;
+}
+export interface UpdateModelsByProviderIdResult {
+  matchedCount: number;
+  updatedCount: number;
+}
 
 export function listModelsByProviderId(providerId: string): ModelTableRow[] {
   return getAppDatabase()
@@ -51,11 +59,51 @@ export function updateModel(modelId: string, input: UpdateModelInput): ModelTabl
   return db.select().from(models).where(eq(models.id, modelId)).get();
 }
 
+export function updateModelsByProviderId(
+  providerId: string,
+  input: UpdateModelInput,
+): UpdateModelsByProviderIdResult {
+  const db = getAppDatabase();
+  const existingRows = db.select().from(models).where(eq(models.providerId, providerId)).all();
+  const updates = pickDefinedModelFields(input, MODEL_MUTABLE_FIELDS);
+
+  if (existingRows.length === 0) {
+    return { matchedCount: 0, updatedCount: 0 };
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return { matchedCount: existingRows.length, updatedCount: 0 };
+  }
+
+  const rowIdsToUpdate = existingRows
+    .filter((row) => doesModelRowNeedUpdate(row, updates))
+    .map((row) => row.id);
+
+  if (rowIdsToUpdate.length === 0) {
+    return { matchedCount: existingRows.length, updatedCount: 0 };
+  }
+
+  db.update(models)
+    .set({
+      ...updates,
+      updatedAt: Date.now(),
+    })
+    .where(inArray(models.id, rowIdsToUpdate))
+    .run();
+
+  return {
+    matchedCount: existingRows.length,
+    updatedCount: rowIdsToUpdate.length,
+  };
+}
+
 export function syncProviderModels(
   providerId: string,
   syncedModels: SyncProviderModelInput[],
+  options: SyncProviderModelsOptions,
 ): { inserted: number; updated: number; markedRemoved: number } {
   return getAppDatabase().transaction((tx) => {
+    const enablementPolicy = getModelEnablementPolicyForSyncContext(options.context);
     const existingRows = tx.select().from(models).where(eq(models.providerId, providerId)).all();
     const existingByProviderModelId = new Map(
       existingRows.map((row) => [row.providerModelId, row] as const),
@@ -80,6 +128,7 @@ export function syncProviderModels(
             providerModelId: syncedModel.providerModelId,
             canonicalModelId: syncedModel.canonicalModelId,
             displayName: syncedModel.displayName,
+            isEnabled: enablementPolicy.insertedModelEnabled,
             metadata: serializedMetadata,
             lifecycleStatus: syncedModel.lifecycleStatus,
           })
@@ -91,16 +140,24 @@ export function syncProviderModels(
       if (
         existing.canonicalModelId === syncedModel.canonicalModelId &&
         (existing.displayName ?? null) === (syncedModel.displayName ?? null) &&
+        (enablementPolicy.existingModelsEnabled === "preserve" ||
+          existing.isEnabled === enablementPolicy.existingModelsEnabled) &&
         existing.metadata === serializedMetadata &&
         existing.lifecycleStatus === syncedModel.lifecycleStatus
       ) {
         continue;
       }
 
+      const nextIsEnabled =
+        enablementPolicy.existingModelsEnabled === "preserve"
+          ? existing.isEnabled
+          : enablementPolicy.existingModelsEnabled;
+
       tx.update(models)
         .set({
           canonicalModelId: syncedModel.canonicalModelId,
           displayName: syncedModel.displayName,
+          isEnabled: nextIsEnabled,
           metadata: serializedMetadata,
           lifecycleStatus: syncedModel.lifecycleStatus,
           updatedAt: Date.now(),
@@ -150,4 +207,37 @@ function pickDefinedModelFields<const TKeys extends readonly ModelMutableField[]
   }
 
   return updates;
+}
+
+function doesModelRowNeedUpdate(
+  row: ModelTableRow,
+  updates: Partial<Pick<ModelTableRow, ModelMutableField>>,
+): boolean {
+  for (const key of MODEL_MUTABLE_FIELDS) {
+    if (updates[key] !== undefined && row[key] !== updates[key]) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function getModelEnablementPolicyForSyncContext(context: ProviderModelSyncContext): {
+  insertedModelEnabled: boolean;
+  existingModelsEnabled: boolean | "preserve";
+} {
+  switch (context) {
+    case "provider-added":
+      return {
+        insertedModelEnabled: true,
+        existingModelsEnabled: true,
+      };
+    case "startup":
+      return {
+        // Future startup sync should preserve user choices for existing rows and
+        // keep newly discovered models disabled until explicitly enabled.
+        insertedModelEnabled: false,
+        existingModelsEnabled: "preserve",
+      };
+  }
 }

@@ -1,4 +1,9 @@
-import { IPC_CHANNELS, type UpdateModelInput, type UpdateModelResult } from "../../../shared/ipc";
+import {
+  IPC_CHANNELS,
+  type SetProviderModelsEnabledResult,
+  type UpdateModelInput,
+  type UpdateModelResult,
+} from "../../../shared/ipc";
 import type { IpcHandlerContext } from "../core/context";
 import { AppError } from "../core/errors";
 import { registerInvokeHandler } from "../core/register-invoke-handler";
@@ -45,6 +50,22 @@ function parseUpdateModelInput(args: unknown[]): [string, UpdateModelInput] {
   return [modelId, input];
 }
 
+function parseSetProviderModelsEnabledInput(args: unknown[]): [string, boolean] {
+  expectArgCount(args, 2);
+
+  const providerId = args[0];
+  if (typeof providerId !== "string" || !providerId.trim()) {
+    throw AppError.badRequest("providerId must be a non-empty string.");
+  }
+
+  const isEnabled = args[1];
+  if (typeof isEnabled !== "boolean") {
+    throw AppError.badRequest("isEnabled must be a boolean.");
+  }
+
+  return [providerId, isEnabled];
+}
+
 export function registerModelsIpcModule(
   context: IpcHandlerContext,
   registeredChannels: Set<string>,
@@ -57,6 +78,17 @@ export function registerModelsIpcModule(
       parseArgs: parseUpdateModelInput,
       handler: ({ services }, _event, modelId, input) =>
         services.models.updateModel(modelId, input),
+    },
+  );
+
+  registerInvokeHandler<[string, boolean], SetProviderModelsEnabledResult>(
+    context,
+    registeredChannels,
+    {
+      channel: IPC_CHANNELS.models.setProviderEnabled,
+      parseArgs: parseSetProviderModelsEnabledInput,
+      handler: ({ services }, _event, providerId, isEnabled) =>
+        services.models.setProviderModelsEnabled(providerId, isEnabled),
     },
   );
 }

@@ -21,10 +21,12 @@ import { createUuidV7 } from "../db/uuidv7";
 import {
   listModelsByProviderId,
   syncProviderModels,
+  type ProviderModelSyncContext,
   type SyncProviderModelInput,
 } from "../models/repository";
 import {
   createProvider,
+  deleteProvider as deleteStoredProvider,
   getProviderById,
   listProviders as listStoredProviders,
   updateProviderMetadataModelSync,
@@ -40,6 +42,7 @@ export interface ProviderService {
   listProviderModels(providerId: string): ProviderModelInfo[];
   testCredentials(input: ProviderCredentialTestInput): Promise<ProviderCredentialTestResult>;
   saveProvider(input: SaveProviderInput): SaveProviderResult;
+  deleteProvider(providerId: string): void;
 }
 
 export function createProviderService(): ProviderService {
@@ -106,7 +109,7 @@ export function createProviderService(): ProviderService {
         config: buildStoredProviderConfig(catalogEntry, config),
       });
 
-      void syncProviderModelsInBackground(row.id);
+      void syncProviderModelsInBackground(row.id, "provider-added");
 
       return {
         id: row.id,
@@ -114,16 +117,28 @@ export function createProviderService(): ProviderService {
         catalogId: row.catalogId as ProviderId,
       };
     },
+
+    deleteProvider(providerId) {
+      const existing = getProviderById(providerId);
+      if (!existing) {
+        throw AppError.notFound(`Provider "${providerId}" not found.`);
+      }
+
+      deleteStoredProvider(providerId);
+    },
   };
 
-  async function syncProviderModelsInBackground(providerId: string): Promise<void> {
+  async function syncProviderModelsInBackground(
+    providerId: string,
+    syncContext: ProviderModelSyncContext,
+  ): Promise<void> {
     if (inFlightModelSyncProviderIds.has(providerId)) {
       return;
     }
 
     inFlightModelSyncProviderIds.add(providerId);
     try {
-      await runProviderModelSync(providerId);
+      await runProviderModelSync(providerId, syncContext);
     } catch (error) {
       console.error(`Provider model sync crashed for provider "${providerId}".`, error);
     } finally {
@@ -220,7 +235,10 @@ function getRequiredDraftConfigValue(config: ProviderDraftConfig, key: string): 
   return value;
 }
 
-async function runProviderModelSync(providerId: string): Promise<void> {
+async function runProviderModelSync(
+  providerId: string,
+  syncContext: ProviderModelSyncContext,
+): Promise<void> {
   const providerRow = getProviderById(providerId);
   if (!providerRow) {
     return;
@@ -243,7 +261,7 @@ async function runProviderModelSync(providerId: string): Promise<void> {
       parsedConfig,
     });
 
-    syncProviderModels(providerId, normalizedModels);
+    syncProviderModels(providerId, normalizedModels, { context: syncContext });
 
     const endedAt = Date.now();
     updateProviderModelsSyncStatus(providerId, "succeeded");

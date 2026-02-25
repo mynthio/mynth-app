@@ -2,6 +2,8 @@ import { BrowserWindow, Menu } from "electron";
 import {
   IPC_CHANNELS,
   type ChatInfo,
+  type ChatTabStateItem,
+  type ChatTabsUiState,
   type ChatTreeChildrenSlice,
   type ChatTreeSnapshot,
   type ChatTreeUiState,
@@ -94,6 +96,30 @@ function parseStringArray(input: unknown, label: string): string[] {
   return values;
 }
 
+function parseChatTabsArray(input: unknown): ChatTabStateItem[] {
+  if (!Array.isArray(input)) {
+    throw AppError.badRequest("Tabs must be an array.");
+  }
+
+  return input.map((entry, index) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw AppError.badRequest(`Tab at index ${index} must be an object.`);
+    }
+
+    const record = entry as Record<string, unknown>;
+    const allowedKeys = new Set(["chatId"]);
+    for (const key of Object.keys(record)) {
+      if (!allowedKeys.has(key)) {
+        throw AppError.badRequest(`Unsupported tab field "${key}".`);
+      }
+    }
+
+    return {
+      chatId: parseValidChatId(record.chatId),
+    };
+  });
+}
+
 export function registerChatTreeIpcModule(
   context: IpcHandlerContext,
   registeredChannels: Set<string>,
@@ -141,6 +167,30 @@ export function registerChatTreeIpcModule(
       services.chatTree.setChatTreeUiState(workspaceId, expandedFolderIds),
   });
 
+  registerInvokeHandler<[string], ChatTabsUiState>(context, registeredChannels, {
+    channel: IPC_CHANNELS.chatTree.getTabsUiState,
+    parseArgs: (args) => {
+      expectArgCount(args, 1);
+      return [parseValidWorkspaceId(args[0])];
+    },
+    handler: ({ services }, _event, workspaceId) =>
+      services.chatTree.getChatTabsUiState(workspaceId),
+  });
+
+  registerInvokeHandler<[string, ChatTabStateItem[]], ChatTabsUiState>(
+    context,
+    registeredChannels,
+    {
+      channel: IPC_CHANNELS.chatTree.setTabsUiState,
+      parseArgs: (args) => {
+        expectArgCount(args, 2);
+        return [parseValidWorkspaceId(args[0]), parseChatTabsArray(args[1])];
+      },
+      handler: ({ services }, _event, workspaceId, tabs) =>
+        services.chatTree.setChatTabsUiState(workspaceId, tabs),
+    },
+  );
+
   registerInvokeHandler<[string, string, string | null], FolderInfo>(context, registeredChannels, {
     channel: IPC_CHANNELS.folders.create,
     parseArgs: (args) => {
@@ -180,6 +230,15 @@ export function registerChatTreeIpcModule(
       return [parseValidFolderId(args[0])];
     },
     handler: ({ services }, _event, id) => services.chatTree.deleteFolder(id),
+  });
+
+  registerInvokeHandler<[string], ChatInfo>(context, registeredChannels, {
+    channel: IPC_CHANNELS.chats.get,
+    parseArgs: (args) => {
+      expectArgCount(args, 1);
+      return [parseValidChatId(args[0])];
+    },
+    handler: ({ services }, _event, id) => services.chatTree.getChat(id),
   });
 
   registerInvokeHandler<[string, string, string | null], ChatInfo>(context, registeredChannels, {

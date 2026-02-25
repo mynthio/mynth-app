@@ -7,11 +7,17 @@ import { Switch } from "@/components/ui/switch";
 
 interface ProviderModelsTableProps {
   models: ProviderModelInfo[];
+  areSwitchesDisabled?: boolean;
+  onModelEnabledChange?: (modelId: string, isEnabled: boolean) => void;
 }
 
 const MODEL_ROW_HEIGHT_PX = 44;
 
-export function ProviderModelsTable({ models }: ProviderModelsTableProps) {
+export function ProviderModelsTable({
+  models,
+  areSwitchesDisabled = false,
+  onModelEnabledChange,
+}: ProviderModelsTableProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
     count: models.length,
@@ -48,7 +54,12 @@ export function ProviderModelsTable({ models }: ProviderModelsTableProps) {
             >
               <div className="flex items-center justify-start gap-4">
                 <Label>
-                  <Switch />
+                  <Switch
+                    checked={model.isEnabled}
+                    disabled={areSwitchesDisabled}
+                    aria-label={`Toggle model ${model.displayName?.trim() || model.providerModelId}`}
+                    onCheckedChange={(isChecked) => onModelEnabledChange?.(model.id, isChecked)}
+                  />
                 </Label>
                 <span className="block truncate">
                   {model.displayName?.trim() || model.providerModelId}

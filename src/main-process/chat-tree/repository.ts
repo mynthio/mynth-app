@@ -102,7 +102,7 @@ function requireFolderById(id: string): FolderRow {
   return folder;
 }
 
-function getChatById(id: string): ChatRow | null {
+export function getChatById(id: string): ChatRow | null {
   const row = getAppDatabase().select().from(chats).where(eq(chats.id, id)).get();
   return row ? toChatRow(row) : null;
 }
@@ -419,6 +419,22 @@ export function listWorkspaceFolderIds(workspaceId: string, ids: readonly string
     .map((row) => row.id);
 }
 
+export function listWorkspaceChatIds(workspaceId: string, ids: readonly string[]): string[] {
+  requireWorkspaceExists(workspaceId);
+
+  if (ids.length === 0) {
+    return [];
+  }
+
+  return getAppDatabase()
+    .select({ id: chats.id })
+    .from(chats)
+    .where(and(eq(chats.workspaceId, workspaceId), inArray(chats.id, [...ids])))
+    .orderBy(asc(chats.id))
+    .all()
+    .map((row) => row.id);
+}
+
 export function createFolder(input: {
   workspaceId: string;
   name: string;
@@ -619,7 +635,8 @@ export function moveChat(id: string, folderId: string | null): ChatRow {
   });
 }
 
-export function deleteChat(id: string): void {
-  requireChatById(id);
+export function deleteChat(id: string): ChatRow {
+  const chat = requireChatById(id);
   getAppDatabase().delete(chats).where(eq(chats.id, id)).run();
+  return chat;
 }
