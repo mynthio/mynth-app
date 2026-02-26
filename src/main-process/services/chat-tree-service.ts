@@ -20,6 +20,10 @@ import {
   type FolderRow,
 } from "../chat-tree/repository";
 import { parseChatId } from "../../shared/chat/chat-id";
+import {
+  normalizeChatMessageMetadata,
+  type MynthUiMessage,
+} from "../../shared/chat/message-metadata";
 import { parseFolderId } from "../../shared/folder/folder-id";
 import type {
   ChatInfo,
@@ -32,6 +36,7 @@ import type {
   ChatTreeUiState,
   FolderInfo,
 } from "../../shared/ipc";
+import { listMessagesByChatId, type MessageRow } from "../messages/repository";
 import { getWorkspaceSettings, updateWorkspaceSettings } from "../workspaces/repository";
 
 const CHAT_TREE_EXPANDED_FOLDER_IDS_SETTINGS_KEY = "chatTreeExpandedFolderIds";
@@ -41,6 +46,7 @@ const MAX_PERSISTED_TABS = 20;
 
 export interface ChatTreeService {
   getChat(id: string): ChatInfo;
+  listChatMessages(chatId: string, branchId?: string | null): MynthUiMessage[];
   getChatTree(workspaceId: string): ChatTreeSnapshot;
   getChatTreeChildren(workspaceId: string, parentFolderId: string | null): ChatTreeChildrenSlice;
   getChatTreeUiState(workspaceId: string): ChatTreeUiState;
@@ -76,6 +82,15 @@ function toChatInfo(chat: ChatRow): ChatInfo {
     title: chat.title,
     createdAt: chat.createdAt,
     updatedAt: chat.updatedAt,
+  };
+}
+
+function toChatMessage(message: MessageRow, previousMessageId: string | null): MynthUiMessage {
+  return {
+    id: message.id,
+    role: message.role,
+    parts: message.parts as MynthUiMessage["parts"],
+    metadata: normalizeChatMessageMetadata(message.metadata, message.parentId ?? previousMessageId),
   };
 }
 
@@ -246,6 +261,18 @@ export function createChatTreeService(): ChatTreeService {
       }
 
       return toChatInfo(chat);
+    },
+
+    listChatMessages(chatId: string, branchId?: string | null): MynthUiMessage[] {
+      const chat = getChatById(chatId);
+      if (!chat) {
+        throw new Error(`Chat "${chatId}" does not exist.`);
+      }
+
+      const rows = listMessagesByChatId(chat.id, branchId);
+      return rows.map((row, index) =>
+        toChatMessage(row, index > 0 ? (rows[index - 1]?.id ?? null) : null),
+      );
     },
 
     getChatTree(workspaceId: string): ChatTreeSnapshot {

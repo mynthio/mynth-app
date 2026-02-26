@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import { RouterProvider, createHashHistory, createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 import { QueryProvider } from "./providers/query-provider";
+import { SystemEventListener } from "./components/system-event-listener";
+import { ChatRegistry } from "./components/chat-registry";
 import "./index.css";
 
 const hashHistory = createHashHistory();
@@ -31,6 +33,8 @@ rootElement.classList.add("theme");
 createRoot(rootElement).render(
   <StrictMode>
     <QueryProvider>
+      <SystemEventListener />
+      <ChatRegistry />
       <RouterProvider router={router} />
     </QueryProvider>
   </StrictMode>,

@@ -29,10 +29,10 @@ function TreeItem({
 }) {
   const defaultProps = {
     className: cn(
-      "group/tree-item relative flex h-8 items-center gap-1.5 rounded-md px-2 text-sm outline-hidden select-none",
+      "group/tree-item relative flex h-8 items-center gap-1.5 rounded-md px-2 text-sm outline-hidden select-none transition-colors duration-150",
       "data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground",
       "data-[focused=true]:ring-2 data-[focused=true]:ring-ring",
-      "data-[drop-target=true]:bg-accent/50",
+      "data-[drop-target=true]:bg-muted/50 data-[drop-target=true]:ring-1 data-[drop-target=true]:ring-muted-foreground/30 data-[drop-target=true]:ring-dashed",
       "hover:bg-accent/50",
       className,
     ),

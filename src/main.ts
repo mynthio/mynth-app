@@ -1,9 +1,16 @@
-import { app, BrowserWindow, dialog } from "electron";
+import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import started from "electron-squirrel-startup";
 import { bootstrapBackend } from "./main-process/app/bootstrap-backend";
 import { createMainWindow } from "./main-process/app/create-main-window";
 import { closeAppDatabase } from "./main-process/db/database";
 import { registerIpcHandlers } from "./main-process/ipc";
+import { createAiServer } from "./main-process/server";
+import {
+  SYSTEM_EVENT_CHANNEL,
+  SYSTEM_STATE_CHANNEL,
+  type SystemEvent,
+  type SystemState,
+} from "./shared/events";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -17,6 +24,33 @@ if (!app.requestSingleInstanceLock()) {
 } else {
   let mainWindow: BrowserWindow | null = null;
   let backend: ReturnType<typeof bootstrapBackend> | null = null;
+  let aiServer: { port: number; close: () => void } | null = null;
+  let aiServerState: SystemState["aiServer"] = { status: "idle", port: null, error: null };
+
+  function broadcastSystemEvent(event: SystemEvent) {
+    for (const window of BrowserWindow.getAllWindows()) {
+      window.webContents.send(SYSTEM_EVENT_CHANNEL, event);
+    }
+  }
+
+  function getSystemState(): SystemState {
+    return { aiServer: aiServerState };
+  }
+
+  async function startAiServer() {
+    try {
+      aiServerState = { status: "starting", port: null, error: null };
+      broadcastSystemEvent({ type: "ai-server:starting" });
+      aiServer = await createAiServer();
+      aiServerState = { status: "ready", port: aiServer.port, error: null };
+      broadcastSystemEvent({ type: "ai-server:ready", port: aiServer.port });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("[ai-server] Failed to start:", message);
+      aiServerState = { status: "error", port: null, error: message };
+      broadcastSystemEvent({ type: "ai-server:error", error: message });
+    }
+  }
 
   function openMainWindow() {
     if (!backend) {
@@ -45,7 +79,9 @@ if (!app.requestSingleInstanceLock()) {
       try {
         backend = bootstrapBackend();
         registerIpcHandlers(backend.ipcContext);
+        ipcMain.handle(SYSTEM_STATE_CHANNEL, () => getSystemState());
         openMainWindow();
+        void startAiServer();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         dialog.showErrorBox("Startup failed", `The app could not initialize.\n\n${message}`);
@@ -72,6 +108,7 @@ if (!app.requestSingleInstanceLock()) {
   // Close the SQLite connection before the process exits so WAL is
   // checkpointed and no data is left in a partial write state.
   app.on("before-quit", () => {
+    aiServer?.close();
     closeAppDatabase();
   });
 }

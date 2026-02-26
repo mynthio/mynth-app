@@ -4,6 +4,9 @@ import { defineConfig } from "vite";
 const external = [
   "better-sqlite3",
   "electron",
+  "@hono/node-server",
+  "ai",
+  "@openrouter/ai-sdk-provider",
   ...builtinModules,
   ...builtinModules.map((moduleName) => `node:${moduleName}`),
 ];

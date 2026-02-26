@@ -59,6 +59,10 @@ export function useUpdateProviderModel() {
         queryKey: queryKeys.providers.models(variables.providerId),
         exact: true,
       });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.models.enabled(),
+        exact: true,
+      });
     },
   });
 }
@@ -91,6 +95,10 @@ export function useSetProviderModelsEnabled() {
     onSettled: (_data, _error, variables) => {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.providers.models(variables.providerId),
+        exact: true,
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.models.enabled(),
         exact: true,
       });
     },

@@ -1,9 +1,14 @@
 import "../lib/electron-api";
+import type { MynthUiMessage } from "../../shared/chat/message-metadata";
 import { parseWorkspaceId } from "../../shared/workspace/workspace-id";
 
 export const chatsApi = {
   get(id: string) {
     return window.electronAPI.getChat(id);
+  },
+
+  listMessages(chatId: string, branchId?: string | null): Promise<MynthUiMessage[]> {
+    return window.electronAPI.listChatMessages(chatId, branchId);
   },
 
   create(workspaceId: string, title: string, folderId?: string | null) {

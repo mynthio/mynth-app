@@ -1,5 +1,6 @@
 import {
   IPC_CHANNELS,
+  type ProviderModelInfo,
   type SetProviderModelsEnabledResult,
   type UpdateModelInput,
   type UpdateModelResult,
@@ -70,6 +71,15 @@ export function registerModelsIpcModule(
   context: IpcHandlerContext,
   registeredChannels: Set<string>,
 ): void {
+  registerInvokeHandler<[], ProviderModelInfo[]>(context, registeredChannels, {
+    channel: IPC_CHANNELS.models.listEnabled,
+    parseArgs: (args) => {
+      expectArgCount(args, 0);
+      return [];
+    },
+    handler: ({ services }) => services.models.listEnabledModels(),
+  });
+
   registerInvokeHandler<[string, UpdateModelInput], UpdateModelResult>(
     context,
     registeredChannels,

@@ -28,4 +28,8 @@ export const queryKeys = {
     models: (providerId: string) => [...queryKeys.providers.all, "models", providerId] as const,
     detail: (id: string) => [...queryKeys.providers.all, "detail", id] as const,
   },
+  models: {
+    all: ["models"] as const,
+    enabled: () => [...queryKeys.models.all, "enabled"] as const,
+  },
 } as const;

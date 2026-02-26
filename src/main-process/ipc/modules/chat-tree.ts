@@ -10,6 +10,7 @@ import {
   type FolderInfo,
 } from "../../../shared/ipc";
 import { parseChatId } from "../../../shared/chat/chat-id";
+import type { MynthUiMessage } from "../../../shared/chat/message-metadata";
 import { parseChatTitle } from "../../../shared/chat/chat-title";
 import { parseFolderId } from "../../../shared/folder/folder-id";
 import { parseFolderName } from "../../../shared/folder/folder-name";
@@ -59,6 +60,18 @@ function parseValidChatId(input: unknown): string {
   }
 
   return parsed.value;
+}
+
+function parseOptionalBranchId(input: unknown): string | null {
+  if (input === null || input === undefined) {
+    return null;
+  }
+
+  if (typeof input !== "string") {
+    throw AppError.badRequest("branchId must be a string.");
+  }
+
+  return input;
 }
 
 function parseValidFolderName(input: unknown): string {
@@ -239,6 +252,16 @@ export function registerChatTreeIpcModule(
       return [parseValidChatId(args[0])];
     },
     handler: ({ services }, _event, id) => services.chatTree.getChat(id),
+  });
+
+  registerInvokeHandler<[string, string | null], MynthUiMessage[]>(context, registeredChannels, {
+    channel: IPC_CHANNELS.chats.listMessages,
+    parseArgs: (args) => {
+      expectArgCount(args, 1, 2);
+      return [parseValidChatId(args[0]), parseOptionalBranchId(args[1])];
+    },
+    handler: ({ services }, _event, chatId, branchId) =>
+      services.chatTree.listChatMessages(chatId, branchId),
   });
 
   registerInvokeHandler<[string, string, string | null], ChatInfo>(context, registeredChannels, {

@@ -1,4 +1,5 @@
 import type { ProviderId } from "../providers/catalog";
+import type { MynthUiMessage } from "../chat/message-metadata";
 
 export const IPC_CHANNELS = {
   workspaces: {
@@ -25,6 +26,7 @@ export const IPC_CHANNELS = {
   },
   chats: {
     get: "chats:get",
+    listMessages: "chats:listMessages",
     create: "chats:create",
     updateTitle: "chats:updateTitle",
     move: "chats:move",
@@ -38,6 +40,7 @@ export const IPC_CHANNELS = {
     delete: "providers:delete",
   },
   models: {
+    listEnabled: "models:listEnabled",
     update: "models:update",
     setProviderEnabled: "models:setProviderEnabled",
   },
@@ -169,6 +172,8 @@ export interface SetProviderModelsEnabledResult {
 }
 
 export interface IpcApi {
+  onSystemEvent: (callback: (event: import("../events").SystemEvent) => void) => () => void;
+  getSystemState: () => Promise<import("../events").SystemState>;
   listWorkspaces: () => Promise<WorkspaceInfo[]>;
   getActiveWorkspace: () => Promise<WorkspaceInfo>;
   createWorkspace: (name: string) => Promise<WorkspaceInfo>;
@@ -187,6 +192,7 @@ export interface IpcApi {
   getChatTabsUiState: (workspaceId: string) => Promise<ChatTabsUiState>;
   setChatTabsUiState: (workspaceId: string, tabs: ChatTabStateItem[]) => Promise<ChatTabsUiState>;
   getChat: (id: string) => Promise<ChatInfo>;
+  listChatMessages: (chatId: string, branchId?: string | null) => Promise<MynthUiMessage[]>;
   createFolder: (
     workspaceId: string,
     name: string,
@@ -210,6 +216,7 @@ export interface IpcApi {
   ) => Promise<ProviderCredentialTestResult>;
   saveProvider: (input: SaveProviderInput) => Promise<SaveProviderResult>;
   deleteProvider: (providerId: string) => Promise<void>;
+  listEnabledModels: () => Promise<ProviderModelInfo[]>;
   updateModel: (modelId: string, input: UpdateModelInput) => Promise<UpdateModelResult>;
   setProviderModelsEnabled: (
     providerId: string,

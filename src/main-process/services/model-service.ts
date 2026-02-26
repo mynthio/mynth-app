@@ -4,16 +4,32 @@ import type {
   UpdateModelInput,
   UpdateModelResult,
 } from "../../shared/ipc";
-import { updateModel as updateModelRepo, updateModelsByProviderId } from "../models/repository";
+import {
+  listEnabledModels as listEnabledModelsRepo,
+  updateModel as updateModelRepo,
+  updateModelsByProviderId,
+} from "../models/repository";
 import { AppError } from "../ipc/core/errors";
 
 export interface ModelService {
+  listEnabledModels(): ProviderModelInfo[];
   updateModel(modelId: string, input: UpdateModelInput): UpdateModelResult;
   setProviderModelsEnabled(providerId: string, isEnabled: boolean): SetProviderModelsEnabledResult;
 }
 
 export function createModelService(): ModelService {
   return {
+    listEnabledModels() {
+      return listEnabledModelsRepo().map((row) => ({
+        id: row.id,
+        providerId: row.providerId,
+        providerModelId: row.providerModelId,
+        displayName: row.displayName,
+        isEnabled: row.isEnabled,
+        status: row.lifecycleStatus as ProviderModelInfo["status"],
+      }));
+    },
+
     updateModel(modelId, input) {
       const updated = updateModelRepo(modelId, input);
       if (!updated) {

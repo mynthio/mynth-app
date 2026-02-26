@@ -1,4 +1,4 @@
-import { asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 
 import { getAppDatabase } from "../db/database";
 import { models } from "../db/schema";
@@ -24,6 +24,19 @@ export interface SyncProviderModelsOptions {
 export interface UpdateModelsByProviderIdResult {
   matchedCount: number;
   updatedCount: number;
+}
+
+export function getModelById(id: string): ModelTableRow | undefined {
+  return getAppDatabase().select().from(models).where(eq(models.id, id)).get();
+}
+
+export function listEnabledModels(): ModelTableRow[] {
+  return getAppDatabase()
+    .select()
+    .from(models)
+    .where(and(eq(models.isEnabled, true), eq(models.lifecycleStatus, "active")))
+    .orderBy(asc(models.providerModelId))
+    .all();
 }
 
 export function listModelsByProviderId(providerId: string): ModelTableRow[] {

@@ -421,6 +421,7 @@ function ChatSidebarTreeInner({
                   level={depth}
                   {...item.getProps()}
                   data-selected={item.isSelected() || undefined}
+                  data-drop-target={item.isDragTarget() || undefined}
                   onClickCapture={() => {
                     openChatInSingleTab(data.chat.id);
                   }}
@@ -444,6 +445,7 @@ function ChatSidebarTreeInner({
                   level={depth}
                   {...item.getProps()}
                   data-selected={item.isSelected() || undefined}
+                  data-drop-target={item.isDragTarget() || undefined}
                   onContextMenu={handleContextMenu}
                 >
                   <TreeItemIcon
