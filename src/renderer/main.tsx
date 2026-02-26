@@ -6,6 +6,7 @@ import { QueryProvider } from "./providers/query-provider";
 import { SystemEventListener } from "./components/system-event-listener";
 import { ChatRegistry } from "./components/chat-registry";
 import "./index.css";
+import "streamdown/styles.css";
 
 const hashHistory = createHashHistory();
 

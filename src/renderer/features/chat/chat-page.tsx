@@ -1,10 +1,10 @@
 import * as React from "react";
 import { useState } from "react";
+import { Streamdown } from "streamdown";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
-import { Add01Icon, Setting07Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrowUp01Icon, Setting07Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Button } from "@/components/ui/button";
@@ -16,21 +16,30 @@ import {
   MenuSeparator,
   MenuTrigger,
 } from "@/components/ui/menu";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "@/components/ui/tooltip";
+import { InputGroup, InputGroupAddon, InputGroupTextarea } from "@/components/ui/input-group";
 import { WindowChrome } from "@/components/app/window-chrome";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ChatSidebarTree } from "@/features/chat/chat-sidebar-tree";
+import { getProviderIconById } from "@/lib/provider-icons";
 import { useSetActiveWorkspace } from "@/mutations/workspaces";
 import { chatsApi } from "@/api/chats";
 import { getChatQueryOptions } from "@/queries/chats";
 import { getChatTabsUiStateQueryOptions } from "@/queries/chat-tree";
 import { listEnabledModelsQueryOptions } from "@/queries/models";
+import { listProvidersQueryOptions } from "@/queries/providers";
 import { activeWorkspaceQueryOptions, listWorkspacesQueryOptions } from "@/queries/workspaces";
 import { useSystemStore, selectAiServerPort, selectAiServerReady } from "@/stores/system-store";
-import {
-  chatMessageMetadataSchema,
-  type MynthUiMessage,
-} from "../../../shared/chat/message-metadata";
+import { useChatStore } from "@/stores/chat-store";
+import type { MynthUiMessage } from "../../../shared/chat/message-metadata";
 import type { ChatTabStateItem } from "../../../shared/ipc";
+
+type ChatModelContextValue = {
+  modelId: string | null;
+  setModelId: React.Dispatch<React.SetStateAction<string | null>>;
+};
+
+const ChatModelContext = React.createContext<ChatModelContextValue | null>(null);
 
 export function ChatPage() {
   const { data: workspaces = [] } = useQuery(listWorkspacesQueryOptions);
@@ -228,9 +237,14 @@ function ActiveChatView({ chatId }: { chatId: string }) {
   const isReady = useSystemStore(selectAiServerReady);
 
   const { data: enabledModels = [] } = useQuery(listEnabledModelsQueryOptions);
-  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
-
-  const effectiveModelId = selectedModelId ?? enabledModels[0]?.id ?? null;
+  const [modelId, setModelId] = useState<string | null>(null);
+  const chatModelContextValue = React.useMemo<ChatModelContextValue>(
+    () => ({
+      modelId: modelId ?? enabledModels[0]?.id ?? null,
+      setModelId,
+    }),
+    [enabledModels, modelId],
+  );
   const apiUrl = port ? `http://127.0.0.1:${port}/api/chat` : "";
 
   if (serverStatus === "starting" || serverStatus === "idle") {
@@ -250,81 +264,73 @@ function ActiveChatView({ chatId }: { chatId: string }) {
   }
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-4xl flex-col px-6 py-6">
-      <div className="mb-3 flex items-center gap-2">
-        <select
-          value={effectiveModelId ?? ""}
-          onChange={(e) => setSelectedModelId(e.target.value || null)}
-          className="rounded-md border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          disabled={enabledModels.length === 0}
-        >
-          {enabledModels.length === 0 ? (
-            <option value="">No models enabled</option>
-          ) : (
-            enabledModels.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.displayName ?? m.providerModelId}
-              </option>
-            ))
-          )}
-        </select>
+    <ChatModelContext.Provider value={chatModelContextValue}>
+      <div className="mx-auto flex h-full w-full max-w-4xl flex-col px-6 py-6">
+        {isReady && chatModelContextValue.modelId ? (
+          <ActiveChatContent
+            key={chatId}
+            chatId={chatId}
+            apiUrl={apiUrl}
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            {enabledModels.length === 0 ? "Enable a model in Settings to start chatting." : ""}
+          </p>
+        )}
       </div>
-
-      {isReady && effectiveModelId ? (
-        <ActiveChatContent
-          key={`${chatId}:${effectiveModelId}`}
-          chatId={chatId}
-          apiUrl={apiUrl}
-          modelId={effectiveModelId}
-        />
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          {enabledModels.length === 0 ? "Enable a model in Settings to start chatting." : ""}
-        </p>
-      )}
-    </div>
+    </ChatModelContext.Provider>
   );
 }
 
-function ActiveChatContent({
-  chatId,
-  apiUrl,
-  modelId,
-}: {
-  chatId: string;
-  apiUrl: string;
-  modelId: string;
-}) {
+function ActiveChatContent({ chatId, apiUrl }: { chatId: string; apiUrl: string }) {
   const [input, setInput] = useState("");
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const { modelId } = useChatModelContext();
 
-  const transport = React.useMemo(
-    () =>
-      new DefaultChatTransport<MynthUiMessage>({
-        api: apiUrl,
-        body: { modelId, chatId },
-        prepareSendMessagesRequest: ({ body, trigger, messages, messageId }) => ({
-          body: {
-            ...body,
-            messages,
-            chatId,
-            modelId,
-            trigger,
-            messageId,
-          },
-        }),
-      }),
-    [apiUrl, chatId, modelId],
+  if (!modelId) {
+    throw new Error("ActiveChatContent requires a selected model");
+  }
+
+  const getOrCreateChat = useChatStore((s) => s.getOrCreateChat);
+
+  const chat = React.useMemo(
+    () => getOrCreateChat(chatId, apiUrl),
+    // apiUrl is stable once the server is ready (determined at mount time).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [chatId],
   );
 
-  const { messages, sendMessage, setMessages, status, error } = useChat<MynthUiMessage>({
-    id: chatId,
-    transport,
-    messageMetadataSchema: chatMessageMetadataSchema,
-  });
+  const {
+    messages,
+    sendMessage: rawSendMessage,
+    regenerate: rawRegenerate,
+    setMessages,
+    status,
+    error,
+  } = useChat<MynthUiMessage>({ chat });
+
+  // Wrap send/regenerate to inject modelId (and any future per-request params)
+  // as additional body, keeping the transport stable and free of React state.
+  const sendMessage = React.useCallback(
+    (
+      message: Parameters<typeof rawSendMessage>[0],
+      options?: Parameters<typeof rawSendMessage>[1],
+    ) => rawSendMessage(message, { ...options, body: { ...options?.body, modelId } }),
+    [rawSendMessage, modelId],
+  );
+
+  const regenerate = React.useCallback(
+    (options?: Parameters<typeof rawRegenerate>[0]) =>
+      rawRegenerate({ ...options, body: { ...options?.body, modelId } }),
+    [rawRegenerate, modelId],
+  );
 
   React.useEffect(() => {
     let isDisposed = false;
+
+    // If the Chat already has messages (e.g. returning to a tab that was
+    // already loaded), skip re-loading so we don't lose streaming state.
+    if (chat.messages.length > 0) return;
 
     setHistoryError(null);
 
@@ -352,7 +358,7 @@ function ActiveChatContent({
     return () => {
       isDisposed = true;
     };
-  }, [chatId, setMessages]);
+  }, [chatId, chat, setMessages]);
 
   return (
     <>
@@ -374,9 +380,15 @@ function ActiveChatContent({
               >
                 {message.parts.map((part, i) =>
                   part.type === "text" ? (
-                    <p key={i} className="whitespace-pre-wrap">
-                      {part.text}
-                    </p>
+                    message.role === "user" ? (
+                      <p key={i} className="whitespace-pre-wrap">
+                        {part.text}
+                      </p>
+                    ) : (
+                      <Streamdown key={i} animated>
+                        {part.text}
+                      </Streamdown>
+                    )
                   ) : null,
                 )}
               </div>
@@ -400,36 +412,123 @@ function ActiveChatContent({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (input.trim()) {
-            void sendMessage({
-              text: input,
-              metadata: {
-                parentId: messages.at(-1)?.id ?? null,
-              },
-            });
-            setInput("");
+          if (!modelId || !input.trim()) {
+            return;
           }
+
+          void sendMessage({
+            text: input,
+            metadata: {
+              parentId: messages.at(-1)?.id ?? null,
+            },
+          });
+          setInput("");
         }}
-        className="mt-4 flex gap-2"
+        className="mt-4"
       >
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Type a message…"
-          className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          disabled={status === "streaming" || status === "submitted"}
-        />
-        <Button
-          type="submit"
-          size="sm"
-          disabled={!input.trim() || status === "streaming" || status === "submitted"}
-        >
-          Send
-        </Button>
+        <InputGroup>
+          <InputGroupTextarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask, Search or Chat…"
+            disabled={status === "streaming" || status === "submitted"}
+            rows={1}
+          />
+          <InputGroupAddon align="block-end">
+            <ModelSelector />
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="submit"
+                    aria-label="Send"
+                    className="ml-auto rounded-full"
+                    size="icon-sm"
+                    variant="default"
+                    disabled={
+                      !modelId || !input.trim() || status === "streaming" || status === "submitted"
+                    }
+                  >
+                    <HugeiconsIcon icon={ArrowUp01Icon} />
+                  </Button>
+                }
+              />
+              <TooltipPopup>Send</TooltipPopup>
+            </Tooltip>
+          </InputGroupAddon>
+        </InputGroup>
       </form>
     </>
   );
+}
+
+function ModelSelector() {
+  const { data: enabledModels = [] } = useQuery(listEnabledModelsQueryOptions);
+  const { data: providers = [] } = useQuery(listProvidersQueryOptions);
+  const { modelId, setModelId } = useChatModelContext();
+  const selectedModel = React.useMemo(
+    () => enabledModels.find((candidate) => candidate.id === modelId) ?? null,
+    [enabledModels, modelId],
+  );
+  const selectedProvider = React.useMemo(
+    () =>
+      selectedModel
+        ? (providers.find((provider) => provider.id === selectedModel.providerId) ?? null)
+        : null,
+    [providers, selectedModel],
+  );
+  const SelectedProviderIcon = selectedProvider
+    ? getProviderIconById(selectedProvider.catalogId)
+    : null;
+
+  return (
+    <Menu>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <MenuTrigger
+              render={<Button aria-label="Select model" className="rounded-full" variant="ghost" />}
+            />
+          }
+        >
+          <span className="inline-flex items-center gap-2">
+            {SelectedProviderIcon ? <SelectedProviderIcon className="size-4" /> : null}
+            <span>
+              {selectedModel?.displayName ?? selectedModel?.providerModelId ?? "Select model"}
+            </span>
+          </span>
+        </TooltipTrigger>
+        <TooltipPopup>Select model</TooltipPopup>
+      </Tooltip>
+      <MenuPopup align="start">
+        <MenuRadioGroup value={modelId ?? ""} onValueChange={(value) => setModelId(value || null)}>
+          {enabledModels.map((m) => {
+            const provider = providers.find((candidate) => candidate.id === m.providerId);
+            const ProviderIcon = provider ? getProviderIconById(provider.catalogId) : null;
+
+            return (
+              <MenuRadioItem key={m.id} value={m.id}>
+                <span className="inline-flex items-center gap-2">
+                  {ProviderIcon ? <ProviderIcon className="size-4" /> : null}
+                  <span>{m.displayName ?? m.providerModelId}</span>
+                </span>
+              </MenuRadioItem>
+            );
+          })}
+        </MenuRadioGroup>
+      </MenuPopup>
+    </Menu>
+  );
+}
+
+function useChatModelContext() {
+  const context = React.useContext(ChatModelContext);
+
+  if (!context) {
+    throw new Error("ChatModelContext is not available");
+  }
+
+  return context;
 }
 
 function resolveActiveTabChatId(

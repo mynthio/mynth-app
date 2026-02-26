@@ -1,21 +1,21 @@
 import { useChat } from "@ai-sdk/react";
 import type { Chat } from "@ai-sdk/react";
-import type { UIMessage } from "ai";
 import { useChatStore } from "../stores/chat-store";
+import type { MynthUiMessage } from "../../shared/chat/message-metadata";
 
 export function ChatRegistry() {
-  const chats = useChatStore((s) => s.chats);
+  const chatEntries = useChatStore((s) => s.chatEntries);
 
   return (
     <>
-      {Array.from(chats.entries()).map(([chatId, chat]) => (
-        <ChatSessionKeepAlive key={chatId} chat={chat} />
+      {Array.from(chatEntries.values()).map((chat) => (
+        <ChatSessionKeepAlive key={chat.id} chat={chat} />
       ))}
     </>
   );
 }
 
-function ChatSessionKeepAlive({ chat }: { chat: Chat<UIMessage> }) {
+function ChatSessionKeepAlive({ chat }: { chat: Chat<MynthUiMessage> }) {
   useChat({ chat });
   return null;
 }

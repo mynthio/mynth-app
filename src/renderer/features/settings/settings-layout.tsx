@@ -3,7 +3,6 @@ import { Link, Outlet, useMatchRoute } from "@tanstack/react-router";
 import {
   Add01Icon,
   ArrowLeft01Icon,
-  BotIcon,
   CircleIcon,
   PaintBrush02Icon,
   SlidersHorizontalIcon,
@@ -11,6 +10,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { WindowChrome } from "@/components/app/window-chrome";
 import { Button } from "@/components/ui/button";
+import { getProviderIconById } from "@/lib/provider-icons";
 import {
   Sidebar,
   SidebarContent,
@@ -140,28 +140,32 @@ export function SettingsLayout() {
               <SidebarGroupContent>
                 {hasProviders ? (
                   <SidebarMenu>
-                    {providers.map((provider) => (
-                      <SidebarMenuItem key={provider.id}>
-                        <SidebarMenuButton
-                          isActive={Boolean(
-                            matchRoute({
-                              to: "/settings/providers/$providerId",
-                              params: { providerId: provider.id },
-                              fuzzy: true,
-                            }),
-                          )}
-                          render={
-                            <Link
-                              to="/settings/providers/$providerId"
-                              params={{ providerId: provider.id }}
-                            />
-                          }
-                        >
-                          <HugeiconsIcon icon={BotIcon} />
-                          <span>{provider.displayName}</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
+                    {providers.map((provider) => {
+                      const ProviderIcon = getProviderIconById(provider.catalogId);
+
+                      return (
+                        <SidebarMenuItem key={provider.id}>
+                          <SidebarMenuButton
+                            isActive={Boolean(
+                              matchRoute({
+                                to: "/settings/providers/$providerId",
+                                params: { providerId: provider.id },
+                                fuzzy: true,
+                              }),
+                            )}
+                            render={
+                              <Link
+                                to="/settings/providers/$providerId"
+                                params={{ providerId: provider.id }}
+                              />
+                            }
+                          >
+                            <ProviderIcon />
+                            <span>{provider.displayName}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      );
+                    })}
                   </SidebarMenu>
                 ) : (
                   <p className="px-2 py-1 text-sidebar-foreground/70 text-xs">

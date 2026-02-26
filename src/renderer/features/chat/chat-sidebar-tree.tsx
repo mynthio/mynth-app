@@ -32,6 +32,7 @@ import {
   TreeItemRenameInput,
 } from "@/components/ui/tree";
 import { chatTreeApi } from "@/api/chat-tree";
+import { useChatStatus } from "@/stores/chat-store";
 import { cn } from "@/lib/utils";
 import {
   useSetChatTreeUiState,
@@ -396,9 +397,7 @@ function ChatSidebarTreeInner({
               return (
                 <TreeItem key={item.getKey()} level={depth} {...item.getProps()}>
                   {data.kind === "chat" ? (
-                    <TreeItemIcon className="text-muted-foreground">
-                      <HugeiconsIcon icon={Chat01Icon} />
-                    </TreeItemIcon>
+                    <ChatTreeItemIcon chatId={data.chat.id} />
                   ) : data.kind === "folder" ? (
                     <>
                       <TreeItemIcon className="text-muted-foreground opacity-50">
@@ -427,9 +426,7 @@ function ChatSidebarTreeInner({
                   }}
                   onContextMenu={handleContextMenu}
                 >
-                  <TreeItemIcon className="text-muted-foreground">
-                    <HugeiconsIcon icon={Chat01Icon} />
-                  </TreeItemIcon>
+                  <ChatTreeItemIcon chatId={data.chat.id} />
                   <TreeItemLabel>{data.chat.title}</TreeItemLabel>
                 </TreeItem>
               );
@@ -468,6 +465,23 @@ function ChatSidebarTreeInner({
       <DeleteChatDialog chatId={deleteChat} onSuccess={invalidateTree} />
       <DeleteFolderDialog folderId={deleteFolder} onSuccess={invalidateTree} />
     </>
+  );
+}
+
+function ChatTreeItemIcon({ chatId }: { chatId: string }) {
+  const status = useChatStatus(chatId);
+  const isActive = status === "streaming" || status === "submitted";
+
+  return (
+    <TreeItemIcon className="text-muted-foreground">
+      {isActive ? (
+        <span className="flex size-4 items-center justify-center">
+          <span className="size-2 animate-pulse rounded-full bg-primary" />
+        </span>
+      ) : (
+        <HugeiconsIcon icon={Chat01Icon} />
+      )}
+    </TreeItemIcon>
   );
 }
 
