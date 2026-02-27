@@ -1,3 +1,5 @@
+import type { ChatFormSubmitBehavior } from "../../shared/ipc";
+
 export type DeepPartial<T> = T extends object ? { [K in keyof T]?: DeepPartial<T[K]> } : T;
 
 export type Theme = "dark";
@@ -22,6 +24,12 @@ export interface AppConfig {
   chat: {
     message: {
       fontSize: number;
+    };
+    prompt: {
+      stickyPosition: boolean;
+    };
+    form: {
+      submitBehavior: ChatFormSubmitBehavior;
     };
   };
 }

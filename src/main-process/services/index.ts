@@ -1,20 +1,33 @@
 import { createChatTreeService, type ChatTreeService } from "./chat-tree-service";
 import { createModelService, type ModelService } from "./model-service";
 import { createProviderService, type ProviderService } from "./provider-service";
+import { createSettingsService, type SettingsService } from "./settings-service";
 import { createWorkspaceService, type WorkspaceService } from "./workspace-service";
+import type { ProviderModelSyncStatus } from "../../shared/events";
 
 export interface AppServices {
   workspaces: WorkspaceService;
+  settings: SettingsService;
   chatTree: ChatTreeService;
   models: ModelService;
   providers: ProviderService;
 }
 
-export function createAppServices(): AppServices {
+interface AppServicesOptions {
+  onProviderModelsSyncCompleted?: (payload: {
+    providerId: string;
+    status: ProviderModelSyncStatus;
+  }) => void;
+}
+
+export function createAppServices(options?: AppServicesOptions): AppServices {
   return {
     workspaces: createWorkspaceService(),
+    settings: createSettingsService(),
     chatTree: createChatTreeService(),
     models: createModelService(),
-    providers: createProviderService(),
+    providers: createProviderService({
+      onModelSyncCompleted: options?.onProviderModelsSyncCompleted,
+    }),
   };
 }

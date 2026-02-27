@@ -5,6 +5,10 @@ export const queryKeys = {
     active: () => [...queryKeys.workspaces.all, "active"] as const,
     detail: (id: string) => [...queryKeys.workspaces.all, "detail", id] as const,
   },
+  settings: {
+    all: ["settings"] as const,
+    globalChat: () => [...queryKeys.settings.all, "globalChat"] as const,
+  },
   chatTree: {
     all: ["chatTree"] as const,
     uiState: (workspaceId: string) => [...queryKeys.chatTree.all, "uiState", workspaceId] as const,

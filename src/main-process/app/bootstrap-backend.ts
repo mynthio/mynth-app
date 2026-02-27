@@ -3,6 +3,7 @@ import { DEFAULT_WORKSPACE_ID, bootstrapStorage, type StorageBootstrapResult } f
 import { type IpcHandlerContext } from "../ipc/core/context";
 import { createTrustedSenderRegistry, type TrustedSenderRegistry } from "../ipc/trusted-senders";
 import { createAppServices, type AppServices } from "../services";
+import type { ProviderModelSyncStatus } from "../../shared/events";
 
 export interface BackendBootstrapResult {
   services: AppServices;
@@ -11,7 +12,14 @@ export interface BackendBootstrapResult {
   storageBootstrap: StorageBootstrapResult;
 }
 
-export function bootstrapBackend(): BackendBootstrapResult {
+interface BackendBootstrapOptions {
+  onProviderModelsSyncCompleted?: (payload: {
+    providerId: string;
+    status: ProviderModelSyncStatus;
+  }) => void;
+}
+
+export function bootstrapBackend(options?: BackendBootstrapOptions): BackendBootstrapResult {
   const config = getConfig();
   console.log(`Config loaded from: ${getConfigPath()} - theme: ${config.app.theme}`);
 
@@ -23,7 +31,9 @@ export function bootstrapBackend(): BackendBootstrapResult {
     `Storage bootstrap complete. App DB: ${storageBootstrap.dbPath}. Workspace assets root: ${storageBootstrap.workspacesRootDir}. Workspaces: ${storageBootstrap.workspaceIds.length}.${defaultWorkspaceLog}`,
   );
 
-  const services = createAppServices();
+  const services = createAppServices({
+    onProviderModelsSyncCompleted: options?.onProviderModelsSyncCompleted,
+  });
   const trustedSenders = createTrustedSenderRegistry();
   const ipcContext: IpcHandlerContext = {
     services,

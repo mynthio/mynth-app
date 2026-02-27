@@ -77,7 +77,15 @@ if (!app.requestSingleInstanceLock()) {
     .whenReady()
     .then(() => {
       try {
-        backend = bootstrapBackend();
+        backend = bootstrapBackend({
+          onProviderModelsSyncCompleted: ({ providerId, status }) => {
+            broadcastSystemEvent({
+              type: "providers:model-sync:completed",
+              providerId,
+              status,
+            });
+          },
+        });
         registerIpcHandlers(backend.ipcContext);
         ipcMain.handle(SYSTEM_STATE_CHANNEL, () => getSystemState());
         openMainWindow();

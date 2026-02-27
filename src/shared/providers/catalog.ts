@@ -1,4 +1,9 @@
-export type ProviderId = "openrouter";
+export type ProviderId = "openrouter" | "ollama";
+
+export interface ProviderHostPortConfigValue {
+  host: string;
+  port: number;
+}
 
 export interface ProviderConfigSecretFieldDefinition {
   type: "secret";
@@ -8,7 +13,18 @@ export interface ProviderConfigSecretFieldDefinition {
   placeholder?: string;
 }
 
-export type ProviderConfigFieldDefinition = ProviderConfigSecretFieldDefinition;
+export interface ProviderConfigHostPortFieldDefinition {
+  type: "host+port";
+  required?: boolean;
+  label: string;
+  description?: string;
+  defaultHost?: string;
+  defaultPort?: number;
+}
+
+export type ProviderConfigFieldDefinition =
+  | ProviderConfigSecretFieldDefinition
+  | ProviderConfigHostPortFieldDefinition;
 
 export interface SupportedProviderDefinition {
   id: ProviderId;
@@ -33,6 +49,23 @@ export const SUPPORTED_PROVIDERS: readonly SupportedProviderDefinition[] = [
         label: "API Key",
         description: "OpenRouter API Key from dashboard",
         placeholder: "Enter your OpenRouter API key",
+      },
+    },
+  },
+  {
+    id: "ollama",
+    name: "Ollama",
+    description: "Use a local or remote Ollama server for model inference.",
+    isAvailable: true,
+    supportsCredentialTest: true,
+    configFields: {
+      endpoint: {
+        type: "host+port",
+        required: true,
+        label: "Host and Port",
+        description: "Connection details for your Ollama API server.",
+        defaultHost: "127.0.0.1",
+        defaultPort: 11434,
       },
     },
   },

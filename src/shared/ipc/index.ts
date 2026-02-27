@@ -9,6 +9,10 @@ export const IPC_CHANNELS = {
     setActive: "workspaces:setActive",
     update: "workspaces:update",
   },
+  settings: {
+    getGlobalChat: "settings:getGlobalChat",
+    updateGlobalChat: "settings:updateGlobalChat",
+  },
   chatTree: {
     get: "chatTree:get",
     getChildren: "chatTree:getChildren",
@@ -55,6 +59,18 @@ export interface WorkspaceInfo {
 export interface WorkspaceUpdateInput {
   name?: string;
   color?: string | null;
+}
+
+export type ChatFormSubmitBehavior = "enter" | "mod-enter";
+
+export interface GlobalChatSettings {
+  promptStickyPosition: boolean;
+  formSubmitBehavior: ChatFormSubmitBehavior;
+}
+
+export interface GlobalChatSettingsUpdateInput {
+  promptStickyPosition?: boolean;
+  formSubmitBehavior?: ChatFormSubmitBehavior;
 }
 
 export interface FolderInfo {
@@ -179,6 +195,8 @@ export interface IpcApi {
   createWorkspace: (name: string) => Promise<WorkspaceInfo>;
   setActiveWorkspace: (id: string) => Promise<WorkspaceInfo>;
   updateWorkspace: (id: string, input: WorkspaceUpdateInput) => Promise<WorkspaceInfo>;
+  getGlobalChatSettings: () => Promise<GlobalChatSettings>;
+  updateGlobalChatSettings: (input: GlobalChatSettingsUpdateInput) => Promise<GlobalChatSettings>;
   getChatTree: (workspaceId: string) => Promise<ChatTreeSnapshot>;
   getChatTreeChildren: (
     workspaceId: string,

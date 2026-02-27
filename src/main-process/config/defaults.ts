@@ -9,5 +9,11 @@ export const DEFAULT_CONFIG: AppConfig = {
     message: {
       fontSize: 14,
     },
+    prompt: {
+      stickyPosition: true,
+    },
+    form: {
+      submitBehavior: "enter",
+    },
   },
 };

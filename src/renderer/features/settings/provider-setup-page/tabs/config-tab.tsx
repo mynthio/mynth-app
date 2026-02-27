@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 
 interface ProviderSetupConfigTabProps {
   provider: SupportedProviderDefinition;
-  configValues: Record<string, string>;
+  configValues: Record<string, unknown>;
   hasRequiredFields: boolean;
   canSubmitCredentialTest: boolean;
   isTestingCredentials: boolean;
@@ -17,7 +17,7 @@ interface ProviderSetupConfigTabProps {
   testResult: ProviderCredentialTestResult | null;
   testError: string | null;
   saveError: string | null;
-  onFieldChange: (key: string, value: string) => void;
+  onFieldChange: (key: string, value: unknown) => void;
   onTest: () => void;
   onSave: () => void;
 }
@@ -43,27 +43,75 @@ export function ProviderSetupConfigTab({
         <CardDescription>Configure the required fields for {provider.name}.</CardDescription>
       </CardHeader>
       <CardPanel className="space-y-4">
-        {Object.entries(provider.configFields).map(([key, field]) => (
-          <Field key={key} className="max-w-xl">
-            <FieldLabel htmlFor={`${provider.id}-${key}`}>{field.label}</FieldLabel>
-            <Input
-              id={`${provider.id}-${key}`}
-              type={field.type === "secret" ? "password" : "text"}
-              autoComplete="off"
-              placeholder={field.placeholder}
-              value={configValues[key] ?? ""}
-              onChange={(event) => {
-                onFieldChange(key, event.target.value);
-              }}
-            />
-            <FieldDescription>
-              {field.description}
-              {field.type === "secret"
-                ? " Your value is encrypted and stored securely on this device."
-                : null}
-            </FieldDescription>
-          </Field>
-        ))}
+        {Object.entries(provider.configFields).map(([key, field]) => {
+          switch (field.type) {
+            case "secret":
+              return (
+                <Field key={key} className="max-w-xl">
+                  <FieldLabel htmlFor={`${provider.id}-${key}`}>{field.label}</FieldLabel>
+                  <Input
+                    id={`${provider.id}-${key}`}
+                    type="password"
+                    autoComplete="off"
+                    placeholder={field.placeholder}
+                    value={typeof configValues[key] === "string" ? configValues[key] : ""}
+                    onChange={(event) => {
+                      onFieldChange(key, event.target.value);
+                    }}
+                  />
+                  <FieldDescription>
+                    {field.description}
+                    {" Your value is encrypted and stored securely on this device."}
+                  </FieldDescription>
+                </Field>
+              );
+            case "host+port": {
+              const hostPortValue = getHostPortInputValue(
+                configValues[key],
+                field.defaultHost,
+                field.defaultPort,
+              );
+
+              return (
+                <Field key={key} className="max-w-xl">
+                  <FieldLabel>{field.label}</FieldLabel>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Input
+                      id={`${provider.id}-${key}-host`}
+                      type="text"
+                      autoComplete="off"
+                      placeholder={field.defaultHost ?? "127.0.0.1"}
+                      value={hostPortValue.host}
+                      onChange={(event) => {
+                        onFieldChange(key, {
+                          ...hostPortValue,
+                          host: event.target.value,
+                        });
+                      }}
+                    />
+                    <Input
+                      id={`${provider.id}-${key}-port`}
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      max={65535}
+                      autoComplete="off"
+                      placeholder={String(field.defaultPort ?? 11434)}
+                      value={hostPortValue.port}
+                      onChange={(event) => {
+                        onFieldChange(key, {
+                          ...hostPortValue,
+                          port: event.target.value,
+                        });
+                      }}
+                    />
+                  </div>
+                  <FieldDescription>{field.description}</FieldDescription>
+                </Field>
+              );
+            }
+          }
+        })}
 
         {!provider.supportsCredentialTest ? (
           <Alert variant="info">
@@ -113,4 +161,31 @@ export function ProviderSetupConfigTab({
       </CardPanel>
     </Card>
   );
+}
+
+function getHostPortInputValue(
+  value: unknown,
+  defaultHost?: string,
+  defaultPort?: number,
+): { host: string; port: string } {
+  const fallback = {
+    host: defaultHost ?? "",
+    port: defaultPort ? String(defaultPort) : "",
+  };
+
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return fallback;
+  }
+
+  const hostRaw = (value as { host?: unknown }).host;
+  const host = typeof hostRaw === "string" ? hostRaw : fallback.host;
+  const rawPort = (value as { port?: unknown }).port;
+  const port =
+    typeof rawPort === "number"
+      ? String(rawPort)
+      : typeof rawPort === "string"
+        ? rawPort
+        : fallback.port;
+
+  return { host, port };
 }

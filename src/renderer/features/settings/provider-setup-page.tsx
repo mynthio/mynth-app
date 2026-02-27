@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ProviderCredentialTestResult } from "../../../shared/ipc";
 import {
   getSupportedProviderById,
+  type ProviderConfigFieldDefinition,
   type SupportedProviderDefinition,
 } from "../../../shared/providers/catalog";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -59,7 +60,7 @@ interface ProviderConfigSetupProps {
 function ProviderConfigSetup({ provider }: ProviderConfigSetupProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [configValues, setConfigValues] = useState<Record<string, string>>(() =>
+  const [configValues, setConfigValues] = useState<Record<string, unknown>>(() =>
     createInitialConfigValues(provider),
   );
   const [isTestingCredentials, setIsTestingCredentials] = useState(false);
@@ -69,14 +70,11 @@ function ProviderConfigSetup({ provider }: ProviderConfigSetupProps) {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const hasRequiredFields = Object.entries(provider.configFields).every(([key, field]) => {
-    if (!field.required) {
-      return true;
-    }
-    return (configValues[key] ?? "").trim().length > 0;
+    return hasRequiredConfigValue(field, configValues[key]);
   });
   const canSubmitCredentialTest = provider.supportsCredentialTest && hasRequiredFields;
 
-  function updateFieldValue(key: string, value: string): void {
+  function updateFieldValue(key: string, value: unknown): void {
     setConfigValues((current) => ({
       ...current,
       [key]: value,
@@ -177,14 +175,54 @@ function ProviderConfigSetup({ provider }: ProviderConfigSetupProps) {
   );
 }
 
-function createInitialConfigValues(provider: SupportedProviderDefinition): Record<string, string> {
-  const values: Record<string, string> = {};
+function createInitialConfigValues(provider: SupportedProviderDefinition): Record<string, unknown> {
+  const values: Record<string, unknown> = {};
 
-  for (const key of Object.keys(provider.configFields)) {
-    values[key] = "";
+  for (const [key, field] of Object.entries(provider.configFields)) {
+    switch (field.type) {
+      case "secret":
+        values[key] = "";
+        break;
+      case "host+port":
+        values[key] = {
+          host: field.defaultHost ?? "127.0.0.1",
+          port: String(field.defaultPort ?? 11434),
+        };
+        break;
+    }
   }
 
   return values;
+}
+
+function hasRequiredConfigValue(field: ProviderConfigFieldDefinition, value: unknown): boolean {
+  if (!field.required) {
+    return true;
+  }
+
+  switch (field.type) {
+    case "secret":
+      return typeof value === "string" && value.trim().length > 0;
+    case "host+port":
+      return isValidHostPortValue(value);
+  }
+}
+
+function isValidHostPortValue(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const host = (value as { host?: unknown }).host;
+  if (typeof host !== "string" || !host.trim()) {
+    return false;
+  }
+
+  const port = (value as { port?: unknown }).port;
+  const parsedPort =
+    typeof port === "number" ? port : typeof port === "string" && port.trim() ? Number(port) : NaN;
+
+  return Number.isInteger(parsedPort) && parsedPort >= 1 && parsedPort <= 65_535;
 }
 
 function getErrorMessage(error: unknown): string {

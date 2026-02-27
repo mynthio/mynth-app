@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { streamText, convertToModelMessages, generateId } from "ai";
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { parseChatId } from "../../../shared/chat/chat-id";
 import {
   normalizeChatMessageMetadata,
@@ -11,6 +10,7 @@ import { upsertMessage } from "../../messages/repository";
 import { getModelById } from "../../models/repository";
 import { getProviderById } from "../../providers/repository";
 import { resolveProviderRuntimeContext } from "../../providers/runtime-config";
+import { createLanguageModel } from "../providers/language-model-factory";
 
 export function createChatRoute() {
   const app = new Hono();
@@ -45,19 +45,18 @@ export function createChatRoute() {
       return c.json({ error: "Model not found or not enabled" }, 400);
     }
 
-    let apiKey: string;
+    let languageModel: ReturnType<typeof createLanguageModel>;
     try {
-      const { parsedConfig } = resolveProviderRuntimeContext(provider);
-      apiKey = parsedConfig.apiKey;
+      const providerRuntime = resolveProviderRuntimeContext(provider);
+      languageModel = createLanguageModel({
+        providerRow: provider,
+        providerRuntime,
+        providerModelId: model.providerModelId,
+      });
     } catch {
       return c.json({ error: "Model not found or not enabled" }, 400);
     }
 
-    if (!apiKey) {
-      return c.json({ error: "Model not found or not enabled" }, 400);
-    }
-
-    const openrouter = createOpenRouter({ apiKey });
     const lastRequestMessage = messages.at(-1);
     const assistantParentId = lastRequestMessage?.id ?? null;
 
@@ -75,7 +74,7 @@ export function createChatRoute() {
     }
 
     const result = streamText({
-      model: openrouter(model.providerModelId),
+      model: languageModel,
       messages: await convertToModelMessages(messages),
     });
 

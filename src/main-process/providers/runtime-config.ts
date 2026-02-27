@@ -1,11 +1,13 @@
 import {
   getSupportedProviderById,
+  type ProviderHostPortConfigValue,
   type SupportedProviderDefinition,
 } from "../../shared/providers/catalog";
 import { decryptString } from "../services/safe-storage";
 import type { ProviderTableRow } from "./repository";
 
-export type ParsedProviderRuntimeConfig = Record<string, string>;
+export type ParsedProviderRuntimeConfigValue = string | ProviderHostPortConfigValue;
+export type ParsedProviderRuntimeConfig = Record<string, ParsedProviderRuntimeConfigValue>;
 
 export interface ResolvedProviderRuntimeContext {
   providerDef: SupportedProviderDefinition;
@@ -14,6 +16,11 @@ export interface ResolvedProviderRuntimeContext {
 
 interface StoredSecretConfigValue {
   $secret: string;
+}
+
+interface StoredHostPortConfigValue {
+  host: unknown;
+  port: unknown;
 }
 
 export function resolveProviderRuntimeContext(
@@ -75,10 +82,41 @@ export function parseStoredProviderConfig(
         runtimeConfig[key] = decrypted;
         break;
       }
+      case "host+port": {
+        const rawValue = parsedConfig[key];
+
+        if (rawValue == null) {
+          if (field.required) {
+            throw new Error(`Missing required stored config field "${key}".`);
+          }
+          continue;
+        }
+
+        runtimeConfig[key] = parseStoredHostPortConfigValue(rawValue, key);
+        break;
+      }
     }
   }
 
   return runtimeConfig;
+}
+
+function parseStoredHostPortConfigValue(value: unknown, key: string): ProviderHostPortConfigValue {
+  if (!isStoredHostPortConfigValue(value)) {
+    throw new Error(`Stored host+port field "${key}" has invalid format.`);
+  }
+
+  const host = readTrimmedString(value.host);
+  if (!host) {
+    throw new Error(`Stored host+port field "${key}" is missing host.`);
+  }
+
+  const port = parsePortNumber(value.port);
+  if (port === null) {
+    throw new Error(`Stored host+port field "${key}" has invalid port.`);
+  }
+
+  return { host, port };
 }
 
 function parseStoredConfigObject(providerId: string, raw: string): Record<string, unknown> {
@@ -105,4 +143,32 @@ function isStoredSecretConfigValue(value: unknown): value is StoredSecretConfigV
 
   const secret = (value as { $secret?: unknown }).$secret;
   return typeof secret === "string" && secret.length > 0;
+}
+
+function isStoredHostPortConfigValue(value: unknown): value is StoredHostPortConfigValue {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function readTrimmedString(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function parsePortNumber(value: unknown): number | null {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" && value.trim()
+        ? Number(value)
+        : NaN;
+
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65_535) {
+    return null;
+  }
+
+  return parsed;
 }

@@ -9,8 +9,12 @@ import { Card, CardDescription, CardHeader, CardPanel, CardTitle } from "@/compo
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { useUpdateGlobalChatSettings } from "@/mutations/settings";
 import { useUpdateWorkspace } from "@/mutations/workspaces";
+import { globalChatSettingsQueryOptions } from "@/queries/settings";
 import { findWorkspaceById, listWorkspacesQueryOptions } from "@/queries/workspaces";
+import type { GlobalChatSettingsUpdateInput } from "../../../shared/ipc";
 import { parseWorkspaceName, workspaceNameSchema } from "../../../shared/workspace/workspace-name";
 
 const WORKSPACE_COLORS: { hex: string; label: string }[] = [
@@ -53,6 +57,7 @@ export function SettingsPage({ workspaceId }: SettingsPageProps) {
       ) : (
         <p className="text-muted-foreground">General settings and configuration.</p>
       )}
+      {!workspaceId ? <GlobalChatSettingsCard /> : null}
       {workspace ? (
         <>
           <WorkspaceNameForm
@@ -68,6 +73,75 @@ export function SettingsPage({ workspaceId }: SettingsPageProps) {
         </>
       ) : null}
     </div>
+  );
+}
+
+function GlobalChatSettingsCard() {
+  const { data: globalChatSettings, isPending: isLoadingGlobalChatSettings } = useQuery(
+    globalChatSettingsQueryOptions,
+  );
+  const updateGlobalChatSettings = useUpdateGlobalChatSettings();
+  const [updateError, setUpdateError] = useState<string | null>(null);
+
+  const isPending = isLoadingGlobalChatSettings || updateGlobalChatSettings.isPending;
+  const promptStickyPosition = globalChatSettings?.promptStickyPosition ?? true;
+  const submitOnModEnter = globalChatSettings?.formSubmitBehavior === "mod-enter";
+
+  function updateSettings(input: GlobalChatSettingsUpdateInput) {
+    setUpdateError(null);
+    updateGlobalChatSettings.mutate(input, {
+      onError: (error) => {
+        setUpdateError(
+          error instanceof Error ? error.message : "Failed to update global chat settings.",
+        );
+      },
+    });
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Chat</CardTitle>
+        <CardDescription>Global behavior for the chat composer.</CardDescription>
+      </CardHeader>
+      <CardPanel className="space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <p className="font-medium text-sm">Prompt Sticky Position</p>
+            <p className="text-muted-foreground text-xs">
+              Keep the prompt composer pinned to the bottom while scrolling.
+            </p>
+          </div>
+          <Switch
+            aria-label="Toggle prompt sticky position"
+            checked={promptStickyPosition}
+            disabled={isPending}
+            onCheckedChange={(checked) => {
+              updateSettings({ promptStickyPosition: checked });
+            }}
+          />
+        </div>
+
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <p className="font-medium text-sm">Submit with Cmd/Ctrl + Enter</p>
+            <p className="text-muted-foreground text-xs">
+              When off, Enter submits. Shift+Enter always inserts a newline.
+            </p>
+          </div>
+          <Switch
+            aria-label="Toggle submit with command or control and enter"
+            checked={submitOnModEnter}
+            disabled={isPending}
+            onCheckedChange={(checked) => {
+              updateSettings({ formSubmitBehavior: checked ? "mod-enter" : "enter" });
+            }}
+          />
+        </div>
+
+        {updateError ? <p className="text-destructive-foreground text-xs">{updateError}</p> : null}
+      </CardPanel>
+    </Card>
   );
 }
 

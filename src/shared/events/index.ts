@@ -6,7 +6,15 @@ export type AiServerEvent =
   | { type: "ai-server:ready"; port: number }
   | { type: "ai-server:error"; error: string };
 
-export type SystemEvent = AiServerEvent;
+export type ProviderModelSyncStatus = "succeeded" | "failed";
+
+export interface ProviderModelsSyncCompletedEvent {
+  type: "providers:model-sync:completed";
+  providerId: string;
+  status: ProviderModelSyncStatus;
+}
+
+export type SystemEvent = AiServerEvent | ProviderModelsSyncCompletedEvent;
 
 export interface AiServerStateSnapshot {
   status: "idle" | "starting" | "ready" | "error";

@@ -9,3 +9,11 @@ theme = "dark"
 [chat.message]
 # Base font size (px) for chat messages.
 fontSize = 14
+
+[chat.prompt]
+# Keep the prompt composer pinned to the bottom while scrolling.
+stickyPosition = true
+
+[chat.form]
+# Enter submits immediately. Use "mod-enter" to require Cmd/Ctrl + Enter.
+submitBehavior = "enter"

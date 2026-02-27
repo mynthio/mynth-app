@@ -30,6 +30,8 @@ export const useSystemStore = create<SystemStoreState>((set) => ({
       case "ai-server:error":
         set({ aiServer: { status: "error", port: null, error: event.error } });
         break;
+      case "providers:model-sync:completed":
+        break;
     }
   },
   syncState: (state) => {
