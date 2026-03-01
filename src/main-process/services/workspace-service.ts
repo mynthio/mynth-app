@@ -5,18 +5,28 @@ import {
   createWorkspace,
   deleteWorkspace,
   getWorkspaceInfoById as getWorkspaceInfoRowById,
+  getWorkspaceSettings,
   listWorkspaceInfoRows,
+  updateWorkspaceSettings as updateWorkspaceSettingsRecord,
   updateWorkspace as updateWorkspaceRecord,
   type WorkspaceRow,
 } from "../workspaces/repository";
-import type { WorkspaceInfo, WorkspaceUpdateInput } from "../../shared/ipc";
+import type {
+  ActiveWorkspaceInfo,
+  GetActiveWorkspaceOptions,
+  WorkspaceInfo,
+  WorkspaceSettings,
+  WorkspaceSettingsPatch,
+  WorkspaceUpdateInput,
+} from "../../shared/ipc";
 
 export interface WorkspaceService {
   listWorkspaces(): WorkspaceInfo[];
-  getActiveWorkspace(): WorkspaceInfo;
+  getActiveWorkspace(options?: GetActiveWorkspaceOptions): ActiveWorkspaceInfo;
   createWorkspace(name: string): WorkspaceInfo;
-  setActiveWorkspace(id: string): WorkspaceInfo;
+  setActiveWorkspace(id: string): ActiveWorkspaceInfo;
   updateWorkspace(id: string, input: WorkspaceUpdateInput): WorkspaceInfo;
+  updateWorkspaceSettings(id: string, settingsPatch: WorkspaceSettingsPatch): WorkspaceSettings;
 }
 
 function toWorkspaceInfo(workspace: Pick<WorkspaceRow, "id" | "name" | "color">): WorkspaceInfo {
@@ -51,7 +61,8 @@ export function createWorkspaceService(): WorkspaceService {
       return listWorkspaceInfoRows().map(toWorkspaceInfo);
     },
 
-    getActiveWorkspace(): WorkspaceInfo {
+    getActiveWorkspace(options): ActiveWorkspaceInfo {
+      const includeSettings = options?.includeSettings ?? false;
       const workspaceInfos = listWorkspaceInfoRows().map(toWorkspaceInfo);
       const configuredActiveWorkspaceId = getConfig().app.activeWorkspaceId;
 
@@ -59,7 +70,14 @@ export function createWorkspaceService(): WorkspaceService {
         (workspaceInfo) => workspaceInfo.id === configuredActiveWorkspaceId,
       );
       if (activeWorkspace) {
-        return activeWorkspace;
+        if (!includeSettings) {
+          return activeWorkspace;
+        }
+
+        return {
+          ...activeWorkspace,
+          settings: getWorkspaceSettings(activeWorkspace.id),
+        };
       }
 
       const fallbackWorkspace = workspaceInfos[0];
@@ -68,7 +86,14 @@ export function createWorkspaceService(): WorkspaceService {
       }
 
       updateConfig({ app: { activeWorkspaceId: fallbackWorkspace.id } });
-      return fallbackWorkspace;
+      if (!includeSettings) {
+        return fallbackWorkspace;
+      }
+
+      return {
+        ...fallbackWorkspace,
+        settings: getWorkspaceSettings(fallbackWorkspace.id),
+      };
     },
 
     createWorkspace(name: string): WorkspaceInfo {
@@ -101,13 +126,16 @@ export function createWorkspaceService(): WorkspaceService {
       return toWorkspaceInfo(createdWorkspace);
     },
 
-    setActiveWorkspace(id: string): WorkspaceInfo {
+    setActiveWorkspace(id: string): ActiveWorkspaceInfo {
       if (!getWorkspaceInfoRowById(id)) {
         throw new Error(`Workspace "${id}" does not exist.`);
       }
 
       updateConfig({ app: { activeWorkspaceId: id } });
-      return getWorkspaceInfoById(id);
+      return {
+        ...getWorkspaceInfoById(id),
+        settings: getWorkspaceSettings(id),
+      };
     },
 
     updateWorkspace(id: string, input: WorkspaceUpdateInput): WorkspaceInfo {
@@ -126,6 +154,11 @@ export function createWorkspaceService(): WorkspaceService {
           color: input.color,
         }),
       );
+    },
+
+    updateWorkspaceSettings(id: string, settingsPatch: WorkspaceSettingsPatch): WorkspaceSettings {
+      const updatedWorkspace = updateWorkspaceSettingsRecord(id, settingsPatch);
+      return updatedWorkspace.settings;
     },
   };
 }

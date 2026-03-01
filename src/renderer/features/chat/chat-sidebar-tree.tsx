@@ -1,5 +1,4 @@
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useTree } from "@headless-tree/react";
 import {
@@ -36,7 +35,6 @@ import { useChatStatus } from "@/stores/chat-store";
 import { cn } from "@/lib/utils";
 import {
   useSetChatTreeUiState,
-  useSetChatTabsUiState,
   useRenameChatTreeItem,
   useMoveFolder,
   useMoveChat,
@@ -45,8 +43,9 @@ import { useCreateChat } from "@/mutations/chats";
 import { useCreateFolder } from "@/mutations/folders";
 import { DeleteChatDialog } from "@/features/chat/delete-chat-dialog";
 import { DeleteFolderDialog } from "@/features/chat/delete-folder-dialog";
-import { getChatTreeUiStateQueryOptions } from "@/queries/chat-tree";
+
 import type { ChatInfo, ChatTreeFolderListItem } from "../../../shared/ipc";
+import { useWorkspaceStore } from "../workspace/store";
 
 type ChatTreeNodeData =
   | { kind: "folder"; folder: ChatTreeFolderListItem }
@@ -56,42 +55,21 @@ type ChatTreeNodeData =
 
 const ROOT_ITEM_ID = "root";
 
-interface ChatSidebarTreeProps {
-  workspaceId: string | null;
-}
-
-export function ChatSidebarTree({ workspaceId }: ChatSidebarTreeProps) {
-  const uiStateQuery = useQuery(getChatTreeUiStateQueryOptions(workspaceId));
+export function ChatSidebarTree() {
+  const workspaceState = useWorkspaceStore((s) => s.state);
+  const workspaceId = useWorkspaceStore((s) => s.workspace?.id);
+  const expandedTreeNodes = useWorkspaceStore((s) => s.expandedTreeNodes);
 
   return (
     <Sidebar collapsible="none">
       <SidebarContent className="gap-1 p-2">
         {!workspaceId ? (
           <p className="px-2 py-2 text-sidebar-foreground/70 text-xs">Select a workspace.</p>
-        ) : uiStateQuery.isPending ? (
-          <p className="px-2 py-2 text-sidebar-foreground/70 text-xs">Loading tree…</p>
-        ) : uiStateQuery.isError ? (
-          <div className="space-y-2 rounded-lg border border-sidebar-border p-2">
-            <p className="text-sidebar-foreground/70 text-xs">
-              {uiStateQuery.error instanceof Error
-                ? uiStateQuery.error.message
-                : "Failed to load tree state"}
-            </p>
-            <Button
-              size="xs"
-              variant="ghost"
-              onClick={() => {
-                void uiStateQuery.refetch();
-              }}
-            >
-              Retry
-            </Button>
-          </div>
-        ) : (
+        ) : workspaceState === "loading" ? null : (
           <ChatSidebarTreeInner
             key={workspaceId}
             workspaceId={workspaceId}
-            initialExpandedFolderIds={uiStateQuery.data.expandedFolderIds}
+            initialExpandedFolderIds={expandedTreeNodes}
           />
         )}
       </SidebarContent>
@@ -109,12 +87,14 @@ function ChatSidebarTreeInner({
   const navigate = useNavigate();
   const { deleteChat, deleteFolder } = useSearch({ from: "/chat/" });
   const setChatTreeUiState = useSetChatTreeUiState();
-  const setChatTabsUiState = useSetChatTabsUiState();
+
   const renameChatTreeItem = useRenameChatTreeItem();
   const moveFolderMutation = useMoveFolder();
   const moveChatMutation = useMoveChat();
   const createChatMutation = useCreateChat();
   const createFolderMutation = useCreateFolder();
+
+  const openTab = useWorkspaceStore((s) => s.openTab);
 
   const [expandedItems, setExpandedItems] = React.useState<string[]>(() =>
     initialExpandedFolderIds.map((id) => `folder:${id}`),
@@ -297,24 +277,11 @@ function ChatSidebarTreeInner({
     [createFolderMutation, invalidateTree, setRenamingItem, setRenamingValue, workspaceId],
   );
 
-  const openChatInSingleTab = React.useCallback(
-    (chatId: string) => {
-      setChatTabsUiState.mutate({
-        workspaceId,
-        tabs: [{ chatId }],
-      });
-
-      void navigate({
-        to: "/chat",
-        search: (prev) => ({
-          ...prev,
-          deleteChat: undefined,
-          deleteFolder: undefined,
-          tabChatId: chatId,
-        }),
-      });
+  const openChat = React.useCallback(
+    (chatId: string, mode: "auto" | "new-tab") => {
+      openTab(chatId, { mode });
     },
-    [navigate, setChatTabsUiState, workspaceId],
+    [openTab],
   );
 
   return (
@@ -374,6 +341,8 @@ function ChatSidebarTreeInner({
                 } else if (action === "add-chat" && itemKind === "folder") {
                   ensureFolderExpanded();
                   void createChat(item.getId().slice("folder:".length));
+                } else if (action === "open-in-new-tab" && data.kind === "chat") {
+                  openChat(data.chat.id, "new-tab");
                 } else if (action === "rename") {
                   item.startRenaming();
                 } else if (action === "delete") {
@@ -422,7 +391,7 @@ function ChatSidebarTreeInner({
                   data-selected={item.isSelected() || undefined}
                   data-drop-target={item.isDragTarget() || undefined}
                   onClickCapture={() => {
-                    openChatInSingleTab(data.chat.id);
+                    openChat(data.chat.id, "auto");
                   }}
                   onContextMenu={handleContextMenu}
                 >

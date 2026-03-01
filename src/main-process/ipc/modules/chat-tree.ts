@@ -2,12 +2,12 @@ import { BrowserWindow, Menu } from "electron";
 import {
   IPC_CHANNELS,
   type ChatInfo,
-  type ChatTabStateItem,
-  type ChatTabsUiState,
   type ChatTreeChildrenSlice,
   type ChatTreeSnapshot,
   type ChatTreeUiState,
   type FolderInfo,
+  type TabStateItem,
+  type TabsUiState,
 } from "../../../shared/ipc";
 import { parseChatId } from "../../../shared/chat/chat-id";
 import type { MynthUiMessage } from "../../../shared/chat/message-metadata";
@@ -62,6 +62,22 @@ function parseValidChatId(input: unknown): string {
   return parsed.value;
 }
 
+function parseValidTabId(input: unknown): string {
+  if (typeof input !== "string" || input.trim().length === 0) {
+    throw AppError.badRequest("tab.id must be a non-empty string.");
+  }
+
+  return input;
+}
+
+function parseValidTabType(input: unknown): "chat" {
+  if (input !== "chat") {
+    throw AppError.badRequest('tab.type must be "chat".');
+  }
+
+  return "chat";
+}
+
 function parseOptionalBranchId(input: unknown): string | null {
   if (input === null || input === undefined) {
     return null;
@@ -109,7 +125,7 @@ function parseStringArray(input: unknown, label: string): string[] {
   return values;
 }
 
-function parseChatTabsArray(input: unknown): ChatTabStateItem[] {
+function parseTabsArray(input: unknown): TabStateItem[] {
   if (!Array.isArray(input)) {
     throw AppError.badRequest("Tabs must be an array.");
   }
@@ -120,7 +136,7 @@ function parseChatTabsArray(input: unknown): ChatTabStateItem[] {
     }
 
     const record = entry as Record<string, unknown>;
-    const allowedKeys = new Set(["chatId"]);
+    const allowedKeys = new Set(["id", "type", "chatId"]);
     for (const key of Object.keys(record)) {
       if (!allowedKeys.has(key)) {
         throw AppError.badRequest(`Unsupported tab field "${key}".`);
@@ -128,6 +144,8 @@ function parseChatTabsArray(input: unknown): ChatTabStateItem[] {
     }
 
     return {
+      id: parseValidTabId(record.id),
+      type: parseValidTabType(record.type),
       chatId: parseValidChatId(record.chatId),
     };
   });
@@ -180,29 +198,24 @@ export function registerChatTreeIpcModule(
       services.chatTree.setChatTreeUiState(workspaceId, expandedFolderIds),
   });
 
-  registerInvokeHandler<[string], ChatTabsUiState>(context, registeredChannels, {
+  registerInvokeHandler<[string], TabsUiState>(context, registeredChannels, {
     channel: IPC_CHANNELS.chatTree.getTabsUiState,
     parseArgs: (args) => {
       expectArgCount(args, 1);
       return [parseValidWorkspaceId(args[0])];
     },
-    handler: ({ services }, _event, workspaceId) =>
-      services.chatTree.getChatTabsUiState(workspaceId),
+    handler: ({ services }, _event, workspaceId) => services.chatTree.getTabsUiState(workspaceId),
   });
 
-  registerInvokeHandler<[string, ChatTabStateItem[]], ChatTabsUiState>(
-    context,
-    registeredChannels,
-    {
-      channel: IPC_CHANNELS.chatTree.setTabsUiState,
-      parseArgs: (args) => {
-        expectArgCount(args, 2);
-        return [parseValidWorkspaceId(args[0]), parseChatTabsArray(args[1])];
-      },
-      handler: ({ services }, _event, workspaceId, tabs) =>
-        services.chatTree.setChatTabsUiState(workspaceId, tabs),
+  registerInvokeHandler<[string, TabStateItem[]], TabsUiState>(context, registeredChannels, {
+    channel: IPC_CHANNELS.chatTree.setTabsUiState,
+    parseArgs: (args) => {
+      expectArgCount(args, 2);
+      return [parseValidWorkspaceId(args[0]), parseTabsArray(args[1])];
     },
-  );
+    handler: ({ services }, _event, workspaceId, tabs) =>
+      services.chatTree.setTabsUiState(workspaceId, tabs),
+  });
 
   registerInvokeHandler<[string, string, string | null], FolderInfo>(context, registeredChannels, {
     channel: IPC_CHANNELS.folders.create,
@@ -261,7 +274,7 @@ export function registerChatTreeIpcModule(
       return [parseValidChatId(args[0]), parseOptionalBranchId(args[1])];
     },
     handler: ({ services }, _event, chatId, branchId) =>
-      services.chatTree.listChatMessages(chatId, branchId),
+      services.chatMessages.listChatMessages(chatId, branchId),
   });
 
   registerInvokeHandler<[string, string, string | null], ChatInfo>(context, registeredChannels, {
@@ -305,62 +318,75 @@ export function registerChatTreeIpcModule(
     handler: ({ services }, _event, id) => services.chatTree.deleteChat(id),
   });
 
-  registerInvokeHandler<[string, string], "add-folder" | "add-chat" | "rename" | "delete" | null>(
-    context,
-    registeredChannels,
-    {
-      channel: IPC_CHANNELS.chatTree.showContextMenu,
-      parseArgs: (args) => {
-        expectArgCount(args, 2);
-        if (typeof args[0] !== "string") throw AppError.badRequest("itemId must be a string.");
-        if (args[1] !== "folder" && args[1] !== "chat")
-          throw AppError.badRequest("itemKind must be 'folder' or 'chat'.");
-        return [args[0], args[1]];
-      },
-      handler: (_context, event, _itemId, itemKind) => {
-        return new Promise<"add-folder" | "add-chat" | "rename" | "delete" | null>((resolve) => {
-          let selected: "add-folder" | "add-chat" | "rename" | "delete" | null = null;
-
-          const menu = Menu.buildFromTemplate([
-            ...(itemKind === "folder"
-              ? ([
-                  {
-                    label: "Add Folder",
-                    click: () => {
-                      selected = "add-folder";
-                    },
-                  },
-                  {
-                    label: "Add Chat",
-                    click: () => {
-                      selected = "add-chat";
-                    },
-                  },
-                  { type: "separator" as const },
-                ] as const)
-              : []),
-            {
-              label: "Rename",
-              click: () => {
-                selected = "rename";
-              },
-            },
-            { type: "separator" },
-            {
-              label: "Delete",
-              click: () => {
-                selected = "delete";
-              },
-            },
-          ]);
-
-          const win = BrowserWindow.fromWebContents(event.sender) ?? undefined;
-          menu.popup({
-            window: win,
-            callback: () => resolve(selected),
-          });
-        });
-      },
+  registerInvokeHandler<
+    [string, string],
+    "add-folder" | "add-chat" | "open-in-new-tab" | "rename" | "delete" | null
+  >(context, registeredChannels, {
+    channel: IPC_CHANNELS.chatTree.showContextMenu,
+    parseArgs: (args) => {
+      expectArgCount(args, 2);
+      if (typeof args[0] !== "string") throw AppError.badRequest("itemId must be a string.");
+      if (args[1] !== "folder" && args[1] !== "chat")
+        throw AppError.badRequest("itemKind must be 'folder' or 'chat'.");
+      return [args[0], args[1]];
     },
-  );
+    handler: (_context, event, _itemId, itemKind) => {
+      return new Promise<
+        "add-folder" | "add-chat" | "open-in-new-tab" | "rename" | "delete" | null
+      >((resolve) => {
+        let selected: "add-folder" | "add-chat" | "open-in-new-tab" | "rename" | "delete" | null =
+          null;
+
+        const menu = Menu.buildFromTemplate([
+          ...(itemKind === "folder"
+            ? ([
+                {
+                  label: "Add Folder",
+                  click: () => {
+                    selected = "add-folder";
+                  },
+                },
+                {
+                  label: "Add Chat",
+                  click: () => {
+                    selected = "add-chat";
+                  },
+                },
+                { type: "separator" as const },
+              ] as const)
+            : []),
+          ...(itemKind === "chat"
+            ? ([
+                {
+                  label: "Open in New Tab",
+                  click: () => {
+                    selected = "open-in-new-tab";
+                  },
+                },
+                { type: "separator" as const },
+              ] as const)
+            : []),
+          {
+            label: "Rename",
+            click: () => {
+              selected = "rename";
+            },
+          },
+          { type: "separator" },
+          {
+            label: "Delete",
+            click: () => {
+              selected = "delete";
+            },
+          },
+        ]);
+
+        const win = BrowserWindow.fromWebContents(event.sender) ?? undefined;
+        menu.popup({
+          window: win,
+          callback: () => resolve(selected),
+        });
+      });
+    },
+  });
 }

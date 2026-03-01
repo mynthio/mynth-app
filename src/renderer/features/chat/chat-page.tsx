@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Streamdown } from "streamdown";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useSearch } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { ArrowUp01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -27,20 +27,19 @@ import { cn } from "@/lib/utils";
 import { listEnabledModelsQueryOptions } from "@/queries/models";
 import { listProvidersQueryOptions } from "@/queries/providers";
 import { globalChatSettingsQueryOptions } from "@/queries/settings";
-import { activeWorkspaceQueryOptions } from "@/queries/workspaces";
 import { useSystemStore, selectAiServerPort, selectAiServerReady } from "@/stores/system-store";
 import "streamdown/styles.css";
+import { useWorkspaceStore } from "../workspace/store";
 
 export function ChatPage() {
-  const { data: activeWorkspace } = useQuery(activeWorkspaceQueryOptions);
-  const { tabChatId } = useSearch({ from: "/chat/" });
+  const activeTab = useWorkspaceStore((s) => s.activeTab());
 
   return (
     <SidebarProvider className="h-full min-h-0">
-      <ChatSidebarTree workspaceId={activeWorkspace?.id ?? null} />
+      <ChatSidebarTree />
       <main className="min-h-0 flex-1 overflow-auto">
-        {tabChatId ? (
-          <ActiveChatView chatId={tabChatId} />
+        {activeTab?.chatId ? (
+          <ActiveChatView chatId={activeTab.chatId} />
         ) : (
           <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-6">
             <p className="text-muted-foreground">No chat selected. Open a chat from the sidebar.</p>

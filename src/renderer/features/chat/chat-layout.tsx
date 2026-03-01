@@ -1,47 +1,46 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, Outlet, useNavigate, useSearch } from "@tanstack/react-router";
-import { Add01Icon, CircleIcon, Setting07Icon } from "@hugeicons/core-free-icons";
+import { Link, Outlet } from "@tanstack/react-router";
+import {
+  Add01Icon,
+  Cancel01Icon,
+  CircleIcon,
+  Setting07Icon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { WindowChrome } from "@/components/app/window-chrome";
 import { Button } from "@/components/ui/button";
-import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
+import {
+  Menu,
+  MenuItem,
+  MenuPopup,
+  MenuSeparator,
+  MenuTrigger,
+} from "@/components/ui/menu";
+
 import { useSetActiveWorkspace } from "@/mutations/workspaces";
-import { getChatTabsUiStateQueryOptions } from "@/queries/chat-tree";
 import { getChatQueryOptions } from "@/queries/chats";
-import { activeWorkspaceQueryOptions, listWorkspacesQueryOptions } from "@/queries/workspaces";
-import type { ChatTabStateItem } from "../../../shared/ipc";
+import { listWorkspacesQueryOptions } from "@/queries/workspaces";
+import { useWorkspaceStore } from "../workspace/store";
+import { Tab } from "../workspace/store/types";
 
 export function ChatLayout() {
+  return <ChatLayoutContent />;
+}
+
+function ChatLayoutContent() {
   const { data: workspaces = [] } = useQuery(listWorkspacesQueryOptions);
-  const { data: activeWorkspace } = useQuery(activeWorkspaceQueryOptions);
-  const { tabChatId } = useSearch({ from: "/chat/" });
-  const navigate = useNavigate();
+  const workspace = useWorkspaceStore((s) => s.workspace);
 
   const setActiveWorkspace = useSetActiveWorkspace();
-  const chatTabsQuery = useQuery(getChatTabsUiStateQueryOptions(activeWorkspace?.id ?? null));
-  const tabs = chatTabsQuery.data?.tabs ?? [];
-  const activeTabChatId = resolveActiveTabChatId(tabs, tabChatId);
 
-  React.useEffect(() => {
-    if (activeWorkspace?.id && chatTabsQuery.isPending) {
-      return;
-    }
+  const switchWorkspace = useWorkspaceStore((s) => s.switchWorkspace);
 
-    if ((tabChatId ?? null) === (activeTabChatId ?? null)) {
-      return;
-    }
+  // const hasHydrated = useWorkspaceStore.persist.hasHydrated();
+  // console.log("Has Hydrated", hasHydrated);
 
-    void navigate({
-      to: "/chat",
-      replace: true,
-      search: (prev) => ({
-        ...prev,
-        tabChatId: activeTabChatId,
-      }),
-    });
-  }, [activeTabChatId, activeWorkspace?.id, chatTabsQuery.isPending, navigate, tabChatId]);
+  // if (!hasHydrated) return null;
 
   return (
     <WindowChrome
@@ -53,18 +52,19 @@ export function ChatLayout() {
                 render={<Button variant="secondary" size="sm" />}
                 style={
                   {
-                    "--from-color": activeWorkspace?.color,
+                    "--from-color": workspace?.color,
                   } as React.CSSProperties
                 }
                 className={`bg-linear-to-tr from-(--from-color) via-transparent to-transparent border-none`}
               >
-                {activeWorkspace?.name ?? "…"}
+                {workspace?.name ?? "…"}
               </MenuTrigger>
               <MenuPopup align="start">
                 {workspaces.map((ws) => (
                   <MenuItem
                     key={ws.id}
                     onClick={() => {
+                      switchWorkspace(ws.id);
                       void setActiveWorkspace.mutateAsync(ws.id);
                     }}
                   >
@@ -89,21 +89,7 @@ export function ChatLayout() {
               </MenuPopup>
             </Menu>
 
-            <ChatTabsBar
-              tabs={tabs}
-              activeTabChatId={activeTabChatId ?? null}
-              isLoading={Boolean(activeWorkspace?.id) && chatTabsQuery.isPending}
-              isError={chatTabsQuery.isError}
-              onSelectTab={(chatId) => {
-                void navigate({
-                  to: "/chat",
-                  search: (prev) => ({
-                    ...prev,
-                    tabChatId: chatId,
-                  }),
-                });
-              }}
-            />
+            <ChatTabsBar />
           </div>
 
           <Button
@@ -122,81 +108,53 @@ export function ChatLayout() {
   );
 }
 
-function ChatTabsBar({
-  tabs,
-  activeTabChatId,
-  isLoading,
-  isError,
-  onSelectTab,
-}: {
-  tabs: ChatTabStateItem[];
-  activeTabChatId: string | null;
-  isLoading: boolean;
-  isError: boolean;
-  onSelectTab: (chatId: string) => void;
-}) {
-  if (isLoading) {
-    return <p className="text-xs text-muted-foreground">Loading tabs…</p>;
-  }
-
-  if (isError) {
-    return <p className="text-xs text-muted-foreground">Tabs unavailable</p>;
-  }
-
-  if (tabs.length === 0) {
-    return <p className="text-xs text-muted-foreground">No tabs</p>;
-  }
+function ChatTabsBar() {
+  const tabs = useWorkspaceStore((s) => s.tabs);
+  if (tabs.length === 0) return null;
 
   return (
     <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
-      {tabs.map((tab, index) => (
-        <ChatTabButton
-          key={tab.chatId}
-          tab={tab}
-          index={index}
-          isActive={tab.chatId === activeTabChatId}
-          onSelect={onSelectTab}
-        />
+      {tabs.map((tab) => (
+        <ChatTabButton key={tab.id} tab={tab} />
       ))}
     </div>
   );
 }
 
-function ChatTabButton({
-  tab,
-  index,
-  isActive,
-  onSelect,
-}: {
-  tab: ChatTabStateItem;
-  index: number;
-  isActive: boolean;
-  onSelect: (chatId: string) => void;
-}) {
+function ChatTabButton({ tab }: { tab: Tab }) {
   const chatQuery = useQuery(getChatQueryOptions(tab.chatId));
   const title = chatQuery.data?.title ?? "Chat";
+
+  const openTab = useWorkspaceStore((s) => s.openTab);
+  const activeId = useWorkspaceStore((s) => s.activeTabId);
+  const closeTab = useWorkspaceStore((s) => s.closeTab);
+
+  const isActive = React.useMemo(() => {
+    return tab.id === activeId;
+  }, [tab, activeId]);
 
   return (
     <Button
       size="sm"
       variant={isActive ? "secondary" : "ghost"}
-      className="shrink-0"
+      className="shrink-0 group/tab relative z-0 px-4 justify-start text-left"
       onClick={() => {
-        onSelect(tab.chatId);
+        openTab(tab.chatId);
       }}
     >
-      {index + 1}. {title}
+      {title}
+
+      <button
+        className="opacity-0 group-hover/tab:opacity-100 cursor-pointer absolute right-0 aspect-square h-full z-10 flex items-center justify-center overflow-hidden"
+        onClick={(e) => {
+          e.stopPropagation();
+          closeTab(tab.id);
+        }}
+      >
+        <div className="bg-black/70 backdrop-blur-lg rounded-sm size-5 flex items-center justify-center">
+          <HugeiconsIcon icon={Cancel01Icon} className="size-3" />
+        </div>
+      </button>
     </Button>
   );
-}
-
-function resolveActiveTabChatId(
-  tabs: readonly ChatTabStateItem[],
-  requestedChatId: string | undefined,
-): string | undefined {
-  if (requestedChatId && tabs.some((tab) => tab.chatId === requestedChatId)) {
-    return requestedChatId;
-  }
-
-  return tabs[0]?.chatId;
 }

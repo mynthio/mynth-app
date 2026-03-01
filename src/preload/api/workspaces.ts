@@ -8,14 +8,19 @@ type WorkspaceApi = Pick<
   | "createWorkspace"
   | "setActiveWorkspace"
   | "updateWorkspace"
+  | "updateWorkspaceSettings"
+  | "getTabsUiState"
 >;
 
 export function createWorkspaceApi(): WorkspaceApi {
   return {
     listWorkspaces: () => invokeIpc(IPC_CHANNELS.workspaces.list),
-    getActiveWorkspace: () => invokeIpc(IPC_CHANNELS.workspaces.getActive),
+    getActiveWorkspace: (options) => invokeIpc(IPC_CHANNELS.workspaces.getActive, options),
     createWorkspace: (name) => invokeIpc(IPC_CHANNELS.workspaces.create, name),
     setActiveWorkspace: (id) => invokeIpc(IPC_CHANNELS.workspaces.setActive, id),
     updateWorkspace: (id, input) => invokeIpc(IPC_CHANNELS.workspaces.update, id, input),
+    updateWorkspaceSettings: (id, settingsPatch) =>
+      invokeIpc(IPC_CHANNELS.workspaces.updateSettings, id, settingsPatch),
+    getTabsUiState: (workspaceId) => invokeIpc(IPC_CHANNELS.chatTree.getTabsUiState, workspaceId),
   };
 }

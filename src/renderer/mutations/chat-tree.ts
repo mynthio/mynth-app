@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { ChatTabsUiState, ChatTabStateItem } from "../../shared/ipc";
 
 import { chatTreeApi } from "../api/chat-tree";
 import { queryKeys } from "../queries/keys";
@@ -13,47 +12,6 @@ export function useSetChatTreeUiState() {
       workspaceId: string;
       expandedFolderIds: string[];
     }) => chatTreeApi.setUiState(workspaceId, expandedFolderIds),
-  });
-}
-
-export function useSetChatTabsUiState() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ workspaceId, tabs }: { workspaceId: string; tabs: ChatTabStateItem[] }) =>
-      chatTreeApi.setTabsUiState(workspaceId, tabs),
-    onMutate: async ({ workspaceId, tabs }) => {
-      await queryClient.cancelQueries({
-        queryKey: queryKeys.chatTree.tabsUiState(workspaceId),
-        exact: true,
-      });
-
-      const queryKey = queryKeys.chatTree.tabsUiState(workspaceId);
-      const previousState = queryClient.getQueryData<ChatTabsUiState>(queryKey);
-
-      queryClient.setQueryData<ChatTabsUiState>(queryKey, { tabs });
-
-      return { queryKey, previousState };
-    },
-    onError: (_error, _variables, context) => {
-      if (context?.previousState) {
-        queryClient.setQueryData(context.queryKey, context.previousState);
-        return;
-      }
-
-      if (context?.queryKey) {
-        queryClient.removeQueries({ queryKey: context.queryKey, exact: true });
-      }
-    },
-    onSuccess: (nextState, { workspaceId }) => {
-      queryClient.setQueryData(queryKeys.chatTree.tabsUiState(workspaceId), nextState);
-    },
-    onSettled: (_data, _error, { workspaceId }) => {
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.chatTree.tabsUiState(workspaceId),
-        exact: true,
-      });
-    },
   });
 }
 

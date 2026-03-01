@@ -1,4 +1,8 @@
-import type { WorkspaceUpdateInput } from "../../shared/ipc";
+import type {
+  GetActiveWorkspaceOptions,
+  WorkspaceSettingsPatch,
+  WorkspaceUpdateInput,
+} from "../../shared/ipc";
 import "../lib/electron-api";
 import { parseWorkspaceId } from "../../shared/workspace/workspace-id";
 
@@ -7,8 +11,8 @@ export const workspaceApi = {
     return window.electronAPI.listWorkspaces();
   },
 
-  getActive() {
-    return window.electronAPI.getActiveWorkspace();
+  getActive(options?: GetActiveWorkspaceOptions) {
+    return window.electronAPI.getActiveWorkspace(options);
   },
 
   create(name: string) {
@@ -31,5 +35,23 @@ export const workspaceApi = {
     }
 
     return window.electronAPI.updateWorkspace(parsedWorkspaceId.value, input);
+  },
+
+  updateSettings(workspaceId: string, settingsPatch: WorkspaceSettingsPatch) {
+    const parsedWorkspaceId = parseWorkspaceId(workspaceId);
+    if (!parsedWorkspaceId.ok) {
+      throw new Error(parsedWorkspaceId.error);
+    }
+
+    return window.electronAPI.updateWorkspaceSettings(parsedWorkspaceId.value, settingsPatch);
+  },
+
+  getTabsUiState(workspaceId: string) {
+    const parsedWorkspaceId = parseWorkspaceId(workspaceId);
+    if (!parsedWorkspaceId.ok) {
+      throw new Error(parsedWorkspaceId.error);
+    }
+
+    return window.electronAPI.getTabsUiState(parsedWorkspaceId.value);
   },
 };

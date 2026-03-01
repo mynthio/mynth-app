@@ -5,6 +5,7 @@ import { useStore } from "zustand";
 import { createStore, type StoreApi } from "zustand/vanilla";
 
 import { chatsApi } from "@/api/chats";
+
 import { useChatStore } from "@/stores/chat-store";
 import type { MynthUiMessage } from "../../../shared/chat/message-metadata";
 
@@ -27,6 +28,7 @@ type ChatContextState = {
 type ChatTransportRefs = {
   sendMessage: ChatSendMessage | null;
   regenerate: ChatRegenerate | null;
+  markTabTouched: (() => void) | null;
 };
 
 type ChatContextStoreApi = StoreApi<ChatContextState>;
@@ -69,6 +71,8 @@ function createChatContextStore({
         return Promise.resolve();
       }
 
+      transportRefs.markTabTouched?.();
+
       return transportRefs.sendMessage(message, {
         ...options,
         body: { ...options?.body, modelId: currentModelId },
@@ -79,6 +83,8 @@ function createChatContextStore({
       if (!transportRefs.regenerate || !currentModelId) {
         return Promise.resolve();
       }
+
+      transportRefs.markTabTouched?.();
 
       return transportRefs.regenerate({
         ...options,
@@ -94,6 +100,7 @@ export function ChatContextProvider({
   enabledModelIds,
   children,
 }: ChatContextProviderProps) {
+  // const { markTabTouched } = useChatTabsState();
   const getOrCreateChat = useChatStore((s) => s.getOrCreateChat);
   const chat = React.useMemo(
     () => getOrCreateChat(chatId, apiUrl),
@@ -105,6 +112,7 @@ export function ChatContextProvider({
   const transportRefs = React.useRef<ChatTransportRefs>({
     sendMessage: null,
     regenerate: null,
+    markTabTouched: null,
   });
   const storeRef = React.useRef<ChatContextStoreApi | null>(null);
 
@@ -122,6 +130,9 @@ export function ChatContextProvider({
 
   transportRefs.current.sendMessage = sendMessage;
   transportRefs.current.regenerate = regenerate;
+  transportRefs.current.markTabTouched = () => {
+    // FIXME: placeholder
+  };
 
   React.useEffect(() => {
     const nextModelId = resolveModelId(enabledModelIds, store.getState().modelId);

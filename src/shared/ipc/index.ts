@@ -8,6 +8,7 @@ export const IPC_CHANNELS = {
     create: "workspaces:create",
     setActive: "workspaces:setActive",
     update: "workspaces:update",
+    updateSettings: "workspaces:updateSettings",
   },
   settings: {
     getGlobalChat: "settings:getGlobalChat",
@@ -54,6 +55,14 @@ export interface WorkspaceInfo {
   id: string;
   name: string;
   color?: string;
+}
+
+export interface ActiveWorkspaceInfo extends WorkspaceInfo {
+  settings?: WorkspaceSettings;
+}
+
+export interface GetActiveWorkspaceOptions {
+  includeSettings?: boolean;
 }
 
 export interface WorkspaceUpdateInput {
@@ -118,13 +127,26 @@ export interface ChatTreeUiState {
   expandedFolderIds: string[];
 }
 
-export interface ChatTabStateItem {
+export type TabType = "chat";
+
+export interface TabStateItem {
+  id: string;
+  type: TabType;
   chatId: string;
 }
 
-export interface ChatTabsUiState {
-  tabs: ChatTabStateItem[];
+export interface TabsUiState {
+  tabs: TabStateItem[];
+  activeTabId: string | null;
 }
+
+export interface WorkspaceSettings {
+  chatTreeExpandedFolderIds?: string[];
+  tabs?: TabStateItem[];
+  activeTabId?: string | null;
+}
+
+export type WorkspaceSettingsPatch = Partial<WorkspaceSettings>;
 
 export interface ProviderCredentialTestInput {
   providerId: ProviderId;
@@ -191,10 +213,14 @@ export interface IpcApi {
   onSystemEvent: (callback: (event: import("../events").SystemEvent) => void) => () => void;
   getSystemState: () => Promise<import("../events").SystemState>;
   listWorkspaces: () => Promise<WorkspaceInfo[]>;
-  getActiveWorkspace: () => Promise<WorkspaceInfo>;
+  getActiveWorkspace: (options?: GetActiveWorkspaceOptions) => Promise<ActiveWorkspaceInfo>;
   createWorkspace: (name: string) => Promise<WorkspaceInfo>;
-  setActiveWorkspace: (id: string) => Promise<WorkspaceInfo>;
+  setActiveWorkspace: (id: string) => Promise<ActiveWorkspaceInfo>;
   updateWorkspace: (id: string, input: WorkspaceUpdateInput) => Promise<WorkspaceInfo>;
+  updateWorkspaceSettings: (
+    id: string,
+    settingsPatch: WorkspaceSettingsPatch,
+  ) => Promise<WorkspaceSettings>;
   getGlobalChatSettings: () => Promise<GlobalChatSettings>;
   updateGlobalChatSettings: (input: GlobalChatSettingsUpdateInput) => Promise<GlobalChatSettings>;
   getChatTree: (workspaceId: string) => Promise<ChatTreeSnapshot>;
@@ -207,8 +233,8 @@ export interface IpcApi {
     workspaceId: string,
     expandedFolderIds: string[],
   ) => Promise<ChatTreeUiState>;
-  getChatTabsUiState: (workspaceId: string) => Promise<ChatTabsUiState>;
-  setChatTabsUiState: (workspaceId: string, tabs: ChatTabStateItem[]) => Promise<ChatTabsUiState>;
+  getTabsUiState: (workspaceId: string) => Promise<TabsUiState>;
+  setTabsUiState: (workspaceId: string, tabs: TabStateItem[]) => Promise<TabsUiState>;
   getChat: (id: string) => Promise<ChatInfo>;
   listChatMessages: (chatId: string, branchId?: string | null) => Promise<MynthUiMessage[]>;
   createFolder: (
@@ -226,7 +252,7 @@ export interface IpcApi {
   showChatTreeItemContextMenu: (
     itemId: string,
     itemKind: "folder" | "chat",
-  ) => Promise<"add-folder" | "add-chat" | "rename" | "delete" | null>;
+  ) => Promise<"add-folder" | "add-chat" | "open-in-new-tab" | "rename" | "delete" | null>;
   listProviders: () => Promise<ProviderInfo[]>;
   listProviderModels: (providerId: string) => Promise<ProviderModelInfo[]>;
   testProviderCredentials: (

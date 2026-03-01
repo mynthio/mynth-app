@@ -12,8 +12,6 @@ export const queryKeys = {
   chatTree: {
     all: ["chatTree"] as const,
     uiState: (workspaceId: string) => [...queryKeys.chatTree.all, "uiState", workspaceId] as const,
-    tabsUiState: (workspaceId: string) =>
-      [...queryKeys.chatTree.all, "tabsUiState", workspaceId] as const,
   },
   chats: {
     all: ["chats"] as const,

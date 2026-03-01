@@ -1,3 +1,4 @@
+import { createChatMessagesService, type ChatMessagesService } from "./chat-messages-service";
 import { createChatTreeService, type ChatTreeService } from "./chat-tree-service";
 import { createModelService, type ModelService } from "./model-service";
 import { createProviderService, type ProviderService } from "./provider-service";
@@ -9,6 +10,7 @@ export interface AppServices {
   workspaces: WorkspaceService;
   settings: SettingsService;
   chatTree: ChatTreeService;
+  chatMessages: ChatMessagesService;
   models: ModelService;
   providers: ProviderService;
 }
@@ -25,6 +27,7 @@ export function createAppServices(options?: AppServicesOptions): AppServices {
     workspaces: createWorkspaceService(),
     settings: createSettingsService(),
     chatTree: createChatTreeService(),
+    chatMessages: createChatMessagesService(),
     models: createModelService(),
     providers: createProviderService({
       onModelSyncCompleted: options?.onProviderModelsSyncCompleted,

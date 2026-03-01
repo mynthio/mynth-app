@@ -7,8 +7,8 @@ type ChatTreeApi = Pick<
   | "getChatTreeChildren"
   | "getChatTreeUiState"
   | "setChatTreeUiState"
-  | "getChatTabsUiState"
-  | "setChatTabsUiState"
+  | "getTabsUiState"
+  | "setTabsUiState"
   | "getChat"
   | "listChatMessages"
   | "createFolder"
@@ -30,9 +30,8 @@ export function createChatTreeApi(): ChatTreeApi {
     getChatTreeUiState: (workspaceId) => invokeIpc(IPC_CHANNELS.chatTree.getUiState, workspaceId),
     setChatTreeUiState: (workspaceId, expandedFolderIds) =>
       invokeIpc(IPC_CHANNELS.chatTree.setUiState, workspaceId, expandedFolderIds),
-    getChatTabsUiState: (workspaceId) =>
-      invokeIpc(IPC_CHANNELS.chatTree.getTabsUiState, workspaceId),
-    setChatTabsUiState: (workspaceId, tabs) =>
+    getTabsUiState: (workspaceId) => invokeIpc(IPC_CHANNELS.chatTree.getTabsUiState, workspaceId),
+    setTabsUiState: (workspaceId, tabs) =>
       invokeIpc(IPC_CHANNELS.chatTree.setTabsUiState, workspaceId, tabs),
     getChat: (id) => invokeIpc(IPC_CHANNELS.chats.get, id),
     listChatMessages: (chatId, branchId) =>

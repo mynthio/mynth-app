@@ -20,39 +20,34 @@ import {
   type FolderRow,
 } from "../chat-tree/repository";
 import { parseChatId } from "../../shared/chat/chat-id";
-import {
-  normalizeChatMessageMetadata,
-  type MynthUiMessage,
-} from "../../shared/chat/message-metadata";
 import { parseFolderId } from "../../shared/folder/folder-id";
 import type {
   ChatInfo,
-  ChatTabsUiState,
-  ChatTabStateItem,
   ChatTreeChildrenSlice,
   ChatTreeFolderListItem,
   ChatTreeFolderNode,
   ChatTreeSnapshot,
   ChatTreeUiState,
   FolderInfo,
+  TabsUiState,
+  TabStateItem,
 } from "../../shared/ipc";
-import { listMessagesByChatId, type MessageRow } from "../messages/repository";
 import { getWorkspaceSettings, updateWorkspaceSettings } from "../workspaces/repository";
 
 const CHAT_TREE_EXPANDED_FOLDER_IDS_SETTINGS_KEY = "chatTreeExpandedFolderIds";
-const CHAT_TABS_SETTINGS_KEY = "chatTabs";
+const TABS_SETTINGS_KEY = "tabs";
+const ACTIVE_TAB_ID_SETTINGS_KEY = "activeTabId";
 const MAX_PERSISTED_EXPANDED_FOLDER_IDS = 2000;
 const MAX_PERSISTED_TABS = 20;
 
 export interface ChatTreeService {
   getChat(id: string): ChatInfo;
-  listChatMessages(chatId: string, branchId?: string | null): MynthUiMessage[];
   getChatTree(workspaceId: string): ChatTreeSnapshot;
   getChatTreeChildren(workspaceId: string, parentFolderId: string | null): ChatTreeChildrenSlice;
   getChatTreeUiState(workspaceId: string): ChatTreeUiState;
   setChatTreeUiState(workspaceId: string, expandedFolderIds: string[]): ChatTreeUiState;
-  getChatTabsUiState(workspaceId: string): ChatTabsUiState;
-  setChatTabsUiState(workspaceId: string, tabs: ChatTabStateItem[]): ChatTabsUiState;
+  getTabsUiState(workspaceId: string): TabsUiState;
+  setTabsUiState(workspaceId: string, tabs: TabStateItem[]): TabsUiState;
   createFolder(input: { workspaceId: string; name: string; parentId: string | null }): FolderInfo;
   updateFolderName(id: string, name: string): FolderInfo;
   moveFolder(id: string, parentId: string | null): FolderInfo;
@@ -82,15 +77,6 @@ function toChatInfo(chat: ChatRow): ChatInfo {
     title: chat.title,
     createdAt: chat.createdAt,
     updatedAt: chat.updatedAt,
-  };
-}
-
-function toChatMessage(message: MessageRow, previousMessageId: string | null): MynthUiMessage {
-  return {
-    id: message.id,
-    role: message.role,
-    parts: message.parts as MynthUiMessage["parts"],
-    metadata: normalizeChatMessageMetadata(message.metadata, message.parentId ?? previousMessageId),
   };
 }
 
@@ -150,13 +136,21 @@ function normalizeExpandedFolderIds(value: unknown): string[] {
   return [...uniqueFolderIds].sort((left, right) => left.localeCompare(right));
 }
 
-function normalizeChatTabs(value: unknown): ChatTabStateItem[] {
+function normalizeTabId(value: unknown): string | null {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return null;
+  }
+
+  return value;
+}
+
+function normalizeTabs(value: unknown): TabStateItem[] {
   if (!Array.isArray(value)) {
     return [];
   }
 
-  const seenChatIds = new Set<string>();
-  const normalizedTabs: ChatTabStateItem[] = [];
+  const seenTabIds = new Set<string>();
+  const normalizedTabs: TabStateItem[] = [];
 
   for (const entry of value) {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
@@ -164,13 +158,22 @@ function normalizeChatTabs(value: unknown): ChatTabStateItem[] {
     }
 
     const record = entry as Record<string, unknown>;
-    const parsedChatId = parseChatId(record.chatId);
-    if (!parsedChatId.ok || seenChatIds.has(parsedChatId.value)) {
+    const tabId = normalizeTabId(record.id);
+    if (!tabId || seenTabIds.has(tabId)) {
       continue;
     }
 
-    seenChatIds.add(parsedChatId.value);
-    normalizedTabs.push({ chatId: parsedChatId.value });
+    if (record.type !== "chat") {
+      continue;
+    }
+
+    const parsedChatId = parseChatId(record.chatId);
+    if (!parsedChatId.ok) {
+      continue;
+    }
+
+    seenTabIds.add(tabId);
+    normalizedTabs.push({ id: tabId, type: "chat", chatId: parsedChatId.value });
 
     if (normalizedTabs.length >= MAX_PERSISTED_TABS) {
       break;
@@ -178,6 +181,15 @@ function normalizeChatTabs(value: unknown): ChatTabStateItem[] {
   }
 
   return normalizedTabs;
+}
+
+function normalizeActiveTabId(value: unknown, tabs: readonly TabStateItem[]): string | null {
+  const normalizedId = normalizeTabId(value);
+  if (!normalizedId) {
+    return null;
+  }
+
+  return tabs.some((tab) => tab.id === normalizedId) ? normalizedId : null;
 }
 
 function pruneExpandedFolderIdsForWorkspace(workspaceId: string, ids: readonly string[]): string[] {
@@ -189,10 +201,7 @@ function pruneExpandedFolderIdsForWorkspace(workspaceId: string, ids: readonly s
   return ids.filter((id) => existingFolderIds.has(id));
 }
 
-function pruneTabsForWorkspace(
-  workspaceId: string,
-  tabs: readonly ChatTabStateItem[],
-): ChatTabStateItem[] {
+function pruneTabsForWorkspace(workspaceId: string, tabs: readonly TabStateItem[]): TabStateItem[] {
   if (tabs.length === 0) {
     return [];
   }
@@ -231,25 +240,34 @@ export function createChatTreeService(): ChatTreeService {
     };
   }
 
-  function readChatTabsUiState(workspaceId: string): ChatTabsUiState {
+  function readTabsUiState(workspaceId: string): TabsUiState {
     const workspaceSettings = getWorkspaceSettings(workspaceId);
-    const normalizedTabs = normalizeChatTabs(workspaceSettings[CHAT_TABS_SETTINGS_KEY]);
+    const normalizedTabs = normalizeTabs(workspaceSettings[TABS_SETTINGS_KEY]);
+    const prunedTabs = pruneTabsForWorkspace(workspaceId, normalizedTabs);
 
     return {
-      tabs: pruneTabsForWorkspace(workspaceId, normalizedTabs),
+      tabs: prunedTabs,
+      activeTabId: normalizeActiveTabId(workspaceSettings[ACTIVE_TAB_ID_SETTINGS_KEY], prunedTabs),
     };
   }
 
-  function writeChatTabsUiState(workspaceId: string, tabs: unknown): ChatTabsUiState {
-    const normalizedTabs = normalizeChatTabs(tabs);
+  function writeTabsUiState(workspaceId: string, tabs: unknown): TabsUiState {
+    const workspaceSettings = getWorkspaceSettings(workspaceId);
+    const normalizedTabs = normalizeTabs(tabs);
     const prunedTabs = pruneTabsForWorkspace(workspaceId, normalizedTabs);
+    const activeTabId = normalizeActiveTabId(
+      workspaceSettings[ACTIVE_TAB_ID_SETTINGS_KEY],
+      prunedTabs,
+    );
 
     updateWorkspaceSettings(workspaceId, {
-      [CHAT_TABS_SETTINGS_KEY]: prunedTabs,
+      [TABS_SETTINGS_KEY]: prunedTabs,
+      [ACTIVE_TAB_ID_SETTINGS_KEY]: activeTabId,
     });
 
     return {
       tabs: prunedTabs,
+      activeTabId,
     };
   }
 
@@ -261,18 +279,6 @@ export function createChatTreeService(): ChatTreeService {
       }
 
       return toChatInfo(chat);
-    },
-
-    listChatMessages(chatId: string, branchId?: string | null): MynthUiMessage[] {
-      const chat = getChatById(chatId);
-      if (!chat) {
-        throw new Error(`Chat "${chatId}" does not exist.`);
-      }
-
-      const rows = listMessagesByChatId(chat.id, branchId);
-      return rows.map((row, index) =>
-        toChatMessage(row, index > 0 ? (rows[index - 1]?.id ?? null) : null),
-      );
     },
 
     getChatTree(workspaceId: string): ChatTreeSnapshot {
@@ -291,12 +297,12 @@ export function createChatTreeService(): ChatTreeService {
       return writeChatTreeUiState(workspaceId, expandedFolderIds);
     },
 
-    getChatTabsUiState(workspaceId: string): ChatTabsUiState {
-      return readChatTabsUiState(workspaceId);
+    getTabsUiState(workspaceId: string): TabsUiState {
+      return readTabsUiState(workspaceId);
     },
 
-    setChatTabsUiState(workspaceId: string, tabs: ChatTabStateItem[]): ChatTabsUiState {
-      return writeChatTabsUiState(workspaceId, tabs);
+    setTabsUiState(workspaceId: string, tabs: TabStateItem[]): TabsUiState {
+      return writeTabsUiState(workspaceId, tabs);
     },
 
     createFolder(input): FolderInfo {
@@ -342,11 +348,11 @@ export function createChatTreeService(): ChatTreeService {
 
     deleteChat(id: string): void {
       const deletedChat = deleteChat(id);
-      const currentTabsUiState = readChatTabsUiState(deletedChat.workspaceId);
+      const currentTabsUiState = readTabsUiState(deletedChat.workspaceId);
       const nextTabs = currentTabsUiState.tabs.filter((tab) => tab.chatId !== deletedChat.id);
 
       if (nextTabs.length !== currentTabsUiState.tabs.length) {
-        writeChatTabsUiState(deletedChat.workspaceId, nextTabs);
+        writeTabsUiState(deletedChat.workspaceId, nextTabs);
       }
     },
   };

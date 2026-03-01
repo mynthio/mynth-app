@@ -1,4 +1,12 @@
-import { IPC_CHANNELS, type WorkspaceInfo, type WorkspaceUpdateInput } from "../../../shared/ipc";
+import {
+  type ActiveWorkspaceInfo,
+  type GetActiveWorkspaceOptions,
+  IPC_CHANNELS,
+  type WorkspaceInfo,
+  type WorkspaceSettings,
+  type WorkspaceSettingsPatch,
+  type WorkspaceUpdateInput,
+} from "../../../shared/ipc";
 import { parseWorkspaceColor } from "../../../shared/workspace/workspace-color";
 import { parseWorkspaceId } from "../../../shared/workspace/workspace-id";
 import { parseWorkspaceName } from "../../../shared/workspace/workspace-name";
@@ -72,6 +80,44 @@ function parseWorkspaceUpdateInput(args: unknown[]): [string, WorkspaceUpdateInp
   return [workspaceId, parsedInput];
 }
 
+function parseWorkspaceSettingsUpdateInput(args: unknown[]): [string, WorkspaceSettingsPatch] {
+  expectArgCount(args, 2);
+
+  const workspaceId = parseValidWorkspaceId(args[0]);
+  const rawPatch = args[1];
+  if (!rawPatch || typeof rawPatch !== "object" || Array.isArray(rawPatch)) {
+    throw AppError.badRequest("Workspace settings patch must be an object.");
+  }
+
+  return [workspaceId, rawPatch as WorkspaceSettingsPatch];
+}
+
+function parseGetActiveWorkspaceInput(args: unknown[]): [GetActiveWorkspaceOptions] {
+  expectArgCount(args, 0, 1);
+
+  if (args.length === 0 || args[0] === undefined) {
+    return [{}];
+  }
+
+  if (typeof args[0] !== "object" || args[0] === null || Array.isArray(args[0])) {
+    throw AppError.badRequest("getActive options must be an object when provided.");
+  }
+
+  const options = args[0] as Record<string, unknown>;
+  const allowedKeys = new Set(["includeSettings"]);
+  for (const key of Object.keys(options)) {
+    if (!allowedKeys.has(key)) {
+      throw AppError.badRequest(`Unsupported getActive option field "${key}".`);
+    }
+  }
+
+  if (options.includeSettings !== undefined && typeof options.includeSettings !== "boolean") {
+    throw AppError.badRequest("includeSettings must be a boolean when provided.");
+  }
+
+  return [{ includeSettings: options.includeSettings as boolean | undefined }];
+}
+
 export function registerWorkspaceIpcModule(
   context: IpcHandlerContext,
   registeredChannels: Set<string>,
@@ -85,14 +131,15 @@ export function registerWorkspaceIpcModule(
     handler: ({ services }) => services.workspaces.listWorkspaces(),
   });
 
-  registerInvokeHandler<[], WorkspaceInfo>(context, registeredChannels, {
-    channel: IPC_CHANNELS.workspaces.getActive,
-    parseArgs: (args) => {
-      expectArgCount(args, 0);
-      return [];
+  registerInvokeHandler<[GetActiveWorkspaceOptions], ActiveWorkspaceInfo>(
+    context,
+    registeredChannels,
+    {
+      channel: IPC_CHANNELS.workspaces.getActive,
+      parseArgs: parseGetActiveWorkspaceInput,
+      handler: ({ services }, _event, options) => services.workspaces.getActiveWorkspace(options),
     },
-    handler: ({ services }) => services.workspaces.getActiveWorkspace(),
-  });
+  );
 
   registerInvokeHandler<[string], WorkspaceInfo>(context, registeredChannels, {
     channel: IPC_CHANNELS.workspaces.create,
@@ -103,7 +150,7 @@ export function registerWorkspaceIpcModule(
     handler: ({ services }, _event, name) => services.workspaces.createWorkspace(name),
   });
 
-  registerInvokeHandler<[string], WorkspaceInfo>(context, registeredChannels, {
+  registerInvokeHandler<[string], ActiveWorkspaceInfo>(context, registeredChannels, {
     channel: IPC_CHANNELS.workspaces.setActive,
     parseArgs: (args) => {
       expectArgCount(args, 1);
@@ -119,6 +166,17 @@ export function registerWorkspaceIpcModule(
       channel: IPC_CHANNELS.workspaces.update,
       parseArgs: parseWorkspaceUpdateInput,
       handler: ({ services }, _event, id, input) => services.workspaces.updateWorkspace(id, input),
+    },
+  );
+
+  registerInvokeHandler<[string, WorkspaceSettingsPatch], WorkspaceSettings>(
+    context,
+    registeredChannels,
+    {
+      channel: IPC_CHANNELS.workspaces.updateSettings,
+      parseArgs: parseWorkspaceSettingsUpdateInput,
+      handler: ({ services }, _event, id, settingsPatch) =>
+        services.workspaces.updateWorkspaceSettings(id, settingsPatch),
     },
   );
 }

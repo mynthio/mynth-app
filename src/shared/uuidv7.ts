@@ -26,7 +26,7 @@ export function parseUuidV7(input: unknown, label = "ID"): ParseUuidV7Result {
   if (!isUuidV7String(input)) {
     return {
       ok: false,
-      error: `${label} must be a canonical lowercase UUIDv7 string.`,
+      error: `${label} must be a canonical lowercase UUIDv7 string was ${input}.`,
     };
   }
 

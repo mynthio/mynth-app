@@ -1,10 +1,9 @@
 import { asc, eq } from "drizzle-orm";
 
 import { DEFAULT_WORKSPACE_ID } from "../../shared/workspace/workspace-id";
+import type { WorkspaceSettings, WorkspaceSettingsPatch } from "../../shared/ipc";
 import { getAppDatabase } from "../db/database";
 import { workspaces } from "../db/schema";
-
-export type WorkspaceSettings = Record<string, unknown>;
 
 export interface WorkspaceRow {
   id: string;
@@ -37,7 +36,68 @@ type WorkspaceTableRow = typeof workspaces.$inferSelect;
 type WorkspaceInfoTableRow = Pick<WorkspaceTableRow, "id" | "name" | "color">;
 
 function isWorkspaceSettings(value: unknown): value is WorkspaceSettings {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  const allowedKeys = new Set<keyof WorkspaceSettings>([
+    "chatTreeExpandedFolderIds",
+    "tabs",
+    "activeTabId",
+  ]);
+
+  for (const key of Object.keys(record)) {
+    if (!allowedKeys.has(key as keyof WorkspaceSettings)) {
+      return false;
+    }
+  }
+
+  if (
+    record.chatTreeExpandedFolderIds !== undefined &&
+    (!Array.isArray(record.chatTreeExpandedFolderIds) ||
+      record.chatTreeExpandedFolderIds.some((entry) => typeof entry !== "string"))
+  ) {
+    return false;
+  }
+
+  if (
+    record.tabs !== undefined &&
+    (!Array.isArray(record.tabs) ||
+      record.tabs.some((entry) => {
+        if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+          return true;
+        }
+
+        const tabRecord = entry as Record<string, unknown>;
+        const hasOnlySupportedKeys = Object.keys(tabRecord).every((key) =>
+          ["id", "type", "chatId"].includes(key),
+        );
+        if (!hasOnlySupportedKeys) {
+          return true;
+        }
+
+        return (
+          typeof tabRecord.id !== "string" ||
+          tabRecord.id.trim().length === 0 ||
+          tabRecord.type !== "chat" ||
+          typeof tabRecord.chatId !== "string" ||
+          tabRecord.chatId.trim().length === 0
+        );
+      }))
+  ) {
+    return false;
+  }
+
+  if (
+    record.activeTabId !== undefined &&
+    record.activeTabId !== null &&
+    typeof record.activeTabId !== "string"
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 function parseWorkspaceSettings(raw: string, workspaceId: string): WorkspaceSettings {
@@ -193,10 +253,7 @@ export function getWorkspaceSettings(id: string): WorkspaceSettings {
   return requireWorkspaceById(id).settings;
 }
 
-export function updateWorkspaceSettings(
-  id: string,
-  patch: Partial<WorkspaceSettings>,
-): WorkspaceRow {
+export function updateWorkspaceSettings(id: string, patch: WorkspaceSettingsPatch): WorkspaceRow {
   if (!isWorkspaceSettings(patch)) {
     throw new Error("Workspace settings patch must be a JSON object.");
   }

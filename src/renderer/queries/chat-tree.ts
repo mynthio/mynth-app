@@ -19,21 +19,3 @@ export function getChatTreeUiStateQueryOptions(
     staleTime: Number.POSITIVE_INFINITY,
   });
 }
-
-export function getChatTabsUiStateQueryOptions(
-  workspaceId: string | null,
-  options?: { enabled?: boolean },
-) {
-  return queryOptions({
-    queryKey: queryKeys.chatTree.tabsUiState(workspaceId ?? ""),
-    queryFn: () => {
-      if (!workspaceId) {
-        throw new Error("Workspace ID is required.");
-      }
-
-      return chatTreeApi.getTabsUiState(workspaceId);
-    },
-    enabled: options?.enabled ?? Boolean(workspaceId),
-    staleTime: Number.POSITIVE_INFINITY,
-  });
-}

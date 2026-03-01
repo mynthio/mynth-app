@@ -1,4 +1,4 @@
-import type { ChatTabStateItem } from "../../shared/ipc";
+import type { TabStateItem } from "../../shared/ipc";
 import "../lib/electron-api";
 import { parseWorkspaceId } from "../../shared/workspace/workspace-id";
 
@@ -36,16 +36,16 @@ export const chatTreeApi = {
       throw new Error(parsedWorkspaceId.error);
     }
 
-    return window.electronAPI.getChatTabsUiState(parsedWorkspaceId.value);
+    return window.electronAPI.getTabsUiState(parsedWorkspaceId.value);
   },
 
-  setTabsUiState(workspaceId: string, tabs: ChatTabStateItem[]) {
+  setTabsUiState(workspaceId: string, tabs: TabStateItem[]) {
     const parsedWorkspaceId = parseWorkspaceId(workspaceId);
     if (!parsedWorkspaceId.ok) {
       throw new Error(parsedWorkspaceId.error);
     }
 
-    return window.electronAPI.setChatTabsUiState(parsedWorkspaceId.value, tabs);
+    return window.electronAPI.setTabsUiState(parsedWorkspaceId.value, tabs);
   },
 
   renameFolder(id: string, name: string) {
