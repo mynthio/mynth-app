@@ -2,9 +2,11 @@ import { syncWorkspaceSettingsStateToSqlite } from "../storage/sqlite-storage";
 import type { WorkspaceSlice, WorkspaceSliceCreator } from "../types";
 import { workspaceApi } from "@/api/workspaces";
 
-export const createWorkspaceSlice: WorkspaceSliceCreator<WorkspaceSlice> = (set) => ({
+export const createWorkspaceSlice: WorkspaceSliceCreator<WorkspaceSlice> = (
+  set,
+) => ({
   state: "idle",
-  workspaceId: null,
+  workspace: null,
 
   switchWorkspace: async (newWorkspaceId: string) => {
     // This is okey as it will still trigger debounce with old workspace ID
@@ -22,16 +24,16 @@ export const createWorkspaceSlice: WorkspaceSliceCreator<WorkspaceSlice> = (set)
      * Now we need will set new workspace as active,
      * which will give us it's settings in response as well
      */
-    const newWorkspace = await workspaceApi.setActive(newWorkspaceId);
-
-    const newSettings = newWorkspace.settings ?? {};
+    const { settings: newSettings = {}, ...newWorkspace } =
+      await workspaceApi.setActive(newWorkspaceId);
 
     set((state) => {
       state.state = "idle";
 
-      state.workspaceId = newWorkspace.id;
+      state.workspace = newWorkspace;
 
-      state.activeTabId = newSettings.activeTabId ?? newSettings.tabs?.[0]?.id ?? null;
+      state.activeTabId =
+        newSettings.activeTabId ?? newSettings.tabs?.[0]?.id ?? null;
       state.tabs =
         newSettings.tabs?.map((t) => ({
           id: t.id,

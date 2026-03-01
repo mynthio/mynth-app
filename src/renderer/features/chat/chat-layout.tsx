@@ -19,7 +19,6 @@ import {
   MenuTrigger,
 } from "@/components/ui/menu";
 
-import { useSetActiveWorkspace } from "@/mutations/workspaces";
 import { getChatQueryOptions } from "@/queries/chats";
 import { listWorkspacesQueryOptions } from "@/queries/workspaces";
 import { useWorkspaceStore } from "../workspace/store";
@@ -32,8 +31,6 @@ export function ChatLayout() {
 function ChatLayoutContent() {
   const { data: workspaces = [] } = useQuery(listWorkspacesQueryOptions);
   const workspace = useWorkspaceStore((s) => s.workspace);
-
-  const setActiveWorkspace = useSetActiveWorkspace();
 
   const switchWorkspace = useWorkspaceStore((s) => s.switchWorkspace);
 
@@ -65,7 +62,6 @@ function ChatLayoutContent() {
                     key={ws.id}
                     onClick={() => {
                       switchWorkspace(ws.id);
-                      void setActiveWorkspace.mutateAsync(ws.id);
                     }}
                   >
                     <HugeiconsIcon
