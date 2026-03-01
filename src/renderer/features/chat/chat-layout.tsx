@@ -97,7 +97,6 @@ function ChatLayoutContent() {
           </Button>
         </div>
       }
-      contentClassName="overflow-hidden"
     >
       <Outlet />
     </WindowChrome>

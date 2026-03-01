@@ -1,7 +1,10 @@
 import type * as React from "react";
 
 import { cn } from "@/lib/utils";
-import { WINDOW_TOOLBAR_HEIGHT, WINDOW_TRAFFIC_LIGHTS_SPACER } from "../../../shared/window-chrome";
+import {
+  WINDOW_TOOLBAR_HEIGHT,
+  WINDOW_TRAFFIC_LIGHTS_SPACER,
+} from "../../../shared/window-chrome";
 
 const windowToolbarInteractiveSelectors = cn(
   "[-webkit-app-region:drag]",
@@ -44,7 +47,7 @@ export function WindowChrome({
 
   return (
     <div
-      className={cn("flex h-full min-h-0 flex-col w-full", className)}
+      className={cn("flex min-h-0 flex-col h-full w-full", className)}
       data-slot="window-chrome"
       style={chromeStyle}
     >
@@ -71,12 +74,15 @@ export function WindowChrome({
           ) : null}
         </div>
       </header>
-      <div
-        className={cn("min-h-0 flex-1 w-full", contentClassName)}
+      <main
+        className={cn(
+          "min-h-0 h-full scrollbar w-full overflow-auto",
+          contentClassName,
+        )}
         data-slot="window-chrome-content"
       >
-        <main className="min-h-0 h-full w-full flex-1 overflow-hidden scrollbar">{children}</main>
-      </div>
+        {children}
+      </main>
     </div>
   );
 }

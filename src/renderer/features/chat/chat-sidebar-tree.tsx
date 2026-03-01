@@ -17,6 +17,7 @@ import {
   FolderAddIcon,
   Folder01Icon,
   Folder02Icon,
+  Search01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -46,6 +47,11 @@ import { DeleteFolderDialog } from "@/features/chat/delete-folder-dialog";
 
 import type { ChatInfo, ChatTreeFolderListItem } from "../../../shared/ipc";
 import { useWorkspaceStore } from "../workspace/store";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 
 type ChatTreeNodeData =
   | { kind: "folder"; folder: ChatTreeFolderListItem }
@@ -64,7 +70,7 @@ export function ChatSidebarTree() {
 
   return (
     <Sidebar collapsible="none">
-      <SidebarContent className="gap-1 p-2">
+      <SidebarContent>
         {!workspaceId ? (
           <p className="px-2 py-2 text-sidebar-foreground/70 text-xs">
             Select a workspace.
@@ -316,13 +322,26 @@ function ChatSidebarTreeInner({
 
   return (
     <>
-      <div className="flex items-center gap-1 px-1 pb-1">
+      <div className="flex items-center gap-1 px-2">
+        <InputGroup className="w-full">
+          <InputGroupInput
+            name="search"
+            placeholder="Search tree..."
+            type="text"
+            size="sm"
+          />
+
+          <InputGroupAddon>
+            <HugeiconsIcon icon={Search01Icon} className="size-3" />
+          </InputGroupAddon>
+        </InputGroup>
+
         <Button
           size="icon-xs"
           variant="ghost"
           aria-label="Add chat to root"
           onClick={() => {
-            void createChat(null);
+            createChat(null);
           }}
         >
           <HugeiconsIcon icon={Add01Icon} />
@@ -332,19 +351,20 @@ function ChatSidebarTreeInner({
           variant="ghost"
           aria-label="Add folder to root"
           onClick={() => {
-            void createFolder(null);
+            createFolder(null);
           }}
         >
           <HugeiconsIcon icon={FolderAddIcon} />
         </Button>
       </div>
+
       {visibleItems.length === 0 ? (
         <p className="px-2 py-2 text-sidebar-foreground/70 text-xs">
           No chats or folders yet.
         </p>
       ) : (
         <Tree
-          className="relative min-h-0 flex-1 gap-0.5 pb-8"
+          className="relative min-h-0 flex-1 gap-0.5 pb-8 px-1"
           {...tree.getContainerProps("Chat tree")}
         >
           <TreeDragLine style={tree.getDragLineStyle()} />
