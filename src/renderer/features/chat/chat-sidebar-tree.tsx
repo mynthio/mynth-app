@@ -47,11 +47,7 @@ import { DeleteFolderDialog } from "@/features/chat/delete-folder-dialog";
 
 import type { ChatInfo, ChatTreeFolderListItem } from "../../../shared/ipc";
 import { useWorkspaceStore } from "../workspace/store";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 
 type ChatTreeNodeData =
   | { kind: "folder"; folder: ChatTreeFolderListItem }
@@ -72,9 +68,7 @@ export function ChatSidebarTree() {
     <Sidebar collapsible="none">
       <SidebarContent>
         {!workspaceId ? (
-          <p className="px-2 py-2 text-sidebar-foreground/70 text-xs">
-            Select a workspace.
-          </p>
+          <p className="px-2 py-2 text-sidebar-foreground/70 text-xs">Select a workspace.</p>
         ) : workspaceState === "loading" ? null : (
           <ChatSidebarTreeInner
             key={workspaceId}
@@ -109,12 +103,8 @@ function ChatSidebarTreeInner({
   const [expandedItems, setExpandedItems] = React.useState<string[]>(() =>
     initialExpandedFolderIds.map((id) => `folder:${id}`),
   );
-  const [renamingItem, setRenamingItemRaw] = React.useState<
-    string | null | undefined
-  >(null);
-  const [renamingValue, setRenamingValueRaw] = React.useState<
-    string | undefined
-  >("");
+  const [renamingItem, setRenamingItemRaw] = React.useState<string | null | undefined>(null);
+  const [renamingValue, setRenamingValueRaw] = React.useState<string | undefined>("");
 
   const setRenamingItem = React.useCallback(
     (
@@ -124,38 +114,27 @@ function ChatSidebarTreeInner({
         | undefined
         | ((old: string | null | undefined) => string | null | undefined),
     ) => {
-      setRenamingItemRaw((prev) =>
-        typeof updater === "function" ? updater(prev) : updater,
-      );
+      setRenamingItemRaw((prev) => (typeof updater === "function" ? updater(prev) : updater));
     },
     [],
   );
 
   const setRenamingValue = React.useCallback(
-    (
-      updater:
-        | string
-        | undefined
-        | ((old: string | undefined) => string | undefined),
-    ) => {
-      setRenamingValueRaw((prev) =>
-        typeof updater === "function" ? updater(prev) : updater,
-      );
+    (updater: string | undefined | ((old: string | undefined) => string | undefined)) => {
+      setRenamingValueRaw((prev) => (typeof updater === "function" ? updater(prev) : updater));
     },
     [],
   );
 
-  const expandedItemsEvent = React.useEffectEvent(
-    (newExpandedItems: string[]) => {
-      const folderIds = newExpandedItems
-        .filter((id) => id.startsWith("folder:"))
-        .map((id) => id.slice("folder:".length));
-      setChatTreeUiState.mutate({
-        workspaceId,
-        expandedFolderIds: folderIds,
-      });
-    },
-  );
+  const expandedItemsEvent = React.useEffectEvent((newExpandedItems: string[]) => {
+    const folderIds = newExpandedItems
+      .filter((id) => id.startsWith("folder:"))
+      .map((id) => id.slice("folder:".length));
+    setChatTreeUiState.mutate({
+      workspaceId,
+      expandedFolderIds: folderIds,
+    });
+  });
 
   React.useEffect(() => {
     expandedItemsEvent(expandedItems);
@@ -194,8 +173,7 @@ function ChatSidebarTreeInner({
     },
     onDrop: async (items, target) => {
       const targetId = target.item.getId();
-      const targetFolderId =
-        targetId === ROOT_ITEM_ID ? null : targetId.slice("folder:".length);
+      const targetFolderId = targetId === ROOT_ITEM_ID ? null : targetId.slice("folder:".length);
 
       for (const item of items) {
         const itemId = item.getId();
@@ -249,12 +227,8 @@ function ChatSidebarTreeInner({
         return { kind: "loading" as const };
       },
       getChildrenWithData: async (itemId) => {
-        const parentFolderId =
-          itemId === ROOT_ITEM_ID ? null : itemId.slice("folder:".length);
-        const slice = await chatTreeApi.getChildren(
-          workspaceId,
-          parentFolderId,
-        );
+        const parentFolderId = itemId === ROOT_ITEM_ID ? null : itemId.slice("folder:".length);
+        const slice = await chatTreeApi.getChildren(workspaceId, parentFolderId);
         return [
           ...slice.folders.map((folder) => ({
             id: `folder:${folder.id}`,
@@ -304,13 +278,7 @@ function ChatSidebarTreeInner({
       setRenamingValue("New Folder");
       invalidateTree();
     },
-    [
-      createFolderMutation,
-      invalidateTree,
-      setRenamingItem,
-      setRenamingValue,
-      workspaceId,
-    ],
+    [createFolderMutation, invalidateTree, setRenamingItem, setRenamingValue, workspaceId],
   );
 
   const openChat = React.useCallback(
@@ -324,12 +292,7 @@ function ChatSidebarTreeInner({
     <>
       <div className="flex items-center gap-1 px-2">
         <InputGroup className="w-full">
-          <InputGroupInput
-            name="search"
-            placeholder="Search tree..."
-            type="text"
-            size="sm"
-          />
+          <InputGroupInput name="search" placeholder="Search tree..." type="text" size="sm" />
 
           <InputGroupAddon>
             <HugeiconsIcon icon={Search01Icon} className="size-3" />
@@ -359,9 +322,7 @@ function ChatSidebarTreeInner({
       </div>
 
       {visibleItems.length === 0 ? (
-        <p className="px-2 py-2 text-sidebar-foreground/70 text-xs">
-          No chats or folders yet.
-        </p>
+        <p className="px-2 py-2 text-sidebar-foreground/70 text-xs">No chats or folders yet.</p>
       ) : (
         <Tree
           className="relative min-h-0 flex-1 gap-0.5 pb-8 px-1"
@@ -379,55 +340,44 @@ function ChatSidebarTreeInner({
             const handleContextMenu = (e: React.MouseEvent) => {
               e.preventDefault();
               const itemKind = data.kind === "folder" ? "folder" : "chat";
-              void chatTreeApi
-                .showContextMenu(item.getId(), itemKind)
-                .then((action) => {
-                  const ensureFolderExpanded = () => {
-                    const folderItemId = item.getId();
-                    setExpandedItems((prev) =>
-                      prev.includes(folderItemId)
-                        ? prev
-                        : [...prev, folderItemId],
-                    );
-                  };
+              void chatTreeApi.showContextMenu(item.getId(), itemKind).then((action) => {
+                const ensureFolderExpanded = () => {
+                  const folderItemId = item.getId();
+                  setExpandedItems((prev) =>
+                    prev.includes(folderItemId) ? prev : [...prev, folderItemId],
+                  );
+                };
 
-                  if (action === "add-folder" && itemKind === "folder") {
-                    ensureFolderExpanded();
-                    void createFolder(item.getId().slice("folder:".length));
-                  } else if (action === "add-chat" && itemKind === "folder") {
-                    ensureFolderExpanded();
-                    void createChat(item.getId().slice("folder:".length));
-                  } else if (
-                    action === "open-in-new-tab" &&
-                    data.kind === "chat"
-                  ) {
-                    openChat(data.chat.id, "new-tab");
-                  } else if (action === "rename") {
-                    item.startRenaming();
-                  } else if (action === "delete") {
-                    const rawId = item.getId();
-                    if (itemKind === "folder") {
-                      void navigate({
-                        to: "/chat",
-                        search: { deleteFolder: rawId.slice("folder:".length) },
-                      });
-                    } else {
-                      void navigate({
-                        to: "/chat",
-                        search: { deleteChat: rawId.slice("chat:".length) },
-                      });
-                    }
+                if (action === "add-folder" && itemKind === "folder") {
+                  ensureFolderExpanded();
+                  void createFolder(item.getId().slice("folder:".length));
+                } else if (action === "add-chat" && itemKind === "folder") {
+                  ensureFolderExpanded();
+                  void createChat(item.getId().slice("folder:".length));
+                } else if (action === "open-in-new-tab" && data.kind === "chat") {
+                  openChat(data.chat.id, "new-tab");
+                } else if (action === "rename") {
+                  item.startRenaming();
+                } else if (action === "delete") {
+                  const rawId = item.getId();
+                  if (itemKind === "folder") {
+                    void navigate({
+                      to: "/chat",
+                      search: { deleteFolder: rawId.slice("folder:".length) },
+                    });
+                  } else {
+                    void navigate({
+                      to: "/chat",
+                      search: { deleteChat: rawId.slice("chat:".length) },
+                    });
                   }
-                });
+                }
+              });
             };
 
             if (item.isRenaming()) {
               return (
-                <TreeItem
-                  key={item.getKey()}
-                  level={depth}
-                  {...item.getProps()}
-                >
+                <TreeItem key={item.getKey()} level={depth} {...item.getProps()}>
                   {data.kind === "chat" ? (
                     <ChatTreeItemIcon chatId={data.chat.id} />
                   ) : data.kind === "folder" ? (
@@ -466,8 +416,7 @@ function ChatSidebarTreeInner({
 
             if (data.kind === "folder") {
               const isExpanded = item.isExpanded();
-              const hasChildren =
-                data.folder.childFolderCount + data.folder.childChatCount > 0;
+              const hasChildren = data.folder.childFolderCount + data.folder.childChatCount > 0;
 
               return (
                 <TreeItem
@@ -479,19 +428,12 @@ function ChatSidebarTreeInner({
                   onContextMenu={handleContextMenu}
                 >
                   <TreeItemIcon
-                    className={cn(
-                      "text-muted-foreground",
-                      !hasChildren && "opacity-50",
-                    )}
+                    className={cn("text-muted-foreground", !hasChildren && "opacity-50")}
                   >
-                    <HugeiconsIcon
-                      icon={isExpanded ? ArrowDown01Icon : ArrowRight01Icon}
-                    />
+                    <HugeiconsIcon icon={isExpanded ? ArrowDown01Icon : ArrowRight01Icon} />
                   </TreeItemIcon>
                   <TreeItemIcon className="text-muted-foreground">
-                    <HugeiconsIcon
-                      icon={isExpanded ? Folder02Icon : Folder01Icon}
-                    />
+                    <HugeiconsIcon icon={isExpanded ? Folder02Icon : Folder01Icon} />
                   </TreeItemIcon>
                   <TreeItemLabel>{data.folder.name}</TreeItemLabel>
                 </TreeItem>

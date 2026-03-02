@@ -2,9 +2,7 @@ import { syncWorkspaceSettingsStateToSqlite } from "../storage/sqlite-storage";
 import type { WorkspaceSlice, WorkspaceSliceCreator } from "../types";
 import { workspaceApi } from "@/api/workspaces";
 
-export const createWorkspaceSlice: WorkspaceSliceCreator<WorkspaceSlice> = (
-  set,
-) => ({
+export const createWorkspaceSlice: WorkspaceSliceCreator<WorkspaceSlice> = (set) => ({
   state: "idle",
   workspace: null,
 
@@ -32,8 +30,7 @@ export const createWorkspaceSlice: WorkspaceSliceCreator<WorkspaceSlice> = (
 
       state.workspace = newWorkspace;
 
-      state.activeTabId =
-        newSettings.activeTabId ?? newSettings.tabs?.[0]?.id ?? null;
+      state.activeTabId = newSettings.activeTabId ?? newSettings.tabs?.[0]?.id ?? null;
       state.tabs =
         newSettings.tabs?.map((t) => ({
           id: t.id,

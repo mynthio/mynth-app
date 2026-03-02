@@ -33,6 +33,7 @@ import {
   useChatSendMessage,
   useSetChatModelId,
 } from "@/features/chat/chat-context";
+import { useTextContextMenu } from "@/hooks/use-text-context-menu";
 import { getProviderIconById } from "@/lib/provider-icons";
 import { cn } from "@/lib/utils";
 import { listEnabledModelsQueryOptions } from "@/queries/models";
@@ -53,7 +54,7 @@ export function ChatPage() {
     <SidebarProvider className="h-full min-h-0 w-full">
       <ChatSidebarTree />
 
-      <div className="w-full h-[calc(100%-8px)] overflow-auto scrollbar bg-card rounded-l-2xl">
+      <div className="w-full h-[calc(100%-8px)] overflow-auto scrollbar bg-card rounded-l-2xl flex min-h-0 flex-col justify-between">
         {activeTab?.chatId ? (
           <ActiveChatView chatId={activeTab.chatId} />
         ) : (
@@ -138,6 +139,7 @@ function ActiveChatContent() {
   const error = useChatError();
   const historyError = useChatHistoryError();
   const { data: globalChatSettings } = useQuery(globalChatSettingsQueryOptions);
+  const handleMessageContextMenu = useTextContextMenu();
 
   const promptStickyPosition = globalChatSettings?.promptStickyPosition ?? true;
   const submitBehavior = globalChatSettings?.formSubmitBehavior ?? "enter";
@@ -210,7 +212,7 @@ function ActiveChatContent() {
 
   return (
     <>
-      <div className="min-h-0 flex flex-col gap-12 w-5xl max-w-[calc(100%-4rem)] mx-auto pt-10">
+      <div className="min-h-0 h-full overflow-visible max-h-max flex flex-col gap-12 w-5xl max-w-[calc(100%-4rem)] mx-auto pt-10 flex-1">
         {messages.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             Send a message to start chatting.
@@ -227,6 +229,7 @@ function ActiveChatContent() {
                     ? "bg-primary text-primary-foreground"
                     : ""
                 }`}
+                onContextMenu={handleMessageContextMenu}
               >
                 {message.parts.map((part, i) =>
                   part.type === "text" ? (

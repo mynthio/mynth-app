@@ -5,11 +5,7 @@ import { useRender } from "@base-ui/react/use-render";
 
 import { cn } from "@/lib/utils";
 
-function Tree({
-  className,
-  render,
-  ...props
-}: useRender.ComponentProps<"div">) {
+function Tree({ className, render, ...props }: useRender.ComponentProps<"div">) {
   const defaultProps = {
     className: cn("flex flex-col [--tree-indent:12px]", className),
     "data-slot": "tree",
@@ -55,11 +51,7 @@ function TreeItem({
   });
 }
 
-function TreeItemIcon({
-  className,
-  render,
-  ...props
-}: useRender.ComponentProps<"span">) {
+function TreeItemIcon({ className, render, ...props }: useRender.ComponentProps<"span">) {
   const defaultProps = {
     className: cn(
       "flex shrink-0 items-center justify-center [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0",
@@ -75,11 +67,7 @@ function TreeItemIcon({
   });
 }
 
-function TreeItemLabel({
-  className,
-  render,
-  ...props
-}: useRender.ComponentProps<"span">) {
+function TreeItemLabel({ className, render, ...props }: useRender.ComponentProps<"span">) {
   const defaultProps = {
     className: cn("flex-1 truncate text-sm", className),
     "data-slot": "tree-item-label",
@@ -92,11 +80,7 @@ function TreeItemLabel({
   });
 }
 
-function TreeItemActions({
-  className,
-  render,
-  ...props
-}: useRender.ComponentProps<"div">) {
+function TreeItemActions({ className, render, ...props }: useRender.ComponentProps<"div">) {
   const defaultProps = {
     className: cn(
       "ml-auto flex items-center gap-0.5",
@@ -113,11 +97,7 @@ function TreeItemActions({
   });
 }
 
-function TreeItemAction({
-  className,
-  render,
-  ...props
-}: useRender.ComponentProps<"button">) {
+function TreeItemAction({ className, render, ...props }: useRender.ComponentProps<"button">) {
   const defaultProps = {
     className: cn(
       "inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md border-transparent text-muted-foreground outline-hidden transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:shrink-0",
@@ -134,11 +114,7 @@ function TreeItemAction({
   });
 }
 
-function TreeItemRenameInput({
-  className,
-  render,
-  ...props
-}: useRender.ComponentProps<"input">) {
+function TreeItemRenameInput({ className, render, ...props }: useRender.ComponentProps<"input">) {
   const defaultProps = {
     className: cn(
       "h-6 w-full min-w-0 rounded border border-ring bg-background px-1.5 text-sm outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
@@ -154,16 +130,9 @@ function TreeItemRenameInput({
   });
 }
 
-function TreeDragLine({
-  className,
-  render,
-  ...props
-}: useRender.ComponentProps<"div">) {
+function TreeDragLine({ className, render, ...props }: useRender.ComponentProps<"div">) {
   const defaultProps = {
-    className: cn(
-      "pointer-events-none absolute left-0 right-0 h-0.5 bg-primary",
-      className,
-    ),
+    className: cn("pointer-events-none absolute left-0 right-0 h-0.5 bg-primary", className),
     "data-slot": "tree-drag-line",
   };
 

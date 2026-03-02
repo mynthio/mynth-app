@@ -1,23 +1,12 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, Outlet } from "@tanstack/react-router";
-import {
-  Add01Icon,
-  Cancel01Icon,
-  CircleIcon,
-  Setting07Icon,
-} from "@hugeicons/core-free-icons";
+import { Add01Icon, Cancel01Icon, CircleIcon, Setting07Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { WindowChrome } from "@/components/app/window-chrome";
 import { Button } from "@/components/ui/button";
-import {
-  Menu,
-  MenuItem,
-  MenuPopup,
-  MenuSeparator,
-  MenuTrigger,
-} from "@/components/ui/menu";
+import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
 
 import { getChatQueryOptions } from "@/queries/chats";
 import { listWorkspacesQueryOptions } from "@/queries/workspaces";

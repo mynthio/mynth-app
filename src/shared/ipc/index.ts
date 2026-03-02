@@ -14,6 +14,9 @@ export const IPC_CHANNELS = {
     getGlobalChat: "settings:getGlobalChat",
     updateGlobalChat: "settings:updateGlobalChat",
   },
+  contextMenu: {
+    showText: "contextMenu:showText",
+  },
   chatTree: {
     get: "chatTree:get",
     getChildren: "chatTree:getChildren",
@@ -80,6 +83,12 @@ export interface GlobalChatSettings {
 export interface GlobalChatSettingsUpdateInput {
   promptStickyPosition?: boolean;
   formSubmitBehavior?: ChatFormSubmitBehavior;
+}
+
+export interface TextContextMenuInput {
+  isEditable: boolean;
+  hasSelection: boolean;
+  selectionText: string;
 }
 
 export interface FolderInfo {
@@ -223,6 +232,7 @@ export interface IpcApi {
   ) => Promise<WorkspaceSettings>;
   getGlobalChatSettings: () => Promise<GlobalChatSettings>;
   updateGlobalChatSettings: (input: GlobalChatSettingsUpdateInput) => Promise<GlobalChatSettings>;
+  showTextContextMenu: (input: TextContextMenuInput) => Promise<void>;
   getChatTree: (workspaceId: string) => Promise<ChatTreeSnapshot>;
   getChatTreeChildren: (
     workspaceId: string,
