@@ -54,22 +54,24 @@ export function ChatPage() {
     <SidebarProvider className="h-full min-h-0 w-full">
       <ChatSidebarTree />
 
-      <div className="w-full h-[calc(100%-8px)] overflow-auto scrollbar bg-card rounded-l-2xl flex min-h-0 flex-col justify-between">
-        {activeTab?.chatId ? (
-          <ActiveChatView chatId={activeTab.chatId} />
-        ) : (
-          <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-6">
-            <p className="text-muted-foreground">
-              No chat selected. Open a chat from the sidebar.
-            </p>
-            <Link
-              to="/settings"
-              className="inline-flex w-fit rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-            >
-              Go to Settings
-            </Link>
-          </div>
-        )}
+      <div className="w-full h-[calc(100%-8px)] overflow-auto scrollbar bg-card rounded-l-2xl">
+        <div className="flex flex-col min-h-full justify-between">
+          {activeTab?.chatId ? (
+            <ActiveChatView chatId={activeTab.chatId} />
+          ) : (
+            <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-6">
+              <p className="text-muted-foreground">
+                No chat selected. Open a chat from the sidebar.
+              </p>
+              <Link
+                to="/settings"
+                className="inline-flex w-fit rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                Go to Settings
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
     </SidebarProvider>
   );
@@ -212,7 +214,7 @@ function ActiveChatContent() {
 
   return (
     <>
-      <div className="min-h-0 h-full overflow-visible max-h-max flex flex-col gap-12 w-5xl max-w-[calc(100%-4rem)] mx-auto pt-10 flex-1">
+      <div className="min-h-0 flex flex-col gap-12 w-5xl max-w-[calc(100%-4rem)] mx-auto pt-10">
         {messages.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             Send a message to start chatting.
@@ -272,54 +274,57 @@ function ActiveChatContent() {
         ) : null}
       </div>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          submitMessage();
-        }}
+      <div
         className={cn(
           "mt-24 mx-auto max-w-5xl w-full mb-4",
           promptStickyPosition ? "sticky bottom-4" : null,
         )}
       >
-        <InputGroup
-          className="dark:bg-background shadow-xl shadow-black/20 p-3"
-          style={
-            {
-              "--radius-lg": "30px",
-              "--radius": "30px",
-            } as React.CSSProperties
-          }
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            submitMessage();
+          }}
         >
-          <InputGroupTextarea
-            data-chat-composer-input="true"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask, Search or Chat…"
-            disabled={isBusy}
-            rows={1}
-          />
-          <InputGroupAddon align="block-end" className="p-0">
-            <ModelSelector />
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    type="submit"
-                    aria-label="Send"
-                    className="ml-auto"
-                    size="icon-lg"
-                    disabled={!modelId || !input.trim() || isBusy}
-                  >
-                    <HugeiconsIcon icon={ArrowUp01Icon} />
-                  </Button>
-                }
-              />
-              <TooltipPopup>Send</TooltipPopup>
-            </Tooltip>
-          </InputGroupAddon>
-        </InputGroup>
-      </form>
+          <InputGroup
+            className="dark:bg-background shadow-xl shadow-black/20 p-3"
+            style={
+              {
+                "--radius-lg": "30px",
+                "--radius": "30px",
+              } as React.CSSProperties
+            }
+          >
+            <InputGroupTextarea
+              data-chat-composer-input="true"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask, Search or Chat…"
+              disabled={isBusy}
+              rows={1}
+            />
+            <InputGroupAddon align="block-end" className="p-0">
+              <ModelSelector />
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      type="submit"
+                      aria-label="Send"
+                      className="ml-auto"
+                      size="icon-lg"
+                      disabled={!modelId || !input.trim() || isBusy}
+                    >
+                      <HugeiconsIcon icon={ArrowUp01Icon} />
+                    </Button>
+                  }
+                />
+                <TooltipPopup>Send</TooltipPopup>
+              </Tooltip>
+            </InputGroupAddon>
+          </InputGroup>
+        </form>
+      </div>
     </>
   );
 }
