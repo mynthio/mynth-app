@@ -9,16 +9,33 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-const nowMs = sql`(cast((julianday('now') - 2440587.5) * 86400000 as integer))`;
+type JsonObject = Record<string, unknown>;
+const timestampMs = (columnName: string) =>
+  integer(columnName)
+    .notNull()
+    .$defaultFn(() => Date.now());
+const jsonObject = <T extends JsonObject = JsonObject>(columnName: string) =>
+  text(columnName, { mode: "json" })
+    .$type<T>()
+    .notNull()
+    .default(sql`'{}'`);
+const jsonArray = <T extends unknown[] = unknown[]>(columnName: string) =>
+  text(columnName, { mode: "json" })
+    .$type<T>()
+    .notNull()
+    .default(sql`'[]'`);
 
 export const workspaces = sqliteTable("workspaces", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   color: text("color"),
   // JSON object stored as TEXT in SQLite (parsed by app code).
-  settings: text("settings").notNull().default("{}"),
-  createdAt: integer("created_at").notNull().default(nowMs),
-  updatedAt: integer("updated_at").notNull().default(nowMs),
+  settings: jsonObject("settings"),
+  data: jsonObject("data"),
+  metadata: jsonObject("metadata"),
+  extensions: jsonObject("extensions"),
+  createdAt: timestampMs("created_at"),
+  updatedAt: timestampMs("updated_at"),
 });
 
 export const folders = sqliteTable(
@@ -32,8 +49,11 @@ export const folders = sqliteTable(
       onDelete: "set null",
     }),
     name: text("name").notNull(),
-    createdAt: integer("created_at").notNull().default(nowMs),
-    updatedAt: integer("updated_at").notNull().default(nowMs),
+    data: jsonObject("data"),
+    metadata: jsonObject("metadata"),
+    extensions: jsonObject("extensions"),
+    createdAt: timestampMs("created_at"),
+    updatedAt: timestampMs("updated_at"),
   },
   (table) => [
     index("folders_workspace_id_idx").on(table.workspaceId),
@@ -52,8 +72,12 @@ export const chats = sqliteTable(
       onDelete: "set null",
     }),
     title: text("title").notNull(),
-    createdAt: integer("created_at").notNull().default(nowMs),
-    updatedAt: integer("updated_at").notNull().default(nowMs),
+    settings: jsonObject("settings"),
+    data: jsonObject("data"),
+    metadata: jsonObject("metadata"),
+    extensions: jsonObject("extensions"),
+    createdAt: timestampMs("created_at"),
+    updatedAt: timestampMs("updated_at"),
   },
   (table) => [
     index("chats_workspace_id_idx").on(table.workspaceId),
@@ -72,10 +96,12 @@ export const messages = sqliteTable(
       onDelete: "set null",
     }),
     role: text("role").notNull(),
-    parts: text("parts").notNull(),
-    metadata: text("metadata").notNull().default("{}"),
-    createdAt: integer("created_at").notNull().default(nowMs),
-    updatedAt: integer("updated_at").notNull().default(nowMs),
+    parts: jsonArray("parts"),
+    data: jsonObject("data"),
+    metadata: jsonObject("metadata"),
+    extensions: jsonObject("extensions"),
+    createdAt: timestampMs("created_at"),
+    updatedAt: timestampMs("updated_at"),
   },
   (table) => [
     index("messages_chat_id_idx").on(table.chatId),
@@ -106,7 +132,10 @@ export const assets = sqliteTable(
     width: integer("width"),
     height: integer("height"),
     durationMs: integer("duration_ms"),
-    createdAt: integer("created_at").notNull().default(nowMs),
+    data: jsonObject("data"),
+    metadata: jsonObject("metadata"),
+    extensions: jsonObject("extensions"),
+    createdAt: timestampMs("created_at"),
   },
   (table) => [
     index("assets_workspace_id_idx").on(table.workspaceId),
@@ -140,13 +169,15 @@ export const providers = sqliteTable(
     // Optional base URL override (Ollama, LM Studio, custom OpenAI-compatible).
     baseUrl: text("base_url"),
     // Arbitrary provider-specific config stored as JSON (including encrypted secret wrappers).
-    config: text("config").notNull().default("{}"),
+    config: jsonObject("config"),
+    data: jsonObject("data"),
     // Operational provider metadata (non-config), such as model sync diagnostics.
-    metadata: text("metadata").notNull().default("{}"),
+    metadata: jsonObject("metadata"),
+    extensions: jsonObject("extensions"),
     // Background model sync status for this provider profile.
     modelsSyncStatus: text("models_sync_status").notNull().default("idle"),
-    createdAt: integer("created_at").notNull().default(nowMs),
-    updatedAt: integer("updated_at").notNull().default(nowMs),
+    createdAt: timestampMs("created_at"),
+    updatedAt: timestampMs("updated_at"),
   },
   (table) => [index("providers_catalog_id_idx").on(table.catalogId)],
 );
@@ -168,10 +199,12 @@ export const models = sqliteTable(
     // App-wide enable/disable flag for this model.
     isEnabled: integer("is_enabled", { mode: "boolean" }).notNull().default(true),
     // Workspace-specific enable/disable state lives in `workspace_model_overrides`.
-    metadata: text("metadata").notNull().default("{}"),
+    data: jsonObject("data"),
+    metadata: jsonObject("metadata"),
+    extensions: jsonObject("extensions"),
     lifecycleStatus: text("lifecycle_status").notNull().default("active"),
-    createdAt: integer("created_at").notNull().default(nowMs),
-    updatedAt: integer("updated_at").notNull().default(nowMs),
+    createdAt: timestampMs("created_at"),
+    updatedAt: timestampMs("updated_at"),
   },
   (table) => [
     uniqueIndex("models_provider_model_unique").on(table.providerId, table.providerModelId),
@@ -190,8 +223,11 @@ export const workspaceProviderOverrides = sqliteTable(
       .notNull()
       .references(() => providers.id, { onDelete: "cascade" }),
     isEnabled: integer("is_enabled", { mode: "boolean" }).notNull(),
-    createdAt: integer("created_at").notNull().default(nowMs),
-    updatedAt: integer("updated_at").notNull().default(nowMs),
+    data: jsonObject("data"),
+    metadata: jsonObject("metadata"),
+    extensions: jsonObject("extensions"),
+    createdAt: timestampMs("created_at"),
+    updatedAt: timestampMs("updated_at"),
   },
   (table) => [
     primaryKey({
@@ -210,8 +246,11 @@ export const workspaceModelOverrides = sqliteTable(
       .notNull()
       .references(() => models.id, { onDelete: "cascade" }),
     isEnabled: integer("is_enabled", { mode: "boolean" }).notNull(),
-    createdAt: integer("created_at").notNull().default(nowMs),
-    updatedAt: integer("updated_at").notNull().default(nowMs),
+    data: jsonObject("data"),
+    metadata: jsonObject("metadata"),
+    extensions: jsonObject("extensions"),
+    createdAt: timestampMs("created_at"),
+    updatedAt: timestampMs("updated_at"),
   },
   (table) => [
     primaryKey({
@@ -219,17 +258,3 @@ export const workspaceModelOverrides = sqliteTable(
     }),
   ],
 );
-
-export const chatSettings = sqliteTable("chat_settings", {
-  chatId: text("chat_id")
-    .primaryKey()
-    .references(() => chats.id, { onDelete: "cascade" }),
-  // FK to the selected model; null means "use workspace/app default".
-  modelId: text("model_id").references(() => models.id, {
-    onDelete: "set null",
-  }),
-  systemPrompt: text("system_prompt"),
-  outputMode: text("output_mode").notNull().default("text"),
-  outputSchema: text("output_schema"),
-  updatedAt: integer("updated_at").notNull().default(nowMs),
-});

@@ -131,7 +131,8 @@ export function syncProviderModels(
       seenProviderModelIds.add(syncedModel.providerModelId);
 
       const existing = existingByProviderModelId.get(syncedModel.providerModelId);
-      const serializedMetadata = JSON.stringify(syncedModel.metadata);
+      const nextMetadata = normalizeJsonObject(syncedModel.metadata);
+      const serializedNextMetadata = JSON.stringify(nextMetadata);
 
       if (!existing) {
         tx.insert(models)
@@ -142,7 +143,7 @@ export function syncProviderModels(
             canonicalModelId: syncedModel.canonicalModelId,
             displayName: syncedModel.displayName,
             isEnabled: enablementPolicy.insertedModelEnabled,
-            metadata: serializedMetadata,
+            metadata: nextMetadata,
             lifecycleStatus: syncedModel.lifecycleStatus,
           })
           .run();
@@ -155,7 +156,7 @@ export function syncProviderModels(
         (existing.displayName ?? null) === (syncedModel.displayName ?? null) &&
         (enablementPolicy.existingModelsEnabled === "preserve" ||
           existing.isEnabled === enablementPolicy.existingModelsEnabled) &&
-        existing.metadata === serializedMetadata &&
+        JSON.stringify(normalizeJsonObject(existing.metadata)) === serializedNextMetadata &&
         existing.lifecycleStatus === syncedModel.lifecycleStatus
       ) {
         continue;
@@ -171,7 +172,7 @@ export function syncProviderModels(
           canonicalModelId: syncedModel.canonicalModelId,
           displayName: syncedModel.displayName,
           isEnabled: nextIsEnabled,
-          metadata: serializedMetadata,
+          metadata: nextMetadata,
           lifecycleStatus: syncedModel.lifecycleStatus,
           updatedAt: Date.now(),
         })
@@ -253,4 +254,12 @@ function getModelEnablementPolicyForSyncContext(context: ProviderModelSyncContex
         existingModelsEnabled: "preserve",
       };
   }
+}
+
+function normalizeJsonObject(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return value as Record<string, unknown>;
 }

@@ -42,7 +42,7 @@ export function createProvider(input: CreateProviderInput): ProviderTableRow {
       displayName: input.displayName,
       catalogId: input.catalogId,
       baseUrl: input.baseUrl ?? null,
-      config: JSON.stringify(input.config ?? {}),
+      config: input.config ?? {},
     })
     .run();
 
@@ -113,7 +113,7 @@ export function updateProviderMetadataModelSync(
   const result = getAppDatabase()
     .update(providers)
     .set({
-      metadata: JSON.stringify(metadata),
+      metadata,
       updatedAt: Date.now(),
     })
     .where(eq(providers.id, id))
@@ -122,16 +122,12 @@ export function updateProviderMetadataModelSync(
   return result.changes > 0;
 }
 
-function parseProviderMetadata(raw: string): ProviderMetadata {
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!isPlainObject(parsed)) {
-      return {};
-    }
-    return parsed as ProviderMetadata;
-  } catch {
+function parseProviderMetadata(raw: unknown): ProviderMetadata {
+  if (!isPlainObject(raw)) {
     return {};
   }
+
+  return raw as ProviderMetadata;
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

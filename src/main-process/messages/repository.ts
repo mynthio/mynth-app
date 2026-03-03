@@ -103,8 +103,6 @@ export function listMessagesByChatId(chatId: string, branchId?: string | null): 
 export function upsertMessage(input: UpsertMessageInput): MessageRow {
   const db = getAppDatabase();
   const existing = db.select().from(messages).where(eq(messages.id, input.id)).get();
-  const serializedParts = JSON.stringify(input.parts);
-  const serializedMetadata = JSON.stringify(input.metadata);
 
   if (!existing) {
     db.insert(messages)
@@ -113,8 +111,8 @@ export function upsertMessage(input: UpsertMessageInput): MessageRow {
         chatId: input.chatId,
         parentId: input.parentId,
         role: input.role,
-        parts: serializedParts,
-        metadata: serializedMetadata,
+        parts: input.parts,
+        metadata: input.metadata,
       })
       .run();
   } else {
@@ -123,8 +121,8 @@ export function upsertMessage(input: UpsertMessageInput): MessageRow {
         chatId: input.chatId,
         parentId: input.parentId,
         role: input.role,
-        parts: serializedParts,
-        metadata: serializedMetadata,
+        parts: input.parts,
+        metadata: input.metadata,
         updatedAt: Date.now(),
       })
       .where(eq(messages.id, input.id))
@@ -211,8 +209,8 @@ function toMessageRow(row: MessageTableRow): MessageRow {
     chatId: row.chatId,
     parentId: row.parentId,
     role: parseMessageRole(row.role),
-    parts: parseJsonArray(row.parts),
-    metadata: parseJsonObject(row.metadata),
+    parts: normalizeJsonArray(row.parts),
+    metadata: normalizeJsonObject(row.metadata),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -226,23 +224,14 @@ function parseMessageRole(value: string): MessageRole {
   throw new Error(`Unsupported message role "${value}".`);
 }
 
-function parseJsonArray(raw: string): unknown[] {
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+function normalizeJsonArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
 }
 
-function parseJsonObject(raw: string): Record<string, unknown> {
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return {};
-    }
-    return parsed as Record<string, unknown>;
-  } catch {
+function normalizeJsonObject(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
     return {};
   }
+
+  return value as Record<string, unknown>;
 }

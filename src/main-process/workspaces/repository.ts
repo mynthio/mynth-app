@@ -100,30 +100,15 @@ function isWorkspaceSettings(value: unknown): value is WorkspaceSettings {
   return true;
 }
 
-function parseWorkspaceSettings(raw: string, workspaceId: string): WorkspaceSettings {
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!isWorkspaceSettings(parsed)) {
-      console.warn(
-        `[workspaces] Invalid settings JSON object for workspace "${workspaceId}", using empty object.`,
-      );
-      return {};
-    }
-    return parsed;
-  } catch (error) {
+function normalizeWorkspaceSettings(raw: unknown, workspaceId: string): WorkspaceSettings {
+  if (!isWorkspaceSettings(raw)) {
     console.warn(
-      `[workspaces] Failed to parse settings JSON for workspace "${workspaceId}", using empty object.`,
-      error,
+      `[workspaces] Invalid settings JSON object for workspace "${workspaceId}", using empty object.`,
     );
     return {};
   }
-}
 
-function serializeWorkspaceSettings(settings: WorkspaceSettings): string {
-  if (!isWorkspaceSettings(settings)) {
-    throw new Error("Workspace settings must be a JSON object.");
-  }
-  return JSON.stringify(settings);
+  return raw;
 }
 
 function toWorkspaceRow(row: WorkspaceTableRow): WorkspaceRow {
@@ -131,7 +116,7 @@ function toWorkspaceRow(row: WorkspaceTableRow): WorkspaceRow {
     id: row.id,
     name: row.name,
     color: row.color,
-    settings: parseWorkspaceSettings(row.settings, row.id),
+    settings: normalizeWorkspaceSettings(row.settings, row.id),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -216,7 +201,7 @@ export function createWorkspace(input: CreateWorkspaceInput): WorkspaceRow {
       id: input.id,
       name: input.name,
       color: input.color ?? null,
-      settings: serializeWorkspaceSettings(settings),
+      settings,
     })
     .run();
 
@@ -267,7 +252,7 @@ export function updateWorkspaceSettings(id: string, patch: WorkspaceSettingsPatc
   getAppDatabase()
     .update(workspaces)
     .set({
-      settings: serializeWorkspaceSettings(nextSettings),
+      settings: nextSettings,
       updatedAt: Date.now(),
     })
     .where(eq(workspaces.id, id))

@@ -39,9 +39,9 @@ export function resolveProviderRuntimeContext(
 
 export function parseStoredProviderConfig(
   providerDef: SupportedProviderDefinition,
-  storedConfigJson: string,
+  storedConfig: unknown,
 ): ParsedProviderRuntimeConfig {
-  const parsedConfig = parseStoredConfigObject(providerDef.id, storedConfigJson);
+  const parsedConfig = parseStoredConfigObject(providerDef.id, storedConfig);
   const allowedKeys = new Set(Object.keys(providerDef.configFields));
 
   for (const key of Object.keys(parsedConfig)) {
@@ -119,21 +119,12 @@ function parseStoredHostPortConfigValue(value: unknown, key: string): ProviderHo
   return { host, port };
 }
 
-function parseStoredConfigObject(providerId: string, raw: string): Record<string, unknown> {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (error) {
-    throw new Error(`Stored config for provider "${providerId}" is not valid JSON.`, {
-      cause: error,
-    });
-  }
-
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+function parseStoredConfigObject(providerId: string, raw: unknown): Record<string, unknown> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new Error(`Stored config for provider "${providerId}" must be an object.`);
   }
 
-  return parsed as Record<string, unknown>;
+  return raw as Record<string, unknown>;
 }
 
 function isStoredSecretConfigValue(value: unknown): value is StoredSecretConfigValue {
