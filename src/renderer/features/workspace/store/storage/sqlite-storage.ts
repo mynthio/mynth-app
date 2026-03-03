@@ -9,11 +9,13 @@ export const syncWorkspaceSettingsStateToSqlite = new AsyncDebouncer(
 
     await workspaceApi.updateSettings(state.workspace.id, {
       activeTabId: state.activeTabId,
-      tabs: state.tabs.map((t) => ({
-        chatId: t.chatId,
-        id: t.id,
-        type: "chat",
-      })),
+      tabs: state.tabs
+        .filter((t) => t.chatId)
+        .map((t) => ({
+          chatId: t.chatId!,
+          id: t.id,
+          type: "chat",
+        })),
 
       chatTreeExpandedFolderIds: state.expandedTreeNodes,
     });

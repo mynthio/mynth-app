@@ -1,4 +1,4 @@
-import type { Tab, TabsSlice, WorkspaceSliceCreator } from "../types";
+import type { Tab, TabContent, TabsSlice, WorkspaceSliceCreator } from "../types";
 
 export const createTabsSlice: WorkspaceSliceCreator<TabsSlice> = (set, get) => ({
   tabs: [],
@@ -10,9 +10,14 @@ export const createTabsSlice: WorkspaceSliceCreator<TabsSlice> = (set, get) => (
     return state.tabs.find((t) => t.id === state.activeTabId) ?? state.tabs[0] ?? null;
   },
 
-  openTab: (chatId, opts = { mode: "auto" }) => {
+  openTab: (content: TabContent, opts = { mode: "auto" }) => {
     set((state) => {
-      const existingTab = state.tabs.find((tab) => tab.chatId === chatId);
+      const existingTab =
+        content.type === "empty"
+          ? state.tabs.find((tab) => tab.type === "empty")
+          : content.type === "chat"
+            ? state.tabs.find((tab) => tab.type === "chat" && tab.chatId === content.chatId)
+            : undefined;
 
       if (existingTab) {
         state.activeTabId = existingTab.id;
@@ -22,10 +27,17 @@ export const createTabsSlice: WorkspaceSliceCreator<TabsSlice> = (set, get) => (
       const newTab: Tab = {
         id: crypto.randomUUID(),
 
-        type: "chat",
-
-        chatId,
+        ...content,
       };
+
+      /**
+       * If empty and non-existing just push, never set dirty on empty tab
+       */
+      if (newTab.type === "empty") {
+        state.tabs.push(newTab);
+        state.activeTabId = newTab.id;
+        return;
+      }
 
       /**
        * Here we know that tab doesn't exists,

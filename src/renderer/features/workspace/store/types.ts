@@ -2,16 +2,24 @@ import { WorkspaceInfo } from "src/shared/ipc";
 import type { StateCreator } from "zustand";
 import "zustand/middleware/immer";
 
-export type TabType = "chat";
+export type TabType = "chat" | "empty";
 
-export interface Tab {
+export interface EmptyTab {
+  type: "empty";
+}
+
+export interface ChatTab {
+  type: "chat";
+  chatId: string;
+}
+
+export type TabContent = EmptyTab | ChatTab;
+
+export type Tab = {
   id: string;
 
-  type: TabType;
-  chatId: string;
-
   isDirty?: boolean;
-}
+} & TabContent;
 
 export type WorkspaceState = "idle" | "loading";
 
@@ -30,7 +38,7 @@ export interface TabsSliceValue {
 }
 
 export interface TabsSlice extends TabsSliceValue {
-  openTab: (chatId: string, opts?: { mode: "auto" | "new-tab" }) => void;
+  openTab: (content: TabContent, opts?: { mode: "auto" | "new-tab" }) => void;
   closeTab: (tabId: string) => void;
 
   setActiveTab: (tabId: string) => void;

@@ -283,7 +283,13 @@ function ChatSidebarTreeInner({
 
   const openChat = React.useCallback(
     (chatId: string, mode: "auto" | "new-tab") => {
-      openTab(chatId, { mode });
+      openTab(
+        {
+          type: "chat",
+          chatId,
+        },
+        { mode },
+      );
     },
     [openTab],
   );

@@ -106,10 +106,10 @@ function ChatTabsBar() {
 }
 
 function ChatTabButton({ tab }: { tab: Tab }) {
-  const chatQuery = useQuery(getChatQueryOptions(tab.chatId));
-  const title = chatQuery.data?.title ?? "Chat";
+  const chatQuery = useQuery(getChatQueryOptions(tab.type === "chat" ? tab.chatId : null));
+  const title = chatQuery.data?.title ?? "New Tab";
 
-  const openTab = useWorkspaceStore((s) => s.openTab);
+  const setActiveTab = useWorkspaceStore((s) => s.setActiveTab);
   const activeId = useWorkspaceStore((s) => s.activeTabId);
   const closeTab = useWorkspaceStore((s) => s.closeTab);
 
@@ -123,7 +123,7 @@ function ChatTabButton({ tab }: { tab: Tab }) {
       variant={isActive ? "secondary" : "ghost"}
       className="shrink-0 group/tab relative z-0 px-4 justify-start text-left"
       onClick={() => {
-        openTab(tab.chatId);
+        setActiveTab(tab.id);
       }}
     >
       {title}
