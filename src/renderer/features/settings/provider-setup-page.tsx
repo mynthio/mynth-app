@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import type { ProviderCredentialTestResult } from "../../../shared/ipc";
+import type { ProviderCredentialTestResult } from "@shared/ipc";
 import {
   getSupportedProviderById,
   type ProviderConfigFieldDefinition,
   type SupportedProviderDefinition,
-} from "../../../shared/providers/catalog";
+} from "@shared/providers/catalog";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { BotIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";

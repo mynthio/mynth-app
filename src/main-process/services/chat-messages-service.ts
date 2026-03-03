@@ -1,7 +1,4 @@
-import {
-  normalizeChatMessageMetadata,
-  type MynthUiMessage,
-} from "../../shared/chat/message-metadata";
+import { normalizeChatMessageMetadata, type MynthUiMessage } from "@shared/chat/message-metadata";
 import { getChatById } from "../chat-tree/repository";
 import { listMessagesByChatId, type MessageRow } from "../messages/repository";
 

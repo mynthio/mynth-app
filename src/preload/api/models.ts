@@ -1,4 +1,4 @@
-import { IPC_CHANNELS, type IpcApi } from "../../shared/ipc";
+import { IPC_CHANNELS, type IpcApi } from "@shared/ipc";
 import { invokeIpc } from "../invoke";
 
 type ModelsApi = Pick<IpcApi, "listEnabledModels" | "setProviderModelsEnabled" | "updateModel">;

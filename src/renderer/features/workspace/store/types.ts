@@ -1,4 +1,4 @@
-import { WorkspaceInfo } from "src/shared/ipc";
+import { WorkspaceInfo } from "@shared/ipc";
 import type { StateCreator } from "zustand";
 import "zustand/middleware/immer";
 

@@ -1,7 +1,7 @@
 import { useChat } from "@ai-sdk/react";
 import type { Chat } from "@ai-sdk/react";
 import { useChatStore } from "../stores/chat-store";
-import type { MynthUiMessage } from "../../shared/chat/message-metadata";
+import type { MynthUiMessage } from "@shared/chat/message-metadata";
 
 export function ChatRegistry() {
   const chatEntries = useChatStore((s) => s.chatEntries);

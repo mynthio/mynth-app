@@ -1,4 +1,4 @@
-import type { SupportedProviderDefinition } from "../../../../../shared/providers/catalog";
+import type { SupportedProviderDefinition } from "@shared/providers/catalog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardPanel, CardTitle } from "@/components/ui/card";

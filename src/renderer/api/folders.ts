@@ -1,5 +1,5 @@
 import "../lib/electron-api";
-import { parseWorkspaceId } from "../../shared/workspace/workspace-id";
+import { parseWorkspaceId } from "@shared/workspace/workspace-id";
 
 export const foldersApi = {
   create(workspaceId: string, name: string, parentId?: string | null) {

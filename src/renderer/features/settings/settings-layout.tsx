@@ -50,14 +50,16 @@ export function SettingsLayout() {
             <HugeiconsIcon icon={ArrowLeft01Icon} />
             <span>Chat</span>
           </Button>
-          <div className="font-heading text-sm font-semibold tracking-tight">Settings</div>
+          <div className="font-heading text-sm font-semibold tracking-tight">
+            Settings
+          </div>
           <div className="w-14" />
         </div>
       }
       contentClassName="overflow-hidden"
     >
       <SidebarProvider className="h-full min-h-0">
-        <Sidebar collapsible="none">
+        <Sidebar collapsible="none" className="shrink-0">
           <SidebarContent>
             <SidebarGroup>
               <SidebarGroupLabel>Global</SidebarGroupLabel>
@@ -72,7 +74,12 @@ export function SettingsLayout() {
                             fuzzy: !("exact" in item),
                           }),
                         )}
-                        render={<Link to={item.to} activeOptions={{ exact: "exact" in item }} />}
+                        render={
+                          <Link
+                            to={item.to}
+                            activeOptions={{ exact: "exact" in item }}
+                          />
+                        }
                       >
                         <HugeiconsIcon icon={item.icon} />
                         <span>{item.label}</span>
@@ -86,7 +93,11 @@ export function SettingsLayout() {
             <SidebarGroup>
               <SidebarGroupLabel className="justify-between gap-2">
                 <span>Workspaces</span>
-                <Button size="xs" variant="ghost" render={<Link to="/settings/workspaces/new" />}>
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  render={<Link to="/settings/workspaces/new" />}
+                >
                   <HugeiconsIcon icon={Add01Icon} />
                   <span>New</span>
                 </Button>
@@ -132,7 +143,11 @@ export function SettingsLayout() {
             <SidebarGroup>
               <SidebarGroupLabel className="justify-between gap-2">
                 <span>Providers</span>
-                <Button size="xs" variant="ghost" render={<Link to="/settings/providers/new" />}>
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  render={<Link to="/settings/providers/new" />}
+                >
                   <HugeiconsIcon icon={Add01Icon} />
                   <span>New</span>
                 </Button>
@@ -141,7 +156,9 @@ export function SettingsLayout() {
                 {hasProviders ? (
                   <SidebarMenu>
                     {providers.map((provider) => {
-                      const ProviderIcon = getProviderIconById(provider.catalogId);
+                      const ProviderIcon = getProviderIconById(
+                        provider.catalogId,
+                      );
 
                       return (
                         <SidebarMenuItem key={provider.id}>

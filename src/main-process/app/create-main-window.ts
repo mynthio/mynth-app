@@ -2,7 +2,7 @@ import { BrowserWindow } from "electron";
 import path from "node:path";
 
 import { isTrustedRendererUrl, type TrustedSenderRegistry } from "../ipc/trusted-senders";
-import { WINDOW_TOOLBAR_HEIGHT, WINDOW_TRAFFIC_LIGHTS_POSITION } from "../../shared/window-chrome";
+import { WINDOW_TOOLBAR_HEIGHT, WINDOW_TRAFFIC_LIGHTS_POSITION } from "@shared/window-chrome";
 import { createPersistentWindowState } from "../lib/persistent-window-state";
 
 export interface CreateMainWindowOptions {

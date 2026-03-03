@@ -4,7 +4,7 @@ import {
   type SetProviderModelsEnabledResult,
   type UpdateModelInput,
   type UpdateModelResult,
-} from "../../../shared/ipc";
+} from "@shared/ipc";
 import type { IpcHandlerContext } from "../core/context";
 import { AppError } from "../core/errors";
 import { registerInvokeHandler } from "../core/register-invoke-handler";

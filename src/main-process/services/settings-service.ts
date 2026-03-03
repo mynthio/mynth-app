@@ -4,7 +4,7 @@ import type {
   ChatFormSubmitBehavior,
   GlobalChatSettings,
   GlobalChatSettingsUpdateInput,
-} from "../../shared/ipc";
+} from "@shared/ipc";
 
 const CHAT_FORM_SUBMIT_BEHAVIORS: readonly ChatFormSubmitBehavior[] = ["enter", "mod-enter"];
 const DEFAULT_PROMPT_STICKY_POSITION = DEFAULT_CONFIG.chat.prompt.stickyPosition;

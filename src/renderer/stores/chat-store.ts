@@ -3,7 +3,7 @@ import { Chat } from "@ai-sdk/react";
 import { DefaultChatTransport, type ChatStatus } from "ai";
 import { create } from "zustand";
 
-import { chatMessageMetadataSchema, type MynthUiMessage } from "../../shared/chat/message-metadata";
+import { chatMessageMetadataSchema, type MynthUiMessage } from "@shared/chat/message-metadata";
 
 interface ChatStoreState {
   chatEntries: Map<string, Chat<MynthUiMessage>>;

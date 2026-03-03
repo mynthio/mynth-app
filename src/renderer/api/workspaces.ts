@@ -2,9 +2,9 @@ import type {
   GetActiveWorkspaceOptions,
   WorkspaceSettingsPatch,
   WorkspaceUpdateInput,
-} from "../../shared/ipc";
+} from "@shared/ipc";
 import "../lib/electron-api";
-import { parseWorkspaceId } from "../../shared/workspace/workspace-id";
+import { parseWorkspaceId } from "@shared/workspace/workspace-id";
 
 export const workspaceApi = {
   list() {

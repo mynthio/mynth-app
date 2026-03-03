@@ -1,11 +1,11 @@
 import { Hono } from "hono";
 import { streamText, convertToModelMessages, generateId } from "ai";
-import { parseChatId } from "../../../shared/chat/chat-id";
+import { parseChatId } from "@shared/chat/chat-id";
 import {
   normalizeChatMessageMetadata,
   type ChatMessageMetadata,
   type MynthUiMessage,
-} from "../../../shared/chat/message-metadata";
+} from "@shared/chat/message-metadata";
 import { getChatById } from "../../chat-tree/repository";
 import { upsertMessage } from "../../messages/repository";
 import { getModelById } from "../../models/repository";
@@ -13,7 +13,7 @@ import { getProviderById } from "../../providers/repository";
 import { resolveProviderRuntimeContext } from "../../providers/runtime-config";
 import { createLanguageModel } from "../providers/language-model-factory";
 import { buildResponseMetadata } from "../providers/metadata-extractor";
-import type { ProviderId } from "../../../shared/providers/catalog";
+import type { ProviderId } from "@shared/providers/catalog";
 
 export function createChatRoute() {
   const app = new Hono();

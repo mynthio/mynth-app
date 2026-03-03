@@ -1,5 +1,5 @@
 import { createOllama } from "ai-sdk-ollama";
-import type { ProviderHostPortConfigValue } from "../../../../shared/providers/catalog";
+import type { ProviderHostPortConfigValue } from "@shared/providers/catalog";
 import { buildOllamaBaseUrl } from "../../../providers/ollama-base-url";
 import type { LanguageModelResolver } from "../language-model-types";
 

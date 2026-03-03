@@ -8,13 +8,13 @@ import {
   type FolderInfo,
   type TabStateItem,
   type TabsUiState,
-} from "../../../shared/ipc";
-import { parseChatId } from "../../../shared/chat/chat-id";
-import type { MynthUiMessage } from "../../../shared/chat/message-metadata";
-import { parseChatTitle } from "../../../shared/chat/chat-title";
-import { parseFolderId } from "../../../shared/folder/folder-id";
-import { parseFolderName } from "../../../shared/folder/folder-name";
-import { parseWorkspaceId } from "../../../shared/workspace/workspace-id";
+} from "@shared/ipc";
+import { parseChatId } from "@shared/chat/chat-id";
+import type { MynthUiMessage } from "@shared/chat/message-metadata";
+import { parseChatTitle } from "@shared/chat/chat-title";
+import { parseFolderId } from "@shared/folder/folder-id";
+import { parseFolderName } from "@shared/folder/folder-name";
+import { parseWorkspaceId } from "@shared/workspace/workspace-id";
 import type { IpcHandlerContext } from "../core/context";
 import { AppError } from "../core/errors";
 import { registerInvokeHandler } from "../core/register-invoke-handler";

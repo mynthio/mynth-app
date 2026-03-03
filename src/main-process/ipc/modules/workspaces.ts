@@ -6,10 +6,10 @@ import {
   type WorkspaceSettings,
   type WorkspaceSettingsPatch,
   type WorkspaceUpdateInput,
-} from "../../../shared/ipc";
-import { parseWorkspaceColor } from "../../../shared/workspace/workspace-color";
-import { parseWorkspaceId } from "../../../shared/workspace/workspace-id";
-import { parseWorkspaceName } from "../../../shared/workspace/workspace-name";
+} from "@shared/ipc";
+import { parseWorkspaceColor } from "@shared/workspace/workspace-color";
+import { parseWorkspaceId } from "@shared/workspace/workspace-id";
+import { parseWorkspaceName } from "@shared/workspace/workspace-name";
 import type { IpcHandlerContext } from "../core/context";
 import { AppError } from "../core/errors";
 import { registerInvokeHandler } from "../core/register-invoke-handler";

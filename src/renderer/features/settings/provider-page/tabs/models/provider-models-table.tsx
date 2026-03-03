@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import type { ProviderModelInfo } from "../../../../../../shared/ipc";
+import type { ProviderModelInfo } from "@shared/ipc";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";

@@ -1,5 +1,5 @@
 import type { LanguageModel } from "ai";
-import type { ProviderId } from "../../../shared/providers/catalog";
+import type { ProviderId } from "@shared/providers/catalog";
 import type { CreateLanguageModelInput, LanguageModelResolver } from "./language-model-types";
 import { createOllamaLanguageModel } from "./resolvers/ollama-language-model";
 import { createOpenRouterLanguageModel } from "./resolvers/openrouter-language-model";

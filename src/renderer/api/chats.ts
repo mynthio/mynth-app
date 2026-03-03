@@ -1,6 +1,6 @@
 import "../lib/electron-api";
-import type { MynthUiMessage } from "../../shared/chat/message-metadata";
-import { parseWorkspaceId } from "../../shared/workspace/workspace-id";
+import type { MynthUiMessage } from "@shared/chat/message-metadata";
+import { parseWorkspaceId } from "@shared/workspace/workspace-id";
 
 export const chatsApi = {
   get(id: string) {

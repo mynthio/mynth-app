@@ -3,7 +3,7 @@ import {
   type ChatFormSubmitBehavior,
   type GlobalChatSettings,
   type GlobalChatSettingsUpdateInput,
-} from "../../../shared/ipc";
+} from "@shared/ipc";
 import type { IpcHandlerContext } from "../core/context";
 import { AppError } from "../core/errors";
 import { registerInvokeHandler } from "../core/register-invoke-handler";

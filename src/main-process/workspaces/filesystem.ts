@@ -1,7 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 
-import { parseWorkspaceId } from "../../shared/workspace/workspace-id";
+import { parseWorkspaceId } from "@shared/workspace/workspace-id";
 import { getUserDataDirectory } from "../system/paths";
 
 const WORKSPACES_DIRECTORY_NAME = "workspaces";

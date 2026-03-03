@@ -4,7 +4,7 @@ import { createModelService, type ModelService } from "./model-service";
 import { createProviderService, type ProviderService } from "./provider-service";
 import { createSettingsService, type SettingsService } from "./settings-service";
 import { createWorkspaceService, type WorkspaceService } from "./workspace-service";
-import type { ProviderModelSyncStatus } from "../../shared/events";
+import type { ProviderModelSyncStatus } from "@shared/events";
 
 export interface AppServices {
   workspaces: WorkspaceService;

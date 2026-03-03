@@ -1,4 +1,4 @@
-import type { IpcApi } from "../../shared/ipc";
+import type { IpcApi } from "@shared/ipc";
 import { createChatTreeApi } from "./chat-tree";
 import { createContextMenuApi } from "./context-menu";
 import { createEventsApi } from "../events";

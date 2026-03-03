@@ -18,7 +18,7 @@ import type {
   WorkspaceSettings,
   WorkspaceSettingsPatch,
   WorkspaceUpdateInput,
-} from "../../shared/ipc";
+} from "@shared/ipc";
 
 export interface WorkspaceService {
   listWorkspaces(): WorkspaceInfo[];

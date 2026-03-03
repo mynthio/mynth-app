@@ -19,8 +19,8 @@ import {
   type ChatTreeSnapshot as ChatTreeSnapshotRecord,
   type FolderRow,
 } from "../chat-tree/repository";
-import { parseChatId } from "../../shared/chat/chat-id";
-import { parseFolderId } from "../../shared/folder/folder-id";
+import { parseChatId } from "@shared/chat/chat-id";
+import { parseFolderId } from "@shared/folder/folder-id";
 import type {
   ChatInfo,
   ChatTreeChildrenSlice,
@@ -31,7 +31,7 @@ import type {
   FolderInfo,
   TabsUiState,
   TabStateItem,
-} from "../../shared/ipc";
+} from "@shared/ipc";
 import { getWorkspaceSettings, updateWorkspaceSettings } from "../workspaces/repository";
 
 const CHAT_TREE_EXPANDED_FOLDER_IDS_SETTINGS_KEY = "chatTreeExpandedFolderIds";

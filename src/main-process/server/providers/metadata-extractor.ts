@@ -1,6 +1,6 @@
 import type { LanguageModelUsage } from "ai";
-import type { ProviderId } from "../../../shared/providers/catalog";
-import type { ChatMessageMetadata } from "../../../shared/chat/message-metadata";
+import type { ProviderId } from "@shared/providers/catalog";
+import type { ChatMessageMetadata } from "@shared/chat/message-metadata";
 import { extractOpenRouterMetadata } from "./resolvers/openrouter-metadata";
 import { extractOllamaMetadata } from "./resolvers/ollama-metadata";
 

@@ -4,7 +4,7 @@ import {
   SYSTEM_STATE_CHANNEL,
   type SystemEvent,
   type SystemState,
-} from "../shared/events";
+} from "@shared/events";
 
 export function createEventsApi() {
   return {

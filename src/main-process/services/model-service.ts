@@ -3,7 +3,7 @@ import type {
   SetProviderModelsEnabledResult,
   UpdateModelInput,
   UpdateModelResult,
-} from "../../shared/ipc";
+} from "@shared/ipc";
 import {
   listEnabledModels as listEnabledModelsRepo,
   updateModel as updateModelRepo,

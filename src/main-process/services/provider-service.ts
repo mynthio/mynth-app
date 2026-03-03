@@ -11,14 +11,14 @@ import type {
   ProviderModelInfo,
   SaveProviderInput,
   SaveProviderResult,
-} from "../../shared/ipc";
-import type { ProviderModelSyncStatus } from "../../shared/events";
+} from "@shared/ipc";
+import type { ProviderModelSyncStatus } from "@shared/events";
 import {
   getSupportedProviderById,
   type ProviderHostPortConfigValue,
   type ProviderId,
   type SupportedProviderDefinition,
-} from "../../shared/providers/catalog";
+} from "@shared/providers/catalog";
 import { createUuidV7 } from "../db/uuidv7";
 import {
   listModelsByProviderId,

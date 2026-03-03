@@ -14,8 +14,8 @@ import { useUpdateGlobalChatSettings } from "@/mutations/settings";
 import { useUpdateWorkspace } from "@/mutations/workspaces";
 import { globalChatSettingsQueryOptions } from "@/queries/settings";
 import { findWorkspaceById, listWorkspacesQueryOptions } from "@/queries/workspaces";
-import type { GlobalChatSettingsUpdateInput } from "../../../shared/ipc";
-import { parseWorkspaceName, workspaceNameSchema } from "../../../shared/workspace/workspace-name";
+import type { GlobalChatSettingsUpdateInput } from "@shared/ipc";
+import { parseWorkspaceName, workspaceNameSchema } from "@shared/workspace/workspace-name";
 
 const WORKSPACE_COLORS: { hex: string; label: string }[] = [
   { hex: "#b85c5c", label: "Red" },

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { listProvidersQueryOptions } from "@/queries/providers";
-import { getSupportedProviderById } from "../../../shared/providers/catalog";
+import { getSupportedProviderById } from "@shared/providers/catalog";
 import { ProviderConfigTab, ProviderModelsTab } from "./provider-page/tabs";
 
 interface ProviderPageProps {

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { ProviderModelInfo } from "../../shared/ipc";
+import type { ProviderModelInfo } from "@shared/ipc";
 import { modelsApi } from "../api/models";
 import { queryKeys } from "../queries/keys";
 

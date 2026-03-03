@@ -3,7 +3,7 @@ import { DEFAULT_WORKSPACE_ID, bootstrapStorage, type StorageBootstrapResult } f
 import { type IpcHandlerContext } from "../ipc/core/context";
 import { createTrustedSenderRegistry, type TrustedSenderRegistry } from "../ipc/trusted-senders";
 import { createAppServices, type AppServices } from "../services";
-import type { ProviderModelSyncStatus } from "../../shared/events";
+import type { ProviderModelSyncStatus } from "@shared/events";
 
 export interface BackendBootstrapResult {
   services: AppServices;

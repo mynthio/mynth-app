@@ -6,8 +6,8 @@ import {
   type ProviderModelInfo,
   type SaveProviderInput,
   type SaveProviderResult,
-} from "../../../shared/ipc";
-import { getSupportedProviderById, type ProviderId } from "../../../shared/providers/catalog";
+} from "@shared/ipc";
+import { getSupportedProviderById, type ProviderId } from "@shared/providers/catalog";
 import type { IpcHandlerContext } from "../core/context";
 import { AppError } from "../core/errors";
 import { registerInvokeHandler } from "../core/register-invoke-handler";

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { getSupportedProviderById } from "../../../../../shared/providers/catalog";
+import { getSupportedProviderById } from "@shared/providers/catalog";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,

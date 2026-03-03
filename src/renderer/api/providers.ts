@@ -1,9 +1,5 @@
 import "../lib/electron-api";
-import type {
-  ProviderCredentialTestInput,
-  SaveProviderInput,
-  UpdateModelInput,
-} from "../../shared/ipc";
+import type { ProviderCredentialTestInput, SaveProviderInput, UpdateModelInput } from "@shared/ipc";
 
 export const providerApi = {
   list() {

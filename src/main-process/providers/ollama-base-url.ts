@@ -1,4 +1,4 @@
-import type { ProviderHostPortConfigValue } from "../../shared/providers/catalog";
+import type { ProviderHostPortConfigValue } from "@shared/providers/catalog";
 
 export function buildOllamaBaseUrl(endpoint: ProviderHostPortConfigValue): string {
   const host = endpoint.host.trim();

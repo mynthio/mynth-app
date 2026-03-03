@@ -45,7 +45,7 @@ import { useCreateFolder } from "@/mutations/folders";
 import { DeleteChatDialog } from "@/features/chat/delete-chat-dialog";
 import { DeleteFolderDialog } from "@/features/chat/delete-folder-dialog";
 
-import type { ChatInfo, ChatTreeFolderListItem } from "../../../shared/ipc";
+import type { ChatInfo, ChatTreeFolderListItem } from "@shared/ipc";
 import { useWorkspaceStore } from "../workspace/store";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 

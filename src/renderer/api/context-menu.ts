@@ -1,4 +1,4 @@
-import type { TextContextMenuInput } from "../../shared/ipc";
+import type { TextContextMenuInput } from "@shared/ipc";
 import "../lib/electron-api";
 
 export const contextMenuApi = {

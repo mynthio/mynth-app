@@ -7,7 +7,7 @@ import { createStore, type StoreApi } from "zustand/vanilla";
 import { chatsApi } from "@/api/chats";
 
 import { useChatStore } from "@/stores/chat-store";
-import type { MynthUiMessage } from "../../../shared/chat/message-metadata";
+import type { MynthUiMessage } from "@shared/chat/message-metadata";
 
 type ChatSendMessage = UseChatHelpers<MynthUiMessage>["sendMessage"];
 type ChatRegenerate = UseChatHelpers<MynthUiMessage>["regenerate"];
@@ -265,6 +265,16 @@ export function useChatError() {
 
 export function useChatHistoryError() {
   return useChatContext((state) => state.historyError);
+}
+
+export function useIsLastMessage(messageId: string) {
+  return useChatContext((state) => state.messages.at(-1)?.id === messageId);
+}
+
+export function useIsAnimatingMessage(messageId: string, role: string) {
+  return useChatContext(
+    (state) => role === "assistant" && state.isBusy && state.messages.at(-1)?.id === messageId,
+  );
 }
 
 function resolveModelId(enabledModelIds: readonly string[], currentModelId: string | null) {

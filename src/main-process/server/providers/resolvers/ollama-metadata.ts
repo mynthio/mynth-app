@@ -1,5 +1,5 @@
 import type { LanguageModelUsage } from "ai";
-import type { ChatMessageMetadata } from "../../../../shared/chat/message-metadata";
+import type { ChatMessageMetadata } from "@shared/chat/message-metadata";
 
 /**
  * Extract Ollama-specific metadata beyond what the AI SDK already provides.

@@ -1,4 +1,4 @@
-import type { GlobalChatSettingsUpdateInput } from "../../shared/ipc";
+import type { GlobalChatSettingsUpdateInput } from "@shared/ipc";
 import "../lib/electron-api";
 
 export const settingsApi = {

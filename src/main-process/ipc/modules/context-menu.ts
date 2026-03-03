@@ -1,5 +1,5 @@
 import { BrowserWindow, Menu, shell, type MenuItemConstructorOptions } from "electron";
-import { IPC_CHANNELS, type TextContextMenuInput } from "../../../shared/ipc";
+import { IPC_CHANNELS, type TextContextMenuInput } from "@shared/ipc";
 import type { IpcHandlerContext } from "../core/context";
 import { AppError } from "../core/errors";
 import { registerInvokeHandler } from "../core/register-invoke-handler";

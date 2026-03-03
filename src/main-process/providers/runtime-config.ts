@@ -2,7 +2,7 @@ import {
   getSupportedProviderById,
   type ProviderHostPortConfigValue,
   type SupportedProviderDefinition,
-} from "../../shared/providers/catalog";
+} from "@shared/providers/catalog";
 import { decryptString } from "../services/safe-storage";
 import type { ProviderTableRow } from "./repository";
 

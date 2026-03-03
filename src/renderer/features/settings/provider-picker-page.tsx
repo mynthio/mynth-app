@@ -4,7 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { getProviderIconById } from "@/lib/provider-icons";
-import { SUPPORTED_PROVIDERS } from "../../../shared/providers/catalog";
+import { SUPPORTED_PROVIDERS } from "@shared/providers/catalog";
 
 export function ProviderPickerPage() {
   return (

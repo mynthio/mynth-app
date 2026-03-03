@@ -1,7 +1,7 @@
 import { asc, eq } from "drizzle-orm";
 
-import { DEFAULT_WORKSPACE_ID } from "../../shared/workspace/workspace-id";
-import type { WorkspaceSettings, WorkspaceSettingsPatch } from "../../shared/ipc";
+import { DEFAULT_WORKSPACE_ID } from "@shared/workspace/workspace-id";
+import type { WorkspaceSettings, WorkspaceSettingsPatch } from "@shared/ipc";
 import { getAppDatabase } from "../db/database";
 import { workspaces } from "../db/schema";
 

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { SystemEvent, SystemState } from "../../shared/events";
+import type { SystemEvent, SystemState } from "@shared/events";
 
 interface AiServerState {
   status: "idle" | "starting" | "ready" | "error";

@@ -1,6 +1,6 @@
-import type { TabStateItem } from "../../shared/ipc";
+import type { TabStateItem } from "@shared/ipc";
 import "../lib/electron-api";
-import { parseWorkspaceId } from "../../shared/workspace/workspace-id";
+import { parseWorkspaceId } from "@shared/workspace/workspace-id";
 
 export const chatTreeApi = {
   getChildren(workspaceId: string, parentFolderId: string | null) {

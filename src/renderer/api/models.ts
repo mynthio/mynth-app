@@ -1,5 +1,5 @@
 import "../lib/electron-api";
-import type { UpdateModelInput } from "../../shared/ipc";
+import type { UpdateModelInput } from "@shared/ipc";
 
 export const modelsApi = {
   listEnabled() {

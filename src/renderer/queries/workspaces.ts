@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import type { WorkspaceInfo } from "../../shared/ipc";
+import type { WorkspaceInfo } from "@shared/ipc";
 import { workspaceApi } from "../api/workspaces";
 import { queryKeys } from "./keys";
 

@@ -1,5 +1,5 @@
-import type { ProviderCredentialTestResult } from "../../../../../shared/ipc";
-import type { SupportedProviderDefinition } from "../../../../../shared/providers/catalog";
+import type { ProviderCredentialTestResult } from "@shared/ipc";
+import type { SupportedProviderDefinition } from "@shared/providers/catalog";
 import { Link } from "@tanstack/react-router";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";

@@ -1,38 +1,49 @@
 import * as React from "react";
-import { Streamdown } from "streamdown";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { ArrowUp01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { code } from "@streamdown/code";
 
 import { Button } from "@/components/ui/button";
-import { Menu, MenuPopup, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "@/components/ui/menu";
+import {
+  Menu,
+  MenuPopup,
+  MenuRadioGroup,
+  MenuRadioItem,
+  MenuTrigger,
+} from "@/components/ui/menu";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "@/components/ui/tooltip";
-import { InputGroup, InputGroupAddon, InputGroupTextarea } from "@/components/ui/input-group";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupTextarea,
+} from "@/components/ui/input-group";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ChatSidebarTree } from "@/features/chat/chat-sidebar-tree";
 import { ChatTabHotkeys } from "@/features/chat/chat-tab-hotkeys";
 import {
   ChatContextProvider,
-  useChatError,
-  useChatHistoryError,
   useChatIsBusy,
+  useChatIsStreaming,
   useChatMessages,
   useChatModelId,
   useChatSendMessage,
   useSetChatModelId,
 } from "@/features/chat/chat-context";
-import { useTextContextMenu } from "@/hooks/use-text-context-menu";
+import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 import { getProviderIconById } from "@/lib/provider-icons";
 import { cn } from "@/lib/utils";
 import { listEnabledModelsQueryOptions } from "@/queries/models";
 import { listProvidersQueryOptions } from "@/queries/providers";
 import { globalChatSettingsQueryOptions } from "@/queries/settings";
-import { useSystemStore, selectAiServerPort, selectAiServerReady } from "@/stores/system-store";
-import "streamdown/styles.css";
+import {
+  useSystemStore,
+  selectAiServerPort,
+  selectAiServerReady,
+} from "@/stores/system-store";
 import { useWorkspaceStore } from "../workspace/store";
+import { Conversation } from "./conversation";
 
 export function ChatPage() {
   const activeTab = useWorkspaceStore((s) => s.activeTab());
@@ -42,24 +53,22 @@ export function ChatPage() {
       <ChatTabHotkeys />
       <ChatSidebarTree />
 
-      <div className="w-full h-[calc(100%-8px)] overflow-auto scrollbar bg-card rounded-l-2xl">
-        <div className="flex flex-col min-h-full justify-between">
-          {activeTab?.type === "chat" && activeTab.chatId ? (
-            <ActiveChatView chatId={activeTab.chatId} />
-          ) : (
-            <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-6">
-              <p className="text-muted-foreground">
-                No chat selected. Open a chat from the sidebar.
-              </p>
-              <Link
-                to="/settings"
-                className="inline-flex w-fit rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-              >
-                Go to Settings
-              </Link>
-            </div>
-          )}
-        </div>
+      <div className="w-full h-[calc(100%-8px)] bg-card rounded-l-2xl overflow-hidden flex flex-col">
+        {activeTab?.type === "chat" && activeTab.chatId ? (
+          <ActiveChatView chatId={activeTab.chatId} />
+        ) : (
+          <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-6">
+            <p className="text-muted-foreground">
+              No chat selected. Open a chat from the sidebar.
+            </p>
+            <Link
+              to="/settings"
+              className="inline-flex w-fit rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              Go to Settings
+            </Link>
+          </div>
+        )}
       </div>
     </SidebarProvider>
   );
@@ -80,7 +89,7 @@ function ActiveChatView({ chatId }: { chatId: string }) {
 
   if (serverStatus === "starting" || serverStatus === "idle") {
     return (
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-6 py-6">
+      <div className="flex-1 mx-auto flex w-full max-w-4xl flex-col gap-4 px-6 py-6">
         <p className="text-sm text-muted-foreground">AI server starting…</p>
       </div>
     );
@@ -88,17 +97,21 @@ function ActiveChatView({ chatId }: { chatId: string }) {
 
   if (serverStatus === "error") {
     return (
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-6 py-6">
-        <p className="text-sm text-destructive">AI server failed to start: {serverError}</p>
+      <div className="flex-1 mx-auto flex w-full max-w-4xl flex-col gap-4 px-6 py-6">
+        <p className="text-sm text-destructive">
+          AI server failed to start: {serverError}
+        </p>
       </div>
     );
   }
 
   if (!isReady || enabledModels.length === 0) {
     return (
-      <div className="mx-auto flex h-full w-full max-w-4xl flex-col px-6 py-6">
+      <div className="flex-1 mx-auto flex w-full max-w-4xl flex-col px-6 py-6">
         <p className="text-sm text-muted-foreground">
-          {enabledModels.length === 0 ? "Enable a model in Settings to start chatting." : ""}
+          {enabledModels.length === 0
+            ? "Enable a model in Settings to start chatting."
+            : ""}
         </p>
       </div>
     );
@@ -122,10 +135,9 @@ function ActiveChatContent() {
   const messages = useChatMessages();
   const sendMessage = useChatSendMessage();
   const isBusy = useChatIsBusy();
-  const error = useChatError();
-  const historyError = useChatHistoryError();
+  const isStreaming = useChatIsStreaming();
+  const { containerRef, anchorRef } = useScrollToBottom(isStreaming);
   const { data: globalChatSettings } = useQuery(globalChatSettingsQueryOptions);
-  const handleMessageContextMenu = useTextContextMenu();
 
   const promptStickyPosition = globalChatSettings?.promptStickyPosition ?? true;
   const submitBehavior = globalChatSettings?.formSubmitBehavior ?? "enter";
@@ -197,115 +209,65 @@ function ActiveChatContent() {
   );
 
   return (
-    <>
-      <div className="min-h-0 flex flex-col gap-12 w-5xl max-w-[calc(100%-4rem)] mx-auto pt-10">
-        {messages.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Send a message to start chatting.</p>
-        ) : (
-          messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[80%] rounded-lg px-4 py-2 text-sm ${
-                  message.role === "user" ? "bg-primary text-primary-foreground" : ""
-                }`}
-                onContextMenu={handleMessageContextMenu}
-              >
-                {message.parts.map((part, i) =>
-                  part.type === "text" ? (
-                    message.role === "user" ? (
-                      <Streamdown
-                        key={i}
-                        plugins={{ code }}
-                        className="text-[1.1rem] text-foreground"
-                      >
-                        {part.text}
-                      </Streamdown>
-                    ) : (
-                      <Streamdown
-                        plugins={{ code }}
-                        key={i}
-                        animated
-                        isAnimating={isBusy}
-                        className="text-[1.1rem] text-card-foreground"
-                      >
-                        {part.text}
-                      </Streamdown>
-                    )
-                  ) : null,
-                )}
-              </div>
-            </div>
-          ))
-        )}
+    <div ref={containerRef} className="flex-1 min-h-0 overflow-auto scrollbar">
+      <div className="flex flex-col min-h-full justify-end">
+        <Conversation />
 
-        {historyError ? (
-          <div className="rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">
-            {historyError}
-          </div>
-        ) : null}
-
-        {error ? (
-          <div className="rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">
-            {error.message}
-          </div>
-        ) : null}
-      </div>
-
-      <div
-        className={cn(
-          "mt-24 mx-auto max-w-5xl w-full mb-4",
-          promptStickyPosition ? "sticky bottom-4" : null,
-        )}
-      >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            submitMessage();
-          }}
+        <div
+          className={cn(
+            "mt-24 mx-auto w-4xl max-w-[calc(100%-4rem)] mb-4",
+            promptStickyPosition ? "sticky bottom-4" : null,
+          )}
         >
-          <InputGroup
-            className="dark:bg-background shadow-xl shadow-black/20 p-3"
-            style={
-              {
-                "--radius-lg": "30px",
-                "--radius": "30px",
-              } as React.CSSProperties
-            }
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              submitMessage();
+            }}
           >
-            <InputGroupTextarea
-              data-chat-composer-input="true"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask, Search or Chat…"
-              disabled={isBusy}
-              rows={1}
-            />
-            <InputGroupAddon align="block-end" className="p-0">
-              <ModelSelector />
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      type="submit"
-                      aria-label="Send"
-                      className="ml-auto"
-                      size="icon-lg"
-                      disabled={!modelId || !input.trim() || isBusy}
-                    >
-                      <HugeiconsIcon icon={ArrowUp01Icon} />
-                    </Button>
-                  }
-                />
-                <TooltipPopup>Send</TooltipPopup>
-              </Tooltip>
-            </InputGroupAddon>
-          </InputGroup>
-        </form>
+            <InputGroup
+              className="dark:bg-background shadow-xl shadow-black/20 p-3"
+              style={
+                {
+                  "--radius-lg": "30px",
+                  "--radius": "30px",
+                } as React.CSSProperties
+              }
+            >
+              <InputGroupTextarea
+                data-chat-composer-input="true"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask, Search or Chat…"
+                disabled={isBusy}
+                rows={1}
+              />
+              <InputGroupAddon align="block-end" className="p-0">
+                <ModelSelector />
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        type="submit"
+                        aria-label="Send"
+                        className="ml-auto"
+                        size="icon-lg"
+                        disabled={!modelId || !input.trim() || isBusy}
+                      >
+                        <HugeiconsIcon icon={ArrowUp01Icon} />
+                      </Button>
+                    }
+                  />
+                  <TooltipPopup>Send</TooltipPopup>
+                </Tooltip>
+              </InputGroupAddon>
+            </InputGroup>
+          </form>
+        </div>
+
+        <div ref={anchorRef} aria-hidden="true" />
       </div>
-    </>
+    </div>
   );
 }
 
@@ -329,7 +291,9 @@ function ModelSelector() {
   const selectedProvider = React.useMemo(
     () =>
       selectedModel
-        ? (providers.find((provider) => provider.id === selectedModel.providerId) ?? null)
+        ? (providers.find(
+            (provider) => provider.id === selectedModel.providerId,
+          ) ?? null)
         : null,
     [providers, selectedModel],
   );
@@ -344,24 +308,41 @@ function ModelSelector() {
           render={
             <MenuTrigger
               openOnHover
-              render={<Button aria-label="Select model" className="max-w-xl" variant="ghost" />}
+              render={
+                <Button
+                  aria-label="Select model"
+                  className="max-w-xl"
+                  variant="ghost"
+                />
+              }
             />
           }
         >
           <span className="inline-flex text-foreground/60 overflow-hidden items-center gap-2">
-            {SelectedProviderIcon ? <SelectedProviderIcon className="size-4" /> : null}
+            {SelectedProviderIcon ? (
+              <SelectedProviderIcon className="size-4" />
+            ) : null}
             <span className="truncate">
-              {selectedModel?.displayName ?? selectedModel?.providerModelId ?? "Select model"}
+              {selectedModel?.displayName ??
+                selectedModel?.providerModelId ??
+                "Select model"}
             </span>
           </span>
         </TooltipTrigger>
         <TooltipPopup>Select model</TooltipPopup>
       </Tooltip>
       <MenuPopup align="start">
-        <MenuRadioGroup value={modelId ?? ""} onValueChange={(value) => setModelId(value || null)}>
+        <MenuRadioGroup
+          value={modelId ?? ""}
+          onValueChange={(value) => setModelId(value || null)}
+        >
           {enabledModels.map((m) => {
-            const provider = providers.find((candidate) => candidate.id === m.providerId);
-            const ProviderIcon = provider ? getProviderIconById(provider.catalogId) : null;
+            const provider = providers.find(
+              (candidate) => candidate.id === m.providerId,
+            );
+            const ProviderIcon = provider
+              ? getProviderIconById(provider.catalogId)
+              : null;
 
             return (
               <MenuRadioItem key={m.id} value={m.id}>

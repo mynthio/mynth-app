@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { GlobalChatSettings, GlobalChatSettingsUpdateInput } from "../../shared/ipc";
+import type { GlobalChatSettings, GlobalChatSettingsUpdateInput } from "@shared/ipc";
 import { settingsApi } from "../api/settings";
 import { queryKeys } from "../queries/keys";
 
