@@ -11,6 +11,7 @@ type ChatTreeApi = Pick<
   | "setTabsUiState"
   | "getChat"
   | "listChatMessages"
+  | "switchChatBranch"
   | "createFolder"
   | "updateFolderName"
   | "moveFolder"
@@ -36,6 +37,8 @@ export function createChatTreeApi(): ChatTreeApi {
     getChat: (id) => invokeIpc(IPC_CHANNELS.chats.get, id),
     listChatMessages: (chatId, branchId) =>
       invokeIpc(IPC_CHANNELS.chats.listMessages, chatId, branchId),
+    switchChatBranch: (chatId, branchId) =>
+      invokeIpc(IPC_CHANNELS.chats.switchBranch, chatId, branchId),
     createFolder: (workspaceId, name, parentId) =>
       invokeIpc(IPC_CHANNELS.folders.create, workspaceId, name, parentId),
     updateFolderName: (id, name) => invokeIpc(IPC_CHANNELS.folders.updateName, id, name),

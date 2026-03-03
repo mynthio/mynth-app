@@ -6,7 +6,7 @@ import {
   type ChatMessageMetadata,
   type MynthUiMessage,
 } from "@shared/chat/message-metadata";
-import { getChatById } from "../../chat-tree/repository";
+import { getChatById, setChatCurrentBranch } from "../../chat-tree/repository";
 import { upsertMessage } from "../../messages/repository";
 import { getModelById } from "../../models/repository";
 import { getProviderById } from "../../providers/repository";
@@ -121,6 +121,8 @@ export function createChatRoute() {
           parts: responseMessage.parts,
           metadata: { parentId, ...capturedResponseMetadata },
         });
+
+        setChatCurrentBranch(chat.id, null);
       },
     });
   });

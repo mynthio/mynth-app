@@ -640,3 +640,23 @@ export function deleteChat(id: string): ChatRow {
   getAppDatabase().delete(chats).where(eq(chats.id, id)).run();
   return chat;
 }
+
+export function setChatCurrentBranch(chatId: string, branchId: string | null): void {
+  const db = getAppDatabase();
+  const existing = db.select().from(chats).where(eq(chats.id, chatId)).get();
+  if (!existing) return;
+  const currentData = (existing.data as Record<string, unknown>) ?? {};
+  db.update(chats)
+    .set({ data: { ...currentData, currentBranchId: branchId }, updatedAt: Date.now() })
+    .where(eq(chats.id, chatId))
+    .run();
+}
+
+export function getChatCurrentBranchId(chatId: string): string | null {
+  const db = getAppDatabase();
+  const row = db.select().from(chats).where(eq(chats.id, chatId)).get();
+  if (!row) return null;
+  const data = row.data as Record<string, unknown> | null;
+  const branchId = data?.currentBranchId;
+  return typeof branchId === "string" ? branchId : null;
+}

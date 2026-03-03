@@ -11,6 +11,10 @@ export const chatsApi = {
     return window.electronAPI.listChatMessages(chatId, branchId);
   },
 
+  switchBranch(chatId: string, branchId: string): Promise<MynthUiMessage[]> {
+    return window.electronAPI.switchChatBranch(chatId, branchId);
+  },
+
   create(workspaceId: string, title: string, folderId?: string | null) {
     const parsedWorkspaceId = parseWorkspaceId(workspaceId);
     if (!parsedWorkspaceId.ok) {

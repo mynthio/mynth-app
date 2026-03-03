@@ -6,6 +6,7 @@ import type { MynthUiMessage } from "@shared/chat/message-metadata";
 import {
   useChatIsBusy,
   useChatRegenerateMessage,
+  useChatSwitchBranch,
   useIsAnimatingMessage,
 } from "@/features/chat/chat-context";
 import { useTextContextMenu } from "@/hooks/use-text-context-menu";
@@ -68,6 +69,13 @@ const AssistantMessageTools = React.memo(function AssistantMessageTools({
 }: AssistantMessageToolsProps) {
   const isBusy = useChatIsBusy();
   const regenerate = useChatRegenerateMessage();
+  const switchBranch = useChatSwitchBranch();
+
+  const siblings = message.metadata?.siblings ?? [];
+  const siblingIndex = message.metadata?.siblingIndex ?? 0;
+  const prevSiblingId = siblings[siblingIndex - 1];
+  const nextSiblingId = siblings[siblingIndex + 1];
+  const hasSiblings = siblings.length > 1;
 
   return (
     <div
@@ -86,21 +94,31 @@ const AssistantMessageTools = React.memo(function AssistantMessageTools({
         <HugeiconsIcon icon={Refresh04Icon} />
       </Button>
 
-      <Group>
-        <Button size="icon-sm" disabled={isBusy}>
-          <HugeiconsIcon icon={ArrowLeft01Icon} />
-        </Button>
-        <Button
-          disabled={isBusy}
-          size="sm"
-          className="text-primary-foreground font-light sm:text-xs"
-        >
-          1/1
-        </Button>
-        <Button size="icon-sm" disabled={isBusy}>
-          <HugeiconsIcon icon={ArrowRight01Icon} />
-        </Button>
-      </Group>
+      {hasSiblings && (
+        <Group>
+          <Button
+            size="icon-sm"
+            disabled={isBusy || !prevSiblingId}
+            onClick={() => prevSiblingId && void switchBranch(prevSiblingId)}
+          >
+            <HugeiconsIcon icon={ArrowLeft01Icon} />
+          </Button>
+          <Button
+            disabled={isBusy}
+            size="sm"
+            className="text-primary-foreground font-light sm:text-xs"
+          >
+            {siblingIndex + 1}/{siblings.length}
+          </Button>
+          <Button
+            size="icon-sm"
+            disabled={isBusy || !nextSiblingId}
+            onClick={() => nextSiblingId && void switchBranch(nextSiblingId)}
+          >
+            <HugeiconsIcon icon={ArrowRight01Icon} />
+          </Button>
+        </Group>
+      )}
     </div>
   );
 });

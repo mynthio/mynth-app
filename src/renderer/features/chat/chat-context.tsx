@@ -23,11 +23,13 @@ type ChatContextState = {
   setModelId: (modelId: string | null) => void;
   sendMessage: ChatSendMessage;
   regenerateMessage: (options?: Parameters<ChatRegenerate>[0]) => ReturnType<ChatRegenerate>;
+  switchBranch: (branchId: string) => Promise<void>;
 };
 
 type ChatTransportRefs = {
   sendMessage: ChatSendMessage | null;
   regenerate: ChatRegenerate | null;
+  setMessages: ((messages: MynthUiMessage[]) => void) | null;
   markTabTouched: (() => void) | null;
 };
 
@@ -43,9 +45,11 @@ type ChatContextProviderProps = {
 };
 
 function createChatContextStore({
+  chatId,
   initialModelId,
   transportRefs,
 }: {
+  chatId: string;
   initialModelId: string | null;
   transportRefs: ChatTransportRefs;
 }): ChatContextStoreApi {
@@ -91,6 +95,11 @@ function createChatContextStore({
         body: { ...options?.body, modelId: currentModelId },
       });
     },
+    switchBranch: async (branchId) => {
+      if (!transportRefs.setMessages) return;
+      const newMessages = await chatsApi.switchBranch(chatId, branchId);
+      transportRefs.setMessages(newMessages);
+    },
   }));
 }
 
@@ -112,12 +121,14 @@ export function ChatContextProvider({
   const transportRefs = React.useRef<ChatTransportRefs>({
     sendMessage: null,
     regenerate: null,
+    setMessages: null,
     markTabTouched: null,
   });
   const storeRef = React.useRef<ChatContextStoreApi | null>(null);
 
   if (!storeRef.current) {
     storeRef.current = createChatContextStore({
+      chatId,
       initialModelId: enabledModelIds[0] ?? null,
       transportRefs: transportRefs.current,
     });
@@ -130,6 +141,7 @@ export function ChatContextProvider({
 
   transportRefs.current.sendMessage = sendMessage;
   transportRefs.current.regenerate = regenerate;
+  transportRefs.current.setMessages = setMessages;
   transportRefs.current.markTabTouched = () => {
     // FIXME: placeholder
   };
@@ -167,6 +179,15 @@ export function ChatContextProvider({
       };
     });
   }, [error, messages, status, store]);
+
+  const prevStatusRef = React.useRef(status);
+  React.useEffect(() => {
+    const prev = prevStatusRef.current;
+    prevStatusRef.current = status;
+    if ((prev === "streaming" || prev === "submitted") && status === "ready") {
+      void chatsApi.listMessages(chatId).then(setMessages);
+    }
+  }, [status, chatId, setMessages]);
 
   React.useEffect(() => {
     let isDisposed = false;
@@ -275,6 +296,10 @@ export function useIsAnimatingMessage(messageId: string, role: string) {
   return useChatContext(
     (state) => role === "assistant" && state.isBusy && state.messages.at(-1)?.id === messageId,
   );
+}
+
+export function useChatSwitchBranch() {
+  return useChatContext((state) => state.switchBranch);
 }
 
 function resolveModelId(enabledModelIds: readonly string[], currentModelId: string | null) {

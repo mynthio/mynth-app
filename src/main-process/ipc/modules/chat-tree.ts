@@ -277,6 +277,20 @@ export function registerChatTreeIpcModule(
       services.chatMessages.listChatMessages(chatId, branchId),
   });
 
+  registerInvokeHandler<[string, string], MynthUiMessage[]>(context, registeredChannels, {
+    channel: IPC_CHANNELS.chats.switchBranch,
+    parseArgs: (args) => {
+      expectArgCount(args, 2);
+      const branchId = args[1];
+      if (typeof branchId !== "string" || branchId.length === 0) {
+        throw AppError.badRequest("branchId must be a non-empty string.");
+      }
+      return [parseValidChatId(args[0]), branchId];
+    },
+    handler: ({ services }, _event, chatId, branchId) =>
+      services.chatMessages.switchChatBranch(chatId, branchId),
+  });
+
   registerInvokeHandler<[string, string, string | null], ChatInfo>(context, registeredChannels, {
     channel: IPC_CHANNELS.chats.create,
     parseArgs: (args) => {

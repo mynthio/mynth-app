@@ -13,6 +13,8 @@ export interface ChatMessageMetadata {
   };
   provider?: string;
   model?: string;
+  siblings?: string[];
+  siblingIndex?: number;
 }
 
 export type MynthUiMessage = UIMessage<ChatMessageMetadata>;

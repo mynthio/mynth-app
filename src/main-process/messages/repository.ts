@@ -15,6 +15,8 @@ export interface MessageRow {
   metadata: Record<string, unknown>;
   createdAt: number;
   updatedAt: number;
+  siblings?: string[];
+  siblingIndex?: number;
 }
 
 export interface UpsertMessageInput {
@@ -97,7 +99,16 @@ export function listMessagesByChatId(chatId: string, branchId?: string | null): 
   // Reverse so the path runs root → leaf.
   path.reverse();
 
-  return path.map(toMessageRow);
+  return path.map((msg) => {
+    const row = toMessageRow(msg);
+    const sibs = childrenByParentId.get(msg.parentId) ?? [];
+    if (sibs.length > 1) {
+      const siblingIds = sibs.map((s) => s.id);
+      row.siblings = siblingIds;
+      row.siblingIndex = siblingIds.indexOf(msg.id);
+    }
+    return row;
+  });
 }
 
 export function upsertMessage(input: UpsertMessageInput): MessageRow {
