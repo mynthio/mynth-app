@@ -1,1 +1,0 @@
-ALTER TABLE `models` ADD `is_enabled` integer DEFAULT true NOT NULL;

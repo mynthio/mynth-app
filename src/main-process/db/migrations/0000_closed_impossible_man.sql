@@ -10,7 +10,10 @@ CREATE TABLE `assets` (
 	`width` integer,
 	`height` integer,
 	`duration_ms` integer,
-	`created_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL,
+	`data` text DEFAULT '{}' NOT NULL,
+	`metadata` text DEFAULT '{}' NOT NULL,
+	`extensions` text DEFAULT '{}' NOT NULL,
+	`created_at` integer NOT NULL,
 	FOREIGN KEY (`workspace_id`) REFERENCES `workspaces`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`chat_id`) REFERENCES `chats`(`id`) ON UPDATE no action ON DELETE set null,
 	FOREIGN KEY (`message_id`) REFERENCES `messages`(`id`) ON UPDATE no action ON DELETE set null
@@ -19,24 +22,17 @@ CREATE TABLE `assets` (
 CREATE INDEX `assets_workspace_id_idx` ON `assets` (`workspace_id`);--> statement-breakpoint
 CREATE INDEX `assets_chat_id_idx` ON `assets` (`chat_id`);--> statement-breakpoint
 CREATE INDEX `assets_message_id_idx` ON `assets` (`message_id`);--> statement-breakpoint
-CREATE TABLE `chat_settings` (
-	`chat_id` text PRIMARY KEY NOT NULL,
-	`model_id` text,
-	`system_prompt` text,
-	`output_mode` text DEFAULT 'text' NOT NULL,
-	`output_schema` text,
-	`updated_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL,
-	FOREIGN KEY (`chat_id`) REFERENCES `chats`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`model_id`) REFERENCES `models`(`id`) ON UPDATE no action ON DELETE set null
-);
---> statement-breakpoint
 CREATE TABLE `chats` (
 	`id` text PRIMARY KEY NOT NULL,
 	`workspace_id` text NOT NULL,
 	`folder_id` text,
 	`title` text NOT NULL,
-	`created_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL,
-	`updated_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL,
+	`settings` text DEFAULT '{}' NOT NULL,
+	`data` text DEFAULT '{}' NOT NULL,
+	`metadata` text DEFAULT '{}' NOT NULL,
+	`extensions` text DEFAULT '{}' NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
 	FOREIGN KEY (`workspace_id`) REFERENCES `workspaces`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`folder_id`) REFERENCES `folders`(`id`) ON UPDATE no action ON DELETE set null
 );
@@ -48,8 +44,11 @@ CREATE TABLE `folders` (
 	`workspace_id` text NOT NULL,
 	`parent_id` text,
 	`name` text NOT NULL,
-	`created_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL,
-	`updated_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL,
+	`data` text DEFAULT '{}' NOT NULL,
+	`metadata` text DEFAULT '{}' NOT NULL,
+	`extensions` text DEFAULT '{}' NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
 	FOREIGN KEY (`workspace_id`) REFERENCES `workspaces`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`parent_id`) REFERENCES `folders`(`id`) ON UPDATE no action ON DELETE set null
 );
@@ -61,10 +60,12 @@ CREATE TABLE `messages` (
 	`chat_id` text NOT NULL,
 	`parent_id` text,
 	`role` text NOT NULL,
-	`parts` text NOT NULL,
+	`parts` text DEFAULT '[]' NOT NULL,
+	`data` text DEFAULT '{}' NOT NULL,
 	`metadata` text DEFAULT '{}' NOT NULL,
-	`created_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL,
-	`updated_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL,
+	`extensions` text DEFAULT '{}' NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
 	FOREIGN KEY (`chat_id`) REFERENCES `chats`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`parent_id`) REFERENCES `messages`(`id`) ON UPDATE no action ON DELETE set null
 );
@@ -78,9 +79,13 @@ CREATE TABLE `models` (
 	`provider_model_id` text NOT NULL,
 	`canonical_model_id` text NOT NULL,
 	`display_name` text,
+	`is_enabled` integer DEFAULT true NOT NULL,
+	`data` text DEFAULT '{}' NOT NULL,
 	`metadata` text DEFAULT '{}' NOT NULL,
-	`created_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL,
-	`updated_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL,
+	`extensions` text DEFAULT '{}' NOT NULL,
+	`lifecycle_status` text DEFAULT 'active' NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
 	FOREIGN KEY (`provider_id`) REFERENCES `providers`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
@@ -93,8 +98,12 @@ CREATE TABLE `providers` (
 	`catalog_id` text NOT NULL,
 	`base_url` text,
 	`config` text DEFAULT '{}' NOT NULL,
-	`created_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL,
-	`updated_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL
+	`data` text DEFAULT '{}' NOT NULL,
+	`metadata` text DEFAULT '{}' NOT NULL,
+	`extensions` text DEFAULT '{}' NOT NULL,
+	`models_sync_status` text DEFAULT 'idle' NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL
 );
 --> statement-breakpoint
 CREATE INDEX `providers_catalog_id_idx` ON `providers` (`catalog_id`);--> statement-breakpoint
@@ -102,8 +111,11 @@ CREATE TABLE `workspace_model_overrides` (
 	`workspace_id` text NOT NULL,
 	`model_id` text NOT NULL,
 	`is_enabled` integer NOT NULL,
-	`created_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL,
-	`updated_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL,
+	`data` text DEFAULT '{}' NOT NULL,
+	`metadata` text DEFAULT '{}' NOT NULL,
+	`extensions` text DEFAULT '{}' NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
 	PRIMARY KEY(`workspace_id`, `model_id`),
 	FOREIGN KEY (`workspace_id`) REFERENCES `workspaces`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`model_id`) REFERENCES `models`(`id`) ON UPDATE no action ON DELETE cascade
@@ -113,8 +125,11 @@ CREATE TABLE `workspace_provider_overrides` (
 	`workspace_id` text NOT NULL,
 	`provider_id` text NOT NULL,
 	`is_enabled` integer NOT NULL,
-	`created_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL,
-	`updated_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL,
+	`data` text DEFAULT '{}' NOT NULL,
+	`metadata` text DEFAULT '{}' NOT NULL,
+	`extensions` text DEFAULT '{}' NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
 	PRIMARY KEY(`workspace_id`, `provider_id`),
 	FOREIGN KEY (`workspace_id`) REFERENCES `workspaces`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`provider_id`) REFERENCES `providers`(`id`) ON UPDATE no action ON DELETE cascade
@@ -123,7 +138,11 @@ CREATE TABLE `workspace_provider_overrides` (
 CREATE TABLE `workspaces` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
+	`color` text,
 	`settings` text DEFAULT '{}' NOT NULL,
-	`created_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL,
-	`updated_at` integer DEFAULT (cast((julianday('now') - 2440587.5) * 86400000 as integer)) NOT NULL
+	`data` text DEFAULT '{}' NOT NULL,
+	`metadata` text DEFAULT '{}' NOT NULL,
+	`extensions` text DEFAULT '{}' NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL
 );

@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1771967015480,
-      "tag": "0000_chief_molly_hayes",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1771971700338,
-      "tag": "0001_supreme_photon",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1772020098100,
-      "tag": "0002_nosy_spirit",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1772030645664,
-      "tag": "0003_friendly_jane_foster",
+      "when": 1772534872726,
+      "tag": "0000_closed_impossible_man",
       "breakpoints": true
     }
   ]

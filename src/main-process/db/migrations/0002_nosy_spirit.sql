@@ -1,1 +1,0 @@
-ALTER TABLE `workspaces` ADD `color` text;
