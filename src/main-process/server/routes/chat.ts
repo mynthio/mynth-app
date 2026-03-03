@@ -3,6 +3,7 @@ import { streamText, convertToModelMessages, generateId } from "ai";
 import { parseChatId } from "../../../shared/chat/chat-id";
 import {
   normalizeChatMessageMetadata,
+  type ChatMessageMetadata,
   type MynthUiMessage,
 } from "../../../shared/chat/message-metadata";
 import { getChatById } from "../../chat-tree/repository";
@@ -11,6 +12,8 @@ import { getModelById } from "../../models/repository";
 import { getProviderById } from "../../providers/repository";
 import { resolveProviderRuntimeContext } from "../../providers/runtime-config";
 import { createLanguageModel } from "../providers/language-model-factory";
+import { buildResponseMetadata } from "../providers/metadata-extractor";
+import type { ProviderId } from "../../../shared/providers/catalog";
 
 export function createChatRoute() {
   const app = new Hono();
@@ -73,21 +76,32 @@ export function createChatRoute() {
       });
     }
 
+    const startTime = Date.now();
+    let capturedResponseMetadata: Omit<ChatMessageMetadata, "parentId"> | undefined;
+
     const result = streamText({
       model: languageModel,
       messages: await convertToModelMessages(messages),
+      onFinish: ({ usage }) => {
+        capturedResponseMetadata = buildResponseMetadata(
+          usage,
+          provider.catalogId as ProviderId,
+          model.id,
+          Date.now() - startTime,
+        );
+      },
     });
 
     return result.toUIMessageStreamResponse({
       generateMessageId: generateId,
       messageMetadata: ({ part }) => {
-        if (part.type !== "start" && part.type !== "finish") {
-          return undefined;
+        if (part.type === "start") {
+          return { parentId: assistantParentId };
         }
-
-        return {
-          parentId: assistantParentId,
-        };
+        if (part.type === "finish") {
+          return { parentId: assistantParentId, ...capturedResponseMetadata };
+        }
+        return undefined;
       },
       onFinish: ({ responseMessage }) => {
         if (responseMessage.role !== "assistant") {
@@ -105,7 +119,7 @@ export function createChatRoute() {
           parentId,
           role: "assistant",
           parts: responseMessage.parts,
-          metadata: { parentId },
+          metadata: { parentId, ...capturedResponseMetadata },
         });
       },
     });

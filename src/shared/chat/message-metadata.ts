@@ -3,6 +3,16 @@ import { type } from "arktype";
 
 export interface ChatMessageMetadata {
   parentId: string | null;
+  tokens?: {
+    input?: number;
+    output?: number;
+    cached?: number;
+  };
+  times?: {
+    generation?: number;
+  };
+  provider?: string;
+  model?: string;
 }
 
 export type MynthUiMessage = UIMessage<ChatMessageMetadata>;
