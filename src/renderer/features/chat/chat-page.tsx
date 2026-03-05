@@ -14,7 +14,7 @@ import { ChatSidebarTree } from "@/features/chat/chat-sidebar-tree";
 import { ChatTabHotkeys } from "@/features/chat/chat-tab-hotkeys";
 import {
   ChatContextProvider,
-  useChatIsBusy,
+  useChatIsInteractionLocked,
   useChatIsStreaming,
   useChatMessages,
   useChatModelId,
@@ -114,7 +114,7 @@ function ActiveChatContent() {
   const modelId = useChatModelId();
   const messages = useChatMessages();
   const sendMessage = useChatSendMessage();
-  const isBusy = useChatIsBusy();
+  const isInteractionLocked = useChatIsInteractionLocked();
   const isStreaming = useChatIsStreaming();
   const { containerRef, anchorRef } = useScrollToBottom(isStreaming);
   const { data: globalChatSettings } = useQuery(globalChatSettingsQueryOptions);
@@ -123,7 +123,7 @@ function ActiveChatContent() {
   const submitBehavior = globalChatSettings?.formSubmitBehavior ?? "enter";
 
   const submitMessage = React.useCallback(() => {
-    if (!modelId || !input.trim() || isBusy) {
+    if (!modelId || !input.trim() || isInteractionLocked) {
       return false;
     }
 
@@ -135,7 +135,7 @@ function ActiveChatContent() {
     });
     setInput("");
     return true;
-  }, [input, isBusy, messages, modelId, sendMessage]);
+  }, [input, isInteractionLocked, messages, modelId, sendMessage]);
 
   useHotkey(
     "Enter",
@@ -153,7 +153,7 @@ function ActiveChatContent() {
       }
     },
     {
-      enabled: !isBusy,
+      enabled: !isInteractionLocked,
       ignoreInputs: false,
       preventDefault: false,
       stopPropagation: false,
@@ -180,7 +180,7 @@ function ActiveChatContent() {
       }
     },
     {
-      enabled: !isBusy,
+      enabled: !isInteractionLocked,
       ignoreInputs: false,
       preventDefault: false,
       stopPropagation: false,
@@ -219,7 +219,7 @@ function ActiveChatContent() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask, Search or Chat…"
-                disabled={isBusy}
+                disabled={isInteractionLocked}
                 rows={1}
               />
               <InputGroupAddon align="block-end" className="p-0">
@@ -232,7 +232,7 @@ function ActiveChatContent() {
                         aria-label="Send"
                         className="ml-auto"
                         size="icon-lg"
-                        disabled={!modelId || !input.trim() || isBusy}
+                        disabled={!modelId || !input.trim() || isInteractionLocked}
                       >
                         <HugeiconsIcon icon={ArrowUp01Icon} />
                       </Button>
@@ -262,6 +262,7 @@ function isComposerInputEvent(event: KeyboardEvent): boolean {
 function ModelSelector() {
   const { data: enabledModels = [] } = useQuery(listEnabledModelsQueryOptions);
   const { data: providers = [] } = useQuery(listProvidersQueryOptions);
+  const isInteractionLocked = useChatIsInteractionLocked();
   const modelId = useChatModelId();
   const setModelId = useSetChatModelId();
   const selectedModel = React.useMemo(
@@ -286,7 +287,14 @@ function ModelSelector() {
           render={
             <MenuTrigger
               openOnHover
-              render={<Button aria-label="Select model" className="max-w-xl" variant="ghost" />}
+              render={
+                <Button
+                  aria-label="Select model"
+                  className="max-w-xl"
+                  variant="ghost"
+                  disabled={isInteractionLocked}
+                />
+              }
             />
           }
         >

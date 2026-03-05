@@ -4,9 +4,14 @@ import { code } from "@streamdown/code";
 
 import type { MynthUiMessage } from "@shared/chat/message-metadata";
 import {
-  useChatIsBusy,
+  useChatIsInteractionLocked,
+  useChatModelId,
   useChatRegenerateMessage,
+  useChatStartEditingMessage,
+  useChatStopEditingMessage,
+  useChatSubmitEditedMessage,
   useChatSwitchBranch,
+  useChatEditingMessageId,
   useIsAnimatingMessage,
 } from "@/features/chat/chat-context";
 import { useTextContextMenu } from "@/hooks/use-text-context-menu";
@@ -17,6 +22,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Group } from "@/components/ui/group";
+import { Textarea } from "@/components/ui/textarea";
+import { Toolbar, ToolbarGroup } from "@/components/ui/toolbar";
 
 // --- Text parts ---
 
@@ -63,7 +70,7 @@ interface AssistantMessageToolsProps {
 const AssistantMessageTools = React.memo(function AssistantMessageTools({
   message,
 }: AssistantMessageToolsProps) {
-  const isBusy = useChatIsBusy();
+  const isInteractionLocked = useChatIsInteractionLocked();
   const regenerate = useChatRegenerateMessage();
   const switchBranch = useChatSwitchBranch();
 
@@ -82,7 +89,7 @@ const AssistantMessageTools = React.memo(function AssistantMessageTools({
     >
       <Button
         size="icon-sm"
-        disabled={isBusy}
+        disabled={isInteractionLocked}
         onClick={() => {
           regenerate({ messageId: message.id });
         }}
@@ -94,13 +101,13 @@ const AssistantMessageTools = React.memo(function AssistantMessageTools({
         <Group>
           <Button
             size="icon-sm"
-            disabled={isBusy || !prevSiblingId}
+            disabled={isInteractionLocked || !prevSiblingId}
             onClick={() => prevSiblingId && void switchBranch(prevSiblingId)}
           >
             <HugeiconsIcon icon={ArrowLeft01Icon} />
           </Button>
           <Button
-            disabled={isBusy}
+            disabled={isInteractionLocked}
             size="sm"
             className="text-primary-foreground font-light sm:text-xs"
           >
@@ -108,7 +115,7 @@ const AssistantMessageTools = React.memo(function AssistantMessageTools({
           </Button>
           <Button
             size="icon-sm"
-            disabled={isBusy || !nextSiblingId}
+            disabled={isInteractionLocked || !nextSiblingId}
             onClick={() => nextSiblingId && void switchBranch(nextSiblingId)}
           >
             <HugeiconsIcon icon={ArrowRight01Icon} />
@@ -127,17 +134,73 @@ interface UserMessageProps {
 
 const UserMessage = React.memo(function UserMessage({ message }: UserMessageProps) {
   const onContextMenu = useTextContextMenu();
+  const modelId = useChatModelId();
+  const editingMessageId = useChatEditingMessageId();
+  const isInteractionLocked = useChatIsInteractionLocked();
+  const startEditingMessage = useChatStartEditingMessage();
+  const stopEditingMessage = useChatStopEditingMessage();
+  const submitEditedMessage = useChatSubmitEditedMessage();
+  const isEditing = editingMessageId === message.id;
+  const messageText = React.useMemo(() => getMessageText(message), [message]);
+  const [draft, setDraft] = React.useState(messageText);
+
+  React.useEffect(() => {
+    if (!isEditing) {
+      setDraft(messageText);
+    }
+  }, [isEditing, messageText]);
 
   return (
-    <div className="flex justify-end">
+    <div className="group/message flex flex-col items-end gap-3">
       <div
         className="max-w-[80%] rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground"
         onContextMenu={onContextMenu}
       >
-        {message.parts.map((part, i) =>
-          part.type === "text" ? <UserMessageTextPart key={i} text={part.text} /> : null,
+        {isEditing ? (
+          <Textarea value={draft} onChange={(event) => setDraft(event.target.value)} />
+        ) : (
+          message.parts.map((part, i) =>
+            part.type === "text" ? <UserMessageTextPart key={i} text={part.text} /> : null,
+          )
         )}
       </div>
+
+      <Toolbar>
+        <ToolbarGroup>
+          {isEditing ? (
+            <>
+              <Button
+                size="xs"
+                disabled={!modelId || !draft.trim()}
+                onClick={() => {
+                  void submitEditedMessage(message.id, draft);
+                }}
+              >
+                Save
+              </Button>
+              <Button
+                size="xs"
+                variant="secondary"
+                onClick={() => {
+                  setDraft(messageText);
+                  stopEditingMessage();
+                }}
+              >
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <Button
+              size="xs"
+              variant="secondary"
+              disabled={isInteractionLocked}
+              onClick={() => startEditingMessage(message.id)}
+            >
+              Edit
+            </Button>
+          )}
+        </ToolbarGroup>
+      </Toolbar>
     </div>
   );
 });
@@ -178,3 +241,13 @@ export const ChatMessage = React.memo(function ChatMessage({ message }: ChatMess
 
   return <AssistantMessage message={message} />;
 });
+
+function getMessageText(message: MynthUiMessage): string {
+  return message.parts
+    .filter(
+      (part): part is Extract<MynthUiMessage["parts"][number], { type: "text" }> =>
+        part.type === "text",
+    )
+    .map((part) => part.text)
+    .join("\n");
+}

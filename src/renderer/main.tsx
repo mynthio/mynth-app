@@ -4,7 +4,6 @@ import { RouterProvider, createHashHistory, createRouter } from "@tanstack/react
 import { routeTree } from "./routeTree.gen";
 import { QueryProvider } from "./providers/query-provider";
 import { SystemEventListener } from "./components/system-event-listener";
-import { ChatRegistry } from "./components/chat-registry";
 import "./index.css";
 import "streamdown/styles.css";
 
@@ -35,7 +34,6 @@ createRoot(rootElement).render(
   <StrictMode>
     <QueryProvider>
       <SystemEventListener />
-      <ChatRegistry />
       <RouterProvider router={router} />
     </QueryProvider>
   </StrictMode>,
