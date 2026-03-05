@@ -1,9 +1,5 @@
 import { normalizeChatMessageMetadata, type MynthUiMessage } from "@shared/chat/message-metadata";
-import {
-  getChatById,
-  getChatCurrentBranchId,
-  setChatCurrentBranch,
-} from "../chat-tree/repository";
+import { getChatById, getChatCurrentBranchId, setChatCurrentBranch } from "../chat-tree/repository";
 import { listMessagesByChatId, type MessageRow } from "../messages/repository";
 
 export interface ChatMessagesService {
@@ -12,7 +8,10 @@ export interface ChatMessagesService {
 }
 
 function toChatMessage(message: MessageRow, previousMessageId: string | null): MynthUiMessage {
-  const base = normalizeChatMessageMetadata(message.metadata, message.parentId ?? previousMessageId);
+  const base = normalizeChatMessageMetadata(
+    message.metadata,
+    message.parentId ?? previousMessageId,
+  );
   return {
     id: message.id,
     role: message.role,

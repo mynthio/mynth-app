@@ -119,23 +119,17 @@
       "indexes": {
         "assets_workspace_id_idx": {
           "name": "assets_workspace_id_idx",
-          "columns": [
-            "workspace_id"
-          ],
+          "columns": ["workspace_id"],
           "isUnique": false
         },
         "assets_chat_id_idx": {
           "name": "assets_chat_id_idx",
-          "columns": [
-            "chat_id"
-          ],
+          "columns": ["chat_id"],
           "isUnique": false
         },
         "assets_message_id_idx": {
           "name": "assets_message_id_idx",
-          "columns": [
-            "message_id"
-          ],
+          "columns": ["message_id"],
           "isUnique": false
         }
       },
@@ -144,12 +138,8 @@
           "name": "assets_workspace_id_workspaces_id_fk",
           "tableFrom": "assets",
           "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -157,12 +147,8 @@
           "name": "assets_chat_id_chats_id_fk",
           "tableFrom": "assets",
           "tableTo": "chats",
-          "columnsFrom": [
-            "chat_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["chat_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -170,12 +156,8 @@
           "name": "assets_message_id_messages_id_fk",
           "tableFrom": "assets",
           "tableTo": "messages",
-          "columnsFrom": [
-            "message_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["message_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -265,16 +247,12 @@
       "indexes": {
         "chats_workspace_id_idx": {
           "name": "chats_workspace_id_idx",
-          "columns": [
-            "workspace_id"
-          ],
+          "columns": ["workspace_id"],
           "isUnique": false
         },
         "chats_folder_id_idx": {
           "name": "chats_folder_id_idx",
-          "columns": [
-            "folder_id"
-          ],
+          "columns": ["folder_id"],
           "isUnique": false
         }
       },
@@ -283,12 +261,8 @@
           "name": "chats_workspace_id_workspaces_id_fk",
           "tableFrom": "chats",
           "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -296,12 +270,8 @@
           "name": "chats_folder_id_folders_id_fk",
           "tableFrom": "chats",
           "tableTo": "folders",
-          "columnsFrom": [
-            "folder_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["folder_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -383,16 +353,12 @@
       "indexes": {
         "folders_workspace_id_idx": {
           "name": "folders_workspace_id_idx",
-          "columns": [
-            "workspace_id"
-          ],
+          "columns": ["workspace_id"],
           "isUnique": false
         },
         "folders_parent_id_idx": {
           "name": "folders_parent_id_idx",
-          "columns": [
-            "parent_id"
-          ],
+          "columns": ["parent_id"],
           "isUnique": false
         }
       },
@@ -401,12 +367,8 @@
           "name": "folders_workspace_id_workspaces_id_fk",
           "tableFrom": "folders",
           "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -414,12 +376,8 @@
           "name": "folders_parent_id_folders_id_fk",
           "tableFrom": "folders",
           "tableTo": "folders",
-          "columnsFrom": [
-            "parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["parent_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -509,23 +467,17 @@
       "indexes": {
         "messages_chat_id_idx": {
           "name": "messages_chat_id_idx",
-          "columns": [
-            "chat_id"
-          ],
+          "columns": ["chat_id"],
           "isUnique": false
         },
         "messages_parent_id_idx": {
           "name": "messages_parent_id_idx",
-          "columns": [
-            "parent_id"
-          ],
+          "columns": ["parent_id"],
           "isUnique": false
         },
         "messages_created_at_idx": {
           "name": "messages_created_at_idx",
-          "columns": [
-            "created_at"
-          ],
+          "columns": ["created_at"],
           "isUnique": false
         }
       },
@@ -534,12 +486,8 @@
           "name": "messages_chat_id_chats_id_fk",
           "tableFrom": "messages",
           "tableTo": "chats",
-          "columnsFrom": [
-            "chat_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["chat_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -547,12 +495,8 @@
           "name": "messages_parent_id_messages_id_fk",
           "tableFrom": "messages",
           "tableTo": "messages",
-          "columnsFrom": [
-            "parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["parent_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -657,24 +601,17 @@
       "indexes": {
         "models_provider_model_unique": {
           "name": "models_provider_model_unique",
-          "columns": [
-            "provider_id",
-            "provider_model_id"
-          ],
+          "columns": ["provider_id", "provider_model_id"],
           "isUnique": true
         },
         "models_canonical_model_id_idx": {
           "name": "models_canonical_model_id_idx",
-          "columns": [
-            "canonical_model_id"
-          ],
+          "columns": ["canonical_model_id"],
           "isUnique": false
         },
         "models_provider_id_idx": {
           "name": "models_provider_id_idx",
-          "columns": [
-            "provider_id"
-          ],
+          "columns": ["provider_id"],
           "isUnique": false
         }
       },
@@ -683,12 +620,8 @@
           "name": "models_provider_id_providers_id_fk",
           "tableFrom": "models",
           "tableTo": "providers",
-          "columnsFrom": [
-            "provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -786,9 +719,7 @@
       "indexes": {
         "providers_catalog_id_idx": {
           "name": "providers_catalog_id_idx",
-          "columns": [
-            "catalog_id"
-          ],
+          "columns": ["catalog_id"],
           "isUnique": false
         }
       },
@@ -866,12 +797,8 @@
           "name": "workspace_model_overrides_workspace_id_workspaces_id_fk",
           "tableFrom": "workspace_model_overrides",
           "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -879,22 +806,15 @@
           "name": "workspace_model_overrides_model_id_models_id_fk",
           "tableFrom": "workspace_model_overrides",
           "tableTo": "models",
-          "columnsFrom": [
-            "model_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["model_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "workspace_model_overrides_workspace_id_model_id_pk": {
-          "columns": [
-            "workspace_id",
-            "model_id"
-          ],
+          "columns": ["workspace_id", "model_id"],
           "name": "workspace_model_overrides_workspace_id_model_id_pk"
         }
       },
@@ -970,12 +890,8 @@
           "name": "workspace_provider_overrides_workspace_id_workspaces_id_fk",
           "tableFrom": "workspace_provider_overrides",
           "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -983,22 +899,15 @@
           "name": "workspace_provider_overrides_provider_id_providers_id_fk",
           "tableFrom": "workspace_provider_overrides",
           "tableTo": "providers",
-          "columnsFrom": [
-            "provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "workspace_provider_overrides_workspace_id_provider_id_pk": {
-          "columns": [
-            "workspace_id",
-            "provider_id"
-          ],
+          "columns": ["workspace_id", "provider_id"],
           "name": "workspace_provider_overrides_workspace_id_provider_id_pk"
         }
       },

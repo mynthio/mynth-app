@@ -12,11 +12,7 @@ import {
 import { useTextContextMenu } from "@/hooks/use-text-context-menu";
 
 import "streamdown/styles.css";
-import {
-  ArrowLeft01Icon,
-  ArrowRight01Icon,
-  Refresh04Icon,
-} from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, ArrowRight01Icon, Refresh04Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -129,9 +125,7 @@ interface UserMessageProps {
   message: MynthUiMessage;
 }
 
-const UserMessage = React.memo(function UserMessage({
-  message,
-}: UserMessageProps) {
+const UserMessage = React.memo(function UserMessage({ message }: UserMessageProps) {
   const onContextMenu = useTextContextMenu();
 
   return (
@@ -141,9 +135,7 @@ const UserMessage = React.memo(function UserMessage({
         onContextMenu={onContextMenu}
       >
         {message.parts.map((part, i) =>
-          part.type === "text" ? (
-            <UserMessageTextPart key={i} text={part.text} />
-          ) : null,
+          part.type === "text" ? <UserMessageTextPart key={i} text={part.text} /> : null,
         )}
       </div>
     </div>
@@ -154,25 +146,16 @@ interface AssistantMessageProps {
   message: MynthUiMessage;
 }
 
-const AssistantMessage = React.memo(function AssistantMessage({
-  message,
-}: AssistantMessageProps) {
+const AssistantMessage = React.memo(function AssistantMessage({ message }: AssistantMessageProps) {
   const isAnimating = useIsAnimatingMessage(message.id, message.role);
   const onContextMenu = useTextContextMenu();
 
   return (
     <div className="group/message flex flex-col items-start gap-3">
-      <div
-        className="max-w-[80%] rounded-lg py-2 text-sm"
-        onContextMenu={onContextMenu}
-      >
+      <div className="max-w-[80%] rounded-lg py-2 text-sm" onContextMenu={onContextMenu}>
         {message.parts.map((part, i) =>
           part.type === "text" ? (
-            <AssistantMessageTextPart
-              key={i}
-              text={part.text}
-              isAnimating={isAnimating}
-            />
+            <AssistantMessageTextPart key={i} text={part.text} isAnimating={isAnimating} />
           ) : null,
         )}
       </div>
@@ -188,9 +171,7 @@ interface ChatMessageProps {
   message: MynthUiMessage;
 }
 
-export const ChatMessage = React.memo(function ChatMessage({
-  message,
-}: ChatMessageProps) {
+export const ChatMessage = React.memo(function ChatMessage({ message }: ChatMessageProps) {
   if (message.role === "user") {
     return <UserMessage message={message} />;
   }

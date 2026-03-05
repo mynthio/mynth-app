@@ -6,19 +6,9 @@ import { ArrowUp01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Menu,
-  MenuPopup,
-  MenuRadioGroup,
-  MenuRadioItem,
-  MenuTrigger,
-} from "@/components/ui/menu";
+import { Menu, MenuPopup, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "@/components/ui/menu";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupTextarea,
-} from "@/components/ui/input-group";
+import { InputGroup, InputGroupAddon, InputGroupTextarea } from "@/components/ui/input-group";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ChatSidebarTree } from "@/features/chat/chat-sidebar-tree";
 import { ChatTabHotkeys } from "@/features/chat/chat-tab-hotkeys";
@@ -37,11 +27,7 @@ import { cn } from "@/lib/utils";
 import { listEnabledModelsQueryOptions } from "@/queries/models";
 import { listProvidersQueryOptions } from "@/queries/providers";
 import { globalChatSettingsQueryOptions } from "@/queries/settings";
-import {
-  useSystemStore,
-  selectAiServerPort,
-  selectAiServerReady,
-} from "@/stores/system-store";
+import { useSystemStore, selectAiServerPort, selectAiServerReady } from "@/stores/system-store";
 import { useWorkspaceStore } from "../workspace/store";
 import { Conversation } from "./conversation";
 
@@ -58,9 +44,7 @@ export function ChatPage() {
           <ActiveChatView chatId={activeTab.chatId} />
         ) : (
           <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-6">
-            <p className="text-muted-foreground">
-              No chat selected. Open a chat from the sidebar.
-            </p>
+            <p className="text-muted-foreground">No chat selected. Open a chat from the sidebar.</p>
             <Link
               to="/settings"
               className="inline-flex w-fit rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
@@ -98,9 +82,7 @@ function ActiveChatView({ chatId }: { chatId: string }) {
   if (serverStatus === "error") {
     return (
       <div className="flex-1 mx-auto flex w-full max-w-4xl flex-col gap-4 px-6 py-6">
-        <p className="text-sm text-destructive">
-          AI server failed to start: {serverError}
-        </p>
+        <p className="text-sm text-destructive">AI server failed to start: {serverError}</p>
       </div>
     );
   }
@@ -109,9 +91,7 @@ function ActiveChatView({ chatId }: { chatId: string }) {
     return (
       <div className="flex-1 mx-auto flex w-full max-w-4xl flex-col px-6 py-6">
         <p className="text-sm text-muted-foreground">
-          {enabledModels.length === 0
-            ? "Enable a model in Settings to start chatting."
-            : ""}
+          {enabledModels.length === 0 ? "Enable a model in Settings to start chatting." : ""}
         </p>
       </div>
     );
@@ -291,9 +271,7 @@ function ModelSelector() {
   const selectedProvider = React.useMemo(
     () =>
       selectedModel
-        ? (providers.find(
-            (provider) => provider.id === selectedModel.providerId,
-          ) ?? null)
+        ? (providers.find((provider) => provider.id === selectedModel.providerId) ?? null)
         : null,
     [providers, selectedModel],
   );
@@ -308,41 +286,24 @@ function ModelSelector() {
           render={
             <MenuTrigger
               openOnHover
-              render={
-                <Button
-                  aria-label="Select model"
-                  className="max-w-xl"
-                  variant="ghost"
-                />
-              }
+              render={<Button aria-label="Select model" className="max-w-xl" variant="ghost" />}
             />
           }
         >
           <span className="inline-flex text-foreground/60 overflow-hidden items-center gap-2">
-            {SelectedProviderIcon ? (
-              <SelectedProviderIcon className="size-4" />
-            ) : null}
+            {SelectedProviderIcon ? <SelectedProviderIcon className="size-4" /> : null}
             <span className="truncate">
-              {selectedModel?.displayName ??
-                selectedModel?.providerModelId ??
-                "Select model"}
+              {selectedModel?.displayName ?? selectedModel?.providerModelId ?? "Select model"}
             </span>
           </span>
         </TooltipTrigger>
         <TooltipPopup>Select model</TooltipPopup>
       </Tooltip>
       <MenuPopup align="start">
-        <MenuRadioGroup
-          value={modelId ?? ""}
-          onValueChange={(value) => setModelId(value || null)}
-        >
+        <MenuRadioGroup value={modelId ?? ""} onValueChange={(value) => setModelId(value || null)}>
           {enabledModels.map((m) => {
-            const provider = providers.find(
-              (candidate) => candidate.id === m.providerId,
-            );
-            const ProviderIcon = provider
-              ? getProviderIconById(provider.catalogId)
-              : null;
+            const provider = providers.find((candidate) => candidate.id === m.providerId);
+            const ProviderIcon = provider ? getProviderIconById(provider.catalogId) : null;
 
             return (
               <MenuRadioItem key={m.id} value={m.id}>

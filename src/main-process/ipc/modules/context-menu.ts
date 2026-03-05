@@ -122,8 +122,6 @@ function createTextContextMenuTemplate(
     template.push({ type: "separator" });
     template.push({ role: "startSpeaking", enabled: hasSelection });
     template.push({ role: "stopSpeaking" });
-    template.push({ type: "separator" });
-    template.push({ role: "services", label: "Writing Tools & Services" });
   }
 
   return normalizeMenuTemplate(template);
