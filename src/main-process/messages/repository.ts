@@ -37,36 +37,13 @@ export interface UpsertMessageInput {
  * Messages are returned in conversation order: root first, leaf last.
  */
 export function listMessagesByChatId(chatId: string, branchId?: string | null): MessageRow[] {
-  const db = getAppDatabase();
-
-  // Load all messages for the chat, oldest first so iteration order is predictable.
-  const allMessages = db
-    .select()
-    .from(messages)
-    .where(eq(messages.chatId, chatId))
-    .orderBy(asc(messages.createdAt), asc(messages.id))
-    .all();
+  const allMessages = loadAllMessagesByChatId(chatId);
 
   if (allMessages.length === 0) {
     return [];
   }
 
-  // Build lookup structures once.
-  const messageMap = new Map<string, MessageTableRow>();
-  // Maps parentId → list of direct children (preserves insertion/creation order).
-  const childrenByParentId = new Map<string | null, MessageTableRow[]>();
-
-  for (const msg of allMessages) {
-    messageMap.set(msg.id, msg);
-
-    const parentKey = msg.parentId;
-    let siblings = childrenByParentId.get(parentKey);
-    if (!siblings) {
-      siblings = [];
-      childrenByParentId.set(parentKey, siblings);
-    }
-    siblings.push(msg);
-  }
+  const { childrenByParentId, messageMap } = buildMessageIndexes(allMessages);
 
   // Find the leaf from which we will trace back to the root.
   let leafMessage: MessageTableRow | undefined;
@@ -99,16 +76,18 @@ export function listMessagesByChatId(chatId: string, branchId?: string | null): 
   // Reverse so the path runs root → leaf.
   path.reverse();
 
-  return path.map((msg) => {
-    const row = toMessageRow(msg);
-    const sibs = childrenByParentId.get(msg.parentId) ?? [];
-    if (sibs.length > 1) {
-      const siblingIds = sibs.map((s) => s.id);
-      row.siblings = siblingIds;
-      row.siblingIndex = siblingIds.indexOf(msg.id);
-    }
-    return row;
-  });
+  return addSiblingMetadata(path, childrenByParentId);
+}
+
+export function listAllMessagesByChatId(chatId: string): MessageRow[] {
+  const allMessages = loadAllMessagesByChatId(chatId);
+
+  if (allMessages.length === 0) {
+    return [];
+  }
+
+  const { childrenByParentId } = buildMessageIndexes(allMessages);
+  return addSiblingMetadata(allMessages, childrenByParentId);
 }
 
 export function upsertMessage(input: UpsertMessageInput): MessageRow {
@@ -245,4 +224,52 @@ function normalizeJsonObject(value: unknown): Record<string, unknown> {
   }
 
   return value as Record<string, unknown>;
+}
+
+function loadAllMessagesByChatId(chatId: string): MessageTableRow[] {
+  return getAppDatabase()
+    .select()
+    .from(messages)
+    .where(eq(messages.chatId, chatId))
+    .orderBy(asc(messages.createdAt), asc(messages.id))
+    .all();
+}
+
+function buildMessageIndexes(allMessages: MessageTableRow[]): {
+  childrenByParentId: Map<string | null, MessageTableRow[]>;
+  messageMap: Map<string, MessageTableRow>;
+} {
+  const messageMap = new Map<string, MessageTableRow>();
+  const childrenByParentId = new Map<string | null, MessageTableRow[]>();
+
+  for (const message of allMessages) {
+    messageMap.set(message.id, message);
+
+    const siblings = childrenByParentId.get(message.parentId) ?? [];
+    siblings.push(message);
+    childrenByParentId.set(message.parentId, siblings);
+  }
+
+  return {
+    childrenByParentId,
+    messageMap,
+  };
+}
+
+function addSiblingMetadata(
+  rows: readonly MessageTableRow[],
+  childrenByParentId: Map<string | null, MessageTableRow[]>,
+): MessageRow[] {
+  return rows.map((message) => {
+    const row = toMessageRow(message);
+    const siblings = childrenByParentId.get(message.parentId) ?? [];
+
+    if (siblings.length > 1) {
+      const siblingIds = siblings.map((sibling) => sibling.id);
+      row.siblings = siblingIds;
+      row.siblingIndex = siblingIds.indexOf(message.id);
+    }
+
+    return row;
+  });
 }

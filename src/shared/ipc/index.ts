@@ -35,6 +35,7 @@ export const IPC_CHANNELS = {
   chats: {
     get: "chats:get",
     listMessages: "chats:listMessages",
+    listAllMessages: "chats:listAllMessages",
     switchBranch: "chats:switchBranch",
     create: "chats:create",
     updateTitle: "chats:updateTitle",
@@ -253,6 +254,7 @@ export interface IpcApi {
   setTabsUiState: (workspaceId: string, tabs: TabStateItem[]) => Promise<TabsUiState>;
   getChat: (id: string) => Promise<ChatInfo>;
   listChatMessages: (chatId: string, branchId?: string | null) => Promise<MynthUiMessage[]>;
+  listAllChatMessages: (chatId: string) => Promise<MynthUiMessage[]>;
   switchChatBranch: (chatId: string, branchId: string) => Promise<MynthUiMessage[]>;
   createFolder: (
     workspaceId: string,

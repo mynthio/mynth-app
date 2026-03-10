@@ -6,6 +6,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { ChatSidebarTree } from "@/features/chat/chat-sidebar-tree";
 import { ChatTabHotkeys } from "@/features/chat/chat-tab-hotkeys";
 import { ChatToolbar } from "@/features/chat/chat-toolbar";
+import { ChatViewHotkeys } from "@/features/chat/chat-view-hotkeys";
 import { cn } from "@/lib/utils";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Chatting01Icon, Setting07Icon, WorkflowSquare03Icon } from "@hugeicons/core-free-icons";
@@ -15,6 +16,7 @@ export function ChatLayout() {
     <WindowChrome contentClassName="overflow-hidden" toolbar={<ChatToolbar />}>
       <SidebarProvider className="h-full min-h-0 w-full">
         <ChatTabHotkeys />
+        <ChatViewHotkeys />
         <ChatSidebarTree />
 
         <div className="relative flex h-full w-full flex-col overflow-hidden rounded-l-2xl bg-card">

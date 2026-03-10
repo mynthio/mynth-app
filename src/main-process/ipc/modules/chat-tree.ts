@@ -277,6 +277,15 @@ export function registerChatTreeIpcModule(
       services.chatMessages.listChatMessages(chatId, branchId),
   });
 
+  registerInvokeHandler<[string], MynthUiMessage[]>(context, registeredChannels, {
+    channel: IPC_CHANNELS.chats.listAllMessages,
+    parseArgs: (args) => {
+      expectArgCount(args, 1);
+      return [parseValidChatId(args[0])];
+    },
+    handler: ({ services }, _event, chatId) => services.chatMessages.listAllChatMessages(chatId),
+  });
+
   registerInvokeHandler<[string, string], MynthUiMessage[]>(context, registeredChannels, {
     channel: IPC_CHANNELS.chats.switchBranch,
     parseArgs: (args) => {
