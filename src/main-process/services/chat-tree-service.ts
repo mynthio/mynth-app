@@ -75,6 +75,7 @@ function toChatInfo(chat: ChatRow): ChatInfo {
     workspaceId: chat.workspaceId,
     folderId: chat.folderId,
     title: chat.title,
+    settings: chat.settings,
     createdAt: chat.createdAt,
     updatedAt: chat.updatedAt,
   };

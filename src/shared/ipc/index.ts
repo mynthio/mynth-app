@@ -106,8 +106,13 @@ export interface ChatInfo {
   workspaceId: string;
   folderId: string | null;
   title: string;
+  settings: ChatSettings;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface ChatSettings {
+  modelId?: string | null;
 }
 
 export interface ChatTreeFolderNode extends FolderInfo {

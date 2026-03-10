@@ -22,7 +22,12 @@ export function DeleteChatDialog({ chatId, onSuccess }: DeleteChatDialogProps) {
   const deleteChat = useDeleteChat();
 
   const close = () => {
-    void navigate({ to: "/chat", search: {} });
+    void navigate({
+      search: (prev) => ({
+        ...prev,
+        deleteChat: undefined,
+      }),
+    });
   };
 
   const handleConfirm = () => {

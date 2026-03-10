@@ -22,7 +22,12 @@ export function DeleteFolderDialog({ folderId, onSuccess }: DeleteFolderDialogPr
   const deleteFolder = useDeleteFolder();
 
   const close = () => {
-    void navigate({ to: "/chat", search: {} });
+    void navigate({
+      search: (prev) => ({
+        ...prev,
+        deleteFolder: undefined,
+      }),
+    });
   };
 
   const handleConfirm = () => {

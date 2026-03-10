@@ -7,6 +7,10 @@ import { getWorkspaceById } from "../workspaces/repository";
 
 type FolderTableRow = typeof folders.$inferSelect;
 type ChatTableRow = typeof chats.$inferSelect;
+type ChatSettings = {
+  modelId?: string | null;
+};
+type ChatSettingsPatch = Partial<ChatSettings>;
 
 export interface FolderRow {
   id: string;
@@ -22,6 +26,7 @@ export interface ChatRow {
   workspaceId: string;
   folderId: string | null;
   title: string;
+  settings: ChatSettings;
   createdAt: number;
   updatedAt: number;
 }
@@ -77,9 +82,45 @@ function toChatRow(row: ChatTableRow): ChatRow {
     workspaceId: row.workspaceId,
     folderId: row.folderId,
     title: row.title,
+    settings: normalizeChatSettings(row.settings),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
+}
+
+function normalizeChatSettings(value: unknown): ChatSettings {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  const record = value as Record<string, unknown>;
+  const modelId = record.modelId;
+
+  if (typeof modelId === "string") {
+    return { modelId };
+  }
+
+  if (modelId === null) {
+    return { modelId: null };
+  }
+
+  return {};
+}
+
+function mergeChatSettings(value: unknown, settingsPatch?: ChatSettingsPatch): ChatSettings {
+  const currentSettings = normalizeChatSettings(value);
+
+  if (!settingsPatch) {
+    return currentSettings;
+  }
+
+  const nextSettings: ChatSettings = { ...currentSettings };
+
+  if ("modelId" in settingsPatch) {
+    nextSettings.modelId = settingsPatch.modelId ?? null;
+  }
+
+  return nextSettings;
 }
 
 function requireWorkspaceExists(workspaceId: string): void {
@@ -641,13 +682,23 @@ export function deleteChat(id: string): ChatRow {
   return chat;
 }
 
-export function setChatCurrentBranch(chatId: string, branchId: string | null): void {
+export function setChatCurrentBranch(
+  chatId: string,
+  branchId: string | null,
+  options?: {
+    settingsPatch?: ChatSettingsPatch;
+  },
+): void {
   const db = getAppDatabase();
   const existing = db.select().from(chats).where(eq(chats.id, chatId)).get();
   if (!existing) return;
   const currentData = (existing.data as Record<string, unknown>) ?? {};
   db.update(chats)
-    .set({ data: { ...currentData, currentBranchId: branchId }, updatedAt: Date.now() })
+    .set({
+      settings: mergeChatSettings(existing.settings, options?.settingsPatch),
+      data: { ...currentData, currentBranchId: branchId },
+      updatedAt: Date.now(),
+    })
     .where(eq(chats.id, chatId))
     .run();
 }

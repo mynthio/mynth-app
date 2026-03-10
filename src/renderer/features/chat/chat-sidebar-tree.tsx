@@ -89,7 +89,7 @@ function ChatSidebarTreeInner({
   initialExpandedFolderIds: string[];
 }) {
   const navigate = useNavigate();
-  const { deleteChat, deleteFolder } = useSearch({ from: "/chat/" });
+  const { deleteChat, deleteFolder } = useSearch({ from: "/chat" });
   const setChatTreeUiState = useSetChatTreeUiState();
 
   const renameChatTreeItem = useRenameChatTreeItem();
@@ -368,13 +368,19 @@ function ChatSidebarTreeInner({
                   const rawId = item.getId();
                   if (itemKind === "folder") {
                     void navigate({
-                      to: "/chat",
-                      search: { deleteFolder: rawId.slice("folder:".length) },
+                      search: (prev) => ({
+                        ...prev,
+                        deleteChat: undefined,
+                        deleteFolder: rawId.slice("folder:".length),
+                      }),
                     });
                   } else {
                     void navigate({
-                      to: "/chat",
-                      search: { deleteChat: rawId.slice("chat:".length) },
+                      search: (prev) => ({
+                        ...prev,
+                        deleteChat: rawId.slice("chat:".length),
+                        deleteFolder: undefined,
+                      }),
                     });
                   }
                 }

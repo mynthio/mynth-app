@@ -3,7 +3,7 @@ import { useWorkspaceStore } from "../workspace/store";
 
 /**
  * Registers keyboard shortcuts for tab management.
- * Renders nothing — mount once inside ChatPage.
+ * Renders nothing — mount once inside ChatLayout.
  *
  * Shortcuts:
  *  Ctrl+Tab      — cycle to the next open tab

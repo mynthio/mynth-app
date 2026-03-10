@@ -17,13 +17,17 @@ import {
 import { useTextContextMenu } from "@/hooks/use-text-context-menu";
 
 import "streamdown/styles.css";
-import { ArrowLeft01Icon, ArrowRight01Icon, Refresh04Icon } from "@hugeicons/core-free-icons";
+import {
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
+  Edit01Icon,
+  Refresh04Icon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Group } from "@/components/ui/group";
 import { Textarea } from "@/components/ui/textarea";
-import { Toolbar, ToolbarGroup } from "@/components/ui/toolbar";
 
 // --- Text parts ---
 
@@ -63,6 +67,27 @@ const AssistantMessageTextPart = React.memo(function AssistantMessageTextPart({
 });
 
 // --- Role-specific tools components ---
+interface MessageToolsProps extends React.ComponentProps<"div"> {
+  forceVisible?: boolean;
+}
+
+const MessageTools = React.memo(function MessageTools({
+  className,
+  forceVisible = false,
+  ...props
+}: MessageToolsProps) {
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-1 transition-opacity duration-150",
+        forceVisible ? "opacity-100" : "opacity-0 group-hover/message:opacity-100",
+        className,
+      )}
+      {...props}
+    />
+  );
+});
+
 interface AssistantMessageToolsProps {
   message: MynthUiMessage;
 }
@@ -81,12 +106,7 @@ const AssistantMessageTools = React.memo(function AssistantMessageTools({
   const hasSiblings = siblings.length > 1;
 
   return (
-    <div
-      className={cn(
-        "flex items-center gap-1",
-        "opacity-0 transition-opacity duration-150 group-hover/message:opacity-100",
-      )}
-    >
+    <MessageTools>
       <Button
         size="icon-sm"
         disabled={isInteractionLocked}
@@ -122,7 +142,74 @@ const AssistantMessageTools = React.memo(function AssistantMessageTools({
           </Button>
         </Group>
       )}
-    </div>
+    </MessageTools>
+  );
+});
+
+interface UserMessageToolsProps {
+  draft: string;
+  isEditing: boolean;
+  isInteractionLocked: boolean;
+  messageId: string;
+  messageText: string;
+  modelId: string | null;
+  onDraftChange: (value: string) => void;
+  startEditingMessage: (messageId: string) => void;
+  stopEditingMessage: () => void;
+  submitEditedMessage: (messageId: string, text: string) => Promise<void>;
+}
+
+const UserMessageTools = React.memo(function UserMessageTools({
+  draft,
+  isEditing,
+  isInteractionLocked,
+  messageId,
+  messageText,
+  modelId,
+  onDraftChange,
+  startEditingMessage,
+  stopEditingMessage,
+  submitEditedMessage,
+}: UserMessageToolsProps) {
+  if (isEditing) {
+    return (
+      <MessageTools forceVisible>
+        <Group>
+          <Button
+            size="xs"
+            disabled={!modelId || !draft.trim()}
+            onClick={() => {
+              void submitEditedMessage(messageId, draft);
+            }}
+          >
+            Save
+          </Button>
+          <Button
+            size="xs"
+            variant="secondary"
+            onClick={() => {
+              onDraftChange(messageText);
+              stopEditingMessage();
+            }}
+          >
+            Cancel
+          </Button>
+        </Group>
+      </MessageTools>
+    );
+  }
+
+  return (
+    <MessageTools>
+      <Button
+        size="icon-sm"
+        variant="secondary"
+        disabled={isInteractionLocked}
+        onClick={() => startEditingMessage(messageId)}
+      >
+        <HugeiconsIcon icon={Edit01Icon} />
+      </Button>
+    </MessageTools>
   );
 });
 
@@ -165,42 +252,18 @@ const UserMessage = React.memo(function UserMessage({ message }: UserMessageProp
         )}
       </div>
 
-      <Toolbar>
-        <ToolbarGroup>
-          {isEditing ? (
-            <>
-              <Button
-                size="xs"
-                disabled={!modelId || !draft.trim()}
-                onClick={() => {
-                  void submitEditedMessage(message.id, draft);
-                }}
-              >
-                Save
-              </Button>
-              <Button
-                size="xs"
-                variant="secondary"
-                onClick={() => {
-                  setDraft(messageText);
-                  stopEditingMessage();
-                }}
-              >
-                Cancel
-              </Button>
-            </>
-          ) : (
-            <Button
-              size="xs"
-              variant="secondary"
-              disabled={isInteractionLocked}
-              onClick={() => startEditingMessage(message.id)}
-            >
-              Edit
-            </Button>
-          )}
-        </ToolbarGroup>
-      </Toolbar>
+      <UserMessageTools
+        draft={draft}
+        isEditing={isEditing}
+        isInteractionLocked={isInteractionLocked}
+        messageId={message.id}
+        messageText={messageText}
+        modelId={modelId}
+        onDraftChange={setDraft}
+        startEditingMessage={startEditingMessage}
+        stopEditingMessage={stopEditingMessage}
+        submitEditedMessage={submitEditedMessage}
+      />
     </div>
   );
 });

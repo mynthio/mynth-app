@@ -44,6 +44,7 @@ const CHAT_STREAM_THROTTLE_MS = 50;
 type ChatContextProviderProps = {
   chatId: string;
   apiUrl: string;
+  initialModelId: string | null;
   enabledModelIds: readonly string[];
   children: React.ReactNode;
 };
@@ -184,6 +185,7 @@ function createChatContextStore({
 export function ChatContextProvider({
   chatId,
   apiUrl,
+  initialModelId,
   enabledModelIds,
   children,
 }: ChatContextProviderProps) {
@@ -209,7 +211,7 @@ export function ChatContextProvider({
   if (!storeRef.current) {
     storeRef.current = createChatContextStore({
       chatId,
-      initialModelId: enabledModelIds[0] ?? null,
+      initialModelId: resolveModelId(enabledModelIds, initialModelId),
       transportRefs: transportRefs.current,
     });
   }

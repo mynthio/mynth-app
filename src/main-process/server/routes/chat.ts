@@ -122,7 +122,11 @@ export function createChatRoute() {
           metadata: { parentId, ...capturedResponseMetadata },
         });
 
-        setChatCurrentBranch(chat.id, null);
+        setChatCurrentBranch(chat.id, null, {
+          settingsPatch: {
+            modelId: model.id,
+          },
+        });
       },
     });
   });

@@ -1,17 +1,14 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { ArrowUp01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
+import { chatsApi } from "@/api/chats";
 import { Button } from "@/components/ui/button";
 import { Menu, MenuPopup, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "@/components/ui/menu";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "@/components/ui/tooltip";
 import { InputGroup, InputGroupAddon, InputGroupTextarea } from "@/components/ui/input-group";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { ChatSidebarTree } from "@/features/chat/chat-sidebar-tree";
-import { ChatTabHotkeys } from "@/features/chat/chat-tab-hotkeys";
 import {
   ChatContextProvider,
   useChatIsInteractionLocked,
@@ -34,27 +31,14 @@ import { Conversation } from "./conversation";
 export function ChatPage() {
   const activeTab = useWorkspaceStore((s) => s.activeTab());
 
-  return (
-    <SidebarProvider className="h-full min-h-0 w-full">
-      <ChatTabHotkeys />
-      <ChatSidebarTree />
+  if (activeTab?.type === "chat" && activeTab.chatId) {
+    return <ActiveChatView chatId={activeTab.chatId} />;
+  }
 
-      <div className="w-full h-[calc(100%-8px)] bg-card rounded-l-2xl overflow-hidden flex flex-col">
-        {activeTab?.type === "chat" && activeTab.chatId ? (
-          <ActiveChatView chatId={activeTab.chatId} />
-        ) : (
-          <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-6">
-            <p className="text-muted-foreground">No chat selected. Open a chat from the sidebar.</p>
-            <Link
-              to="/settings"
-              className="inline-flex w-fit rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-            >
-              Go to Settings
-            </Link>
-          </div>
-        )}
-      </div>
-    </SidebarProvider>
+  return (
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-6">
+      <p className="text-muted-foreground">No chat selected. Open a chat from the sidebar.</p>
+    </div>
   );
 }
 
@@ -63,6 +47,9 @@ function ActiveChatView({ chatId }: { chatId: string }) {
   const serverError = useSystemStore((s) => s.aiServer.error);
   const port = useSystemStore(selectAiServerPort);
   const isReady = useSystemStore(selectAiServerReady);
+  const [initialModelId, setInitialModelId] = React.useState<string | null>(null);
+  const [isChatLoaded, setIsChatLoaded] = React.useState(false);
+  const [chatError, setChatError] = React.useState<string | null>(null);
 
   const { data: enabledModels = [] } = useQuery(listEnabledModelsQueryOptions);
   const enabledModelIds = React.useMemo(
@@ -70,6 +57,40 @@ function ActiveChatView({ chatId }: { chatId: string }) {
     [enabledModels],
   );
   const apiUrl = port ? `http://127.0.0.1:${port}/api/chat` : "";
+
+  React.useEffect(() => {
+    let isDisposed = false;
+
+    setInitialModelId(null);
+    setIsChatLoaded(false);
+    setChatError(null);
+
+    void chatsApi
+      .get(chatId)
+      .then((chat) => {
+        if (isDisposed) {
+          return;
+        }
+
+        setInitialModelId(chat.settings.modelId ?? null);
+        setIsChatLoaded(true);
+      })
+      .catch((loadError) => {
+        if (isDisposed) {
+          return;
+        }
+
+        setChatError(
+          loadError instanceof Error && loadError.message.trim()
+            ? loadError.message
+            : "Failed to load chat.",
+        );
+      });
+
+    return () => {
+      isDisposed = true;
+    };
+  }, [chatId]);
 
   if (serverStatus === "starting" || serverStatus === "idle") {
     return (
@@ -97,11 +118,28 @@ function ActiveChatView({ chatId }: { chatId: string }) {
     );
   }
 
+  if (chatError) {
+    return (
+      <div className="flex-1 mx-auto flex w-full max-w-4xl flex-col gap-4 px-6 py-6">
+        <p className="text-sm text-destructive">{chatError}</p>
+      </div>
+    );
+  }
+
+  if (!isChatLoaded) {
+    return (
+      <div className="flex-1 mx-auto flex w-full max-w-4xl flex-col gap-4 px-6 py-6">
+        <p className="text-sm text-muted-foreground">Loading chat…</p>
+      </div>
+    );
+  }
+
   return (
     <ChatContextProvider
       key={chatId}
       chatId={chatId}
       apiUrl={apiUrl}
+      initialModelId={initialModelId}
       enabledModelIds={enabledModelIds}
     >
       <ActiveChatContent />
