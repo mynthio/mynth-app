@@ -4,17 +4,25 @@
   "private": true,
   "description": "Local-first AI chat desktop app",
   "keywords": [],
+  "homepage": "https://github.com/mynthio/mynth-app",
+  "bugs": {
+    "url": "https://github.com/mynthio/mynth-app/issues"
+  },
   "license": "MIT",
   "author": {
     "name": "Tomasz Szczucinski",
     "email": "tomasz.szczucinski@mynth.io"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mynthio/mynth-app.git"
   },
   "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
-    "publish": "electron-forge publish",
+    "release:publish": "electron-forge publish",
     "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
     "db:check": "drizzle-kit check --config=drizzle.config.ts",
     "db:studio": "drizzle-kit studio --config=drizzle.config.ts",
@@ -74,6 +82,7 @@
     "@electron-forge/plugin-auto-unpack-natives": "^7.11.1",
     "@electron-forge/plugin-fuses": "^7.11.1",
     "@electron-forge/plugin-vite": "^7.11.1",
+    "@electron-forge/publisher-github": "^7.11.1",
     "@electron/fuses": "^2.1.0",
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.2.1",

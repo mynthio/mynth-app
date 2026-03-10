@@ -8,6 +8,8 @@ import { AutoUnpackNativesPlugin } from "@electron-forge/plugin-auto-unpack-nati
 import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
 
+const isPrereleaseTag = (process.env.GITHUB_REF_NAME ?? "").includes("-");
+
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
@@ -15,6 +17,21 @@ const config: ForgeConfig = {
   },
   rebuildConfig: {},
   makers: [new MakerSquirrel({}), new MakerZIP({}, ["darwin"]), new MakerRpm({}), new MakerDeb({})],
+  publishers: [
+    {
+      name: "@electron-forge/publisher-github",
+      config: {
+        repository: {
+          owner: "mynthio",
+          name: "mynth-app",
+        },
+        draft: false,
+        prerelease: isPrereleaseTag,
+        generateReleaseNotes: true,
+        force: true,
+      },
+    },
+  ],
   plugins: [
     new AutoUnpackNativesPlugin({}),
     new VitePlugin({
