@@ -14,6 +14,7 @@ import {
   useChatEditingMessageId,
   useIsAnimatingMessage,
 } from "@/features/chat/chat-context";
+import { useChatScrollToBottom } from "@/features/chat/chat-scroll-context";
 import { useMessageContextMenu } from "@/hooks/use-message-context-menu";
 
 import "streamdown/styles.css";
@@ -97,6 +98,7 @@ const AssistantMessageTools = React.memo(function AssistantMessageTools({
 }: AssistantMessageToolsProps) {
   const isInteractionLocked = useChatIsInteractionLocked();
   const regenerate = useChatRegenerateMessage();
+  const scrollToBottom = useChatScrollToBottom();
   const switchBranch = useChatSwitchBranch();
 
   const siblings = message.metadata?.siblings ?? [];
@@ -112,6 +114,7 @@ const AssistantMessageTools = React.memo(function AssistantMessageTools({
         variant="ghost"
         disabled={isInteractionLocked}
         onClick={() => {
+          scrollToBottom();
           regenerate({ messageId: message.id });
         }}
       >

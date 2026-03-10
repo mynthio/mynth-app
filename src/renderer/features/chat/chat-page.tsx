@@ -18,6 +18,7 @@ import {
   useChatSendMessage,
   useSetChatModelId,
 } from "@/features/chat/chat-context";
+import { ChatScrollToBottomProvider } from "@/features/chat/chat-scroll-context";
 import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 import { getProviderIconById } from "@/lib/provider-icons";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ import { listEnabledModelsQueryOptions } from "@/queries/models";
 import { listProvidersQueryOptions } from "@/queries/providers";
 import { globalChatSettingsQueryOptions } from "@/queries/settings";
 import { useSystemStore, selectAiServerPort, selectAiServerReady } from "@/stores/system-store";
+import { ChatMessageHotkeys } from "./chat-message-hotkeys";
 import { useWorkspaceStore } from "../workspace/store";
 import { Conversation } from "./conversation";
 
@@ -154,7 +156,7 @@ function ActiveChatContent() {
   const sendMessage = useChatSendMessage();
   const isInteractionLocked = useChatIsInteractionLocked();
   const isStreaming = useChatIsStreaming();
-  const { containerRef, anchorRef } = useScrollToBottom(isStreaming);
+  const { containerRef, anchorRef, scrollToBottom } = useScrollToBottom(isStreaming);
   const { data: globalChatSettings } = useQuery(globalChatSettingsQueryOptions);
 
   const promptStickyPosition = globalChatSettings?.promptStickyPosition ?? true;
@@ -165,6 +167,7 @@ function ActiveChatContent() {
       return false;
     }
 
+    scrollToBottom();
     void sendMessage({
       text: input,
       metadata: {
@@ -173,7 +176,7 @@ function ActiveChatContent() {
     });
     setInput("");
     return true;
-  }, [input, isInteractionLocked, messages, modelId, sendMessage]);
+  }, [input, isInteractionLocked, messages, modelId, scrollToBottom, sendMessage]);
 
   useHotkey(
     "Enter",
@@ -227,65 +230,69 @@ function ActiveChatContent() {
   );
 
   return (
-    <div ref={containerRef} className="flex-1 min-h-0 overflow-auto scrollbar">
-      <div className="flex flex-col min-h-full justify-end">
-        <Conversation />
+    <ChatScrollToBottomProvider scrollToBottom={scrollToBottom}>
+      <div ref={containerRef} className="flex-1 min-h-0 overflow-auto scrollbar">
+        <ChatMessageHotkeys />
 
-        <div
-          className={cn(
-            "mt-24 mx-auto w-4xl max-w-[calc(100%-4rem)] mb-4",
-            promptStickyPosition ? "sticky bottom-4" : null,
-          )}
-        >
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              submitMessage();
-            }}
+        <div className="flex flex-col min-h-full justify-end">
+          <Conversation />
+
+          <div
+            className={cn(
+              "mt-24 mx-auto w-4xl max-w-[calc(100%-4rem)] mb-4",
+              promptStickyPosition ? "sticky bottom-4" : null,
+            )}
           >
-            <InputGroup
-              className="dark:bg-background shadow-xl shadow-black/20 p-3"
-              style={
-                {
-                  "--radius-lg": "30px",
-                  "--radius": "30px",
-                } as React.CSSProperties
-              }
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                submitMessage();
+              }}
             >
-              <InputGroupTextarea
-                data-chat-composer-input="true"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask, Search or Chat…"
-                disabled={isInteractionLocked}
-                rows={1}
-              />
-              <InputGroupAddon align="block-end" className="p-0">
-                <ModelSelector />
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <Button
-                        type="submit"
-                        aria-label="Send"
-                        className="ml-auto"
-                        size="icon-lg"
-                        disabled={!modelId || !input.trim() || isInteractionLocked}
-                      >
-                        <HugeiconsIcon icon={ArrowUp01Icon} />
-                      </Button>
-                    }
-                  />
-                  <TooltipPopup>Send</TooltipPopup>
-                </Tooltip>
-              </InputGroupAddon>
-            </InputGroup>
-          </form>
-        </div>
+              <InputGroup
+                className="dark:bg-background shadow-xl shadow-black/20 p-3"
+                style={
+                  {
+                    "--radius-lg": "30px",
+                    "--radius": "30px",
+                  } as React.CSSProperties
+                }
+              >
+                <InputGroupTextarea
+                  data-chat-composer-input="true"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Ask, Search or Chat…"
+                  disabled={isInteractionLocked}
+                  rows={1}
+                />
+                <InputGroupAddon align="block-end" className="p-0">
+                  <ModelSelector />
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          type="submit"
+                          aria-label="Send"
+                          className="ml-auto"
+                          size="icon-lg"
+                          disabled={!modelId || !input.trim() || isInteractionLocked}
+                        >
+                          <HugeiconsIcon icon={ArrowUp01Icon} />
+                        </Button>
+                      }
+                    />
+                    <TooltipPopup>Send</TooltipPopup>
+                  </Tooltip>
+                </InputGroupAddon>
+              </InputGroup>
+            </form>
+          </div>
 
-        <div ref={anchorRef} aria-hidden="true" />
+          <div ref={anchorRef} aria-hidden="true" />
+        </div>
       </div>
-    </div>
+    </ChatScrollToBottomProvider>
   );
 }
 

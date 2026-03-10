@@ -16,9 +16,17 @@ const BOTTOM_THRESHOLD = 100; // px from bottom considered "at bottom"
 export function useScrollToBottom(isStreaming: boolean): {
   containerRef: React.RefObject<HTMLDivElement>;
   anchorRef: React.RefObject<HTMLDivElement>;
+  scrollToBottom: () => void;
 } {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const anchorRef = React.useRef<HTMLDivElement>(null);
+  const scrollToBottom = React.useCallback(() => {
+    const el = containerRef.current;
+
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, []);
 
   // Mutable refs so effect closures never go stale without re-subscribing.
   const shouldStickRef = React.useRef(true);
@@ -38,8 +46,7 @@ export function useScrollToBottom(isStreaming: boolean): {
 
   // Scroll to absolute bottom on mount (instant, before paint).
   React.useLayoutEffect(() => {
-    const el = containerRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    scrollToBottom();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -69,8 +76,7 @@ export function useScrollToBottom(isStreaming: boolean): {
 
     const observer = new ResizeObserver(() => {
       if (shouldStickRef.current) {
-        const el = containerRef.current;
-        if (el) el.scrollTop = el.scrollHeight;
+        scrollToBottom();
       }
     });
 
@@ -79,5 +85,5 @@ export function useScrollToBottom(isStreaming: boolean): {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { containerRef, anchorRef };
+  return { containerRef, anchorRef, scrollToBottom };
 }
