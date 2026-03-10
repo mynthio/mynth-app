@@ -14,7 +14,7 @@ import {
   useChatEditingMessageId,
   useIsAnimatingMessage,
 } from "@/features/chat/chat-context";
-import { useTextContextMenu } from "@/hooks/use-text-context-menu";
+import { useMessageContextMenu } from "@/hooks/use-message-context-menu";
 
 import "streamdown/styles.css";
 import {
@@ -109,6 +109,7 @@ const AssistantMessageTools = React.memo(function AssistantMessageTools({
     <MessageTools>
       <Button
         size="icon-sm"
+        variant="ghost"
         disabled={isInteractionLocked}
         onClick={() => {
           regenerate({ messageId: message.id });
@@ -118,9 +119,10 @@ const AssistantMessageTools = React.memo(function AssistantMessageTools({
       </Button>
 
       {hasSiblings && (
-        <Group>
+        <>
           <Button
             size="icon-sm"
+            variant="ghost"
             disabled={isInteractionLocked || !prevSiblingId}
             onClick={() => prevSiblingId && void switchBranch(prevSiblingId)}
           >
@@ -128,6 +130,7 @@ const AssistantMessageTools = React.memo(function AssistantMessageTools({
           </Button>
           <Button
             disabled={isInteractionLocked}
+            variant="ghost"
             size="sm"
             className="text-primary-foreground font-light sm:text-xs"
           >
@@ -135,12 +138,13 @@ const AssistantMessageTools = React.memo(function AssistantMessageTools({
           </Button>
           <Button
             size="icon-sm"
+            variant="ghost"
             disabled={isInteractionLocked || !nextSiblingId}
             onClick={() => nextSiblingId && void switchBranch(nextSiblingId)}
           >
             <HugeiconsIcon icon={ArrowRight01Icon} />
           </Button>
-        </Group>
+        </>
       )}
     </MessageTools>
   );
@@ -220,7 +224,7 @@ interface UserMessageProps {
 }
 
 const UserMessage = React.memo(function UserMessage({ message }: UserMessageProps) {
-  const onContextMenu = useTextContextMenu();
+  const onContextMenu = useMessageContextMenu(message.id);
   const modelId = useChatModelId();
   const editingMessageId = useChatEditingMessageId();
   const isInteractionLocked = useChatIsInteractionLocked();
@@ -274,7 +278,7 @@ interface AssistantMessageProps {
 
 const AssistantMessage = React.memo(function AssistantMessage({ message }: AssistantMessageProps) {
   const isAnimating = useIsAnimatingMessage(message.id, message.role);
-  const onContextMenu = useTextContextMenu();
+  const onContextMenu = useMessageContextMenu(message.id);
 
   return (
     <div className="group/message flex flex-col items-start gap-3">

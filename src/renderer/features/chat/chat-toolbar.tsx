@@ -1,10 +1,18 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Add01Icon, Cancel01Icon, CircleIcon, Setting07Icon } from "@hugeicons/core-free-icons";
+import {
+  Add01Icon,
+  Cancel01Icon,
+  CircleIcon,
+  PanelLeftCloseIcon,
+  PanelLeftOpenIcon,
+  Setting07Icon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Button } from "@/components/ui/button";
+import { useSidebar } from "@/components/ui/sidebar";
 import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
 import { getChatQueryOptions } from "@/queries/chats";
 import { listWorkspacesQueryOptions } from "@/queries/workspaces";
@@ -15,10 +23,21 @@ export function ChatToolbar() {
   const { data: workspaces = [] } = useQuery(listWorkspacesQueryOptions);
   const workspace = useWorkspaceStore((s) => s.workspace);
   const switchWorkspace = useWorkspaceStore((s) => s.switchWorkspace);
+  const { isMobile, open, openMobile, toggleSidebar } = useSidebar();
+  const isSidebarOpen = isMobile ? openMobile : open;
 
   return (
     <div className="flex w-full items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-2 w-full">
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          aria-label={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+          onClick={toggleSidebar}
+        >
+          <HugeiconsIcon icon={isSidebarOpen ? PanelLeftCloseIcon : PanelLeftOpenIcon} />
+        </Button>
+
         <Menu>
           <MenuTrigger
             render={<Button variant="secondary" size="sm" />}

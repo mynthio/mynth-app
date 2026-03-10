@@ -5,4 +5,8 @@ export const contextMenuApi = {
   showTextContextMenu(input: TextContextMenuInput) {
     return window.electronAPI.showTextContextMenu(input);
   },
+
+  showMessageContextMenu(input: TextContextMenuInput) {
+    return window.electronAPI.showMessageContextMenu(input);
+  },
 };

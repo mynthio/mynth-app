@@ -1,5 +1,6 @@
 import * as React from "react";
 import { contextMenuApi } from "@/api/context-menu";
+import type { TextContextMenuInput } from "@shared/ipc";
 
 const TEXT_INPUT_TYPES = new Set([
   "",
@@ -98,25 +99,36 @@ function getWindowSelectionWithin(currentTarget: HTMLElement): string {
   return selection.toString();
 }
 
+export function getTextContextMenuInput(
+  event: React.MouseEvent<HTMLElement>,
+): TextContextMenuInput | null {
+  const textControl = findTextControlElement(event.target);
+  const contentEditable = findContentEditableElement(event.target);
+  const isEditable = isEditableTextTarget(textControl, contentEditable);
+  const selectionText =
+    getTextControlSelection(textControl) || getWindowSelectionWithin(event.currentTarget);
+  const hasSelection = selectionText.trim().length > 0;
+  const hasTextContent = event.currentTarget.textContent?.trim().length;
+
+  if (!isEditable && !hasSelection && !hasTextContent) {
+    return null;
+  }
+
+  return {
+    isEditable,
+    hasSelection,
+    selectionText,
+  };
+}
+
 export function useTextContextMenu(): React.MouseEventHandler<HTMLElement> {
   return React.useCallback((event) => {
-    const textControl = findTextControlElement(event.target);
-    const contentEditable = findContentEditableElement(event.target);
-    const isEditable = isEditableTextTarget(textControl, contentEditable);
-    const selectionText =
-      getTextControlSelection(textControl) || getWindowSelectionWithin(event.currentTarget);
-    const hasSelection = selectionText.trim().length > 0;
-    const hasTextContent = event.currentTarget.textContent?.trim().length;
-
-    if (!isEditable && !hasSelection && !hasTextContent) {
+    const input = getTextContextMenuInput(event);
+    if (!input) {
       return;
     }
 
     event.preventDefault();
-    void contextMenuApi.showTextContextMenu({
-      isEditable,
-      hasSelection,
-      selectionText,
-    });
+    void contextMenuApi.showTextContextMenu(input);
   }, []);
 }

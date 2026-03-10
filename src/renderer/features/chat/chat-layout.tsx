@@ -2,7 +2,7 @@ import { Link, Outlet, useMatchRoute } from "@tanstack/react-router";
 
 import { WindowChrome } from "@/components/app/window-chrome";
 import { Button } from "@/components/ui/button";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { ChatSidebarTree } from "@/features/chat/chat-sidebar-tree";
 import { ChatTabHotkeys } from "@/features/chat/chat-tab-hotkeys";
 import { ChatToolbar } from "@/features/chat/chat-toolbar";
@@ -13,19 +13,35 @@ import { Chatting01Icon, Setting07Icon, WorkflowSquare03Icon } from "@hugeicons/
 
 export function ChatLayout() {
   return (
-    <WindowChrome contentClassName="overflow-hidden" toolbar={<ChatToolbar />}>
-      <SidebarProvider className="h-full min-h-0 w-full">
-        <ChatTabHotkeys />
-        <ChatViewHotkeys />
-        <ChatSidebarTree />
+    <SidebarProvider className="h-full min-h-0 w-full">
+      <WindowChrome contentClassName="overflow-hidden" toolbar={<ChatToolbar />}>
+        <ChatLayoutFrame />
+      </WindowChrome>
+    </SidebarProvider>
+  );
+}
 
-        <div className="relative flex h-full w-full flex-col overflow-hidden rounded-l-2xl bg-card">
-          <Outlet />
+function ChatLayoutFrame() {
+  const { isMobile, open } = useSidebar();
+  const isDesktopSidebarVisible = !isMobile && open;
 
-          <ChatContentNavigation />
-        </div>
-      </SidebarProvider>
-    </WindowChrome>
+  return (
+    <div className="flex h-full min-h-0 w-full">
+      <ChatTabHotkeys />
+      <ChatViewHotkeys />
+      <ChatSidebarTree />
+
+      <div
+        className={cn(
+          "relative flex h-full w-full flex-col overflow-hidden bg-card",
+          isDesktopSidebarVisible ? "rounded-l-2xl" : "rounded-2xl",
+        )}
+      >
+        <Outlet />
+
+        <ChatContentNavigation />
+      </div>
+    </div>
   );
 }
 

@@ -4,6 +4,7 @@ import { ChatLayout } from "@/features/chat/chat-layout";
 export interface ChatSearchParams {
   deleteChat?: string;
   deleteFolder?: string;
+  graphMessageId?: string;
   tabChatId?: string;
 }
 
@@ -12,6 +13,7 @@ export const Route = createFileRoute("/chat")({
   validateSearch: (search: Record<string, unknown>): ChatSearchParams => ({
     deleteChat: typeof search.deleteChat === "string" ? search.deleteChat : undefined,
     deleteFolder: typeof search.deleteFolder === "string" ? search.deleteFolder : undefined,
+    graphMessageId: typeof search.graphMessageId === "string" ? search.graphMessageId : undefined,
     tabChatId: typeof search.tabChatId === "string" ? search.tabChatId : undefined,
   }),
 });

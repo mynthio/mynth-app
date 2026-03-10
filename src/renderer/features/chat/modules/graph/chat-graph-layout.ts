@@ -2,8 +2,8 @@ import { MarkerType, Position, type Edge, type Node } from "@xyflow/react";
 import dagre from "@dagrejs/dagre";
 import type { MynthUiMessage } from "@shared/chat/message-metadata";
 
-const NODE_WIDTH = 352;
-const NODE_HEIGHT = 288;
+export const NODE_WIDTH = 352;
+export const NODE_HEIGHT = 288;
 
 export interface ChatGraphNodeData extends Record<string, unknown> {
   childCount: number;

@@ -1,5 +1,9 @@
 import { BrowserWindow, Menu, shell, type MenuItemConstructorOptions } from "electron";
-import { IPC_CHANNELS, type TextContextMenuInput } from "@shared/ipc";
+import {
+  IPC_CHANNELS,
+  type MessageContextMenuAction,
+  type TextContextMenuInput,
+} from "@shared/ipc";
 import type { IpcHandlerContext } from "../core/context";
 import { AppError } from "../core/errors";
 import { registerInvokeHandler } from "../core/register-invoke-handler";
@@ -162,4 +166,55 @@ export function registerContextMenuIpcModule(
       });
     },
   });
+
+  registerInvokeHandler<[TextContextMenuInput], MessageContextMenuAction>(
+    context,
+    registeredChannels,
+    {
+      channel: IPC_CHANNELS.contextMenu.showMessage,
+      parseArgs: parseTextContextMenuInput,
+      handler: (_handlerContext, event, input) => {
+        const isMac = process.platform === "darwin";
+        const selectedText = input.selectionText.trim();
+
+        return new Promise<MessageContextMenuAction>((resolve) => {
+          let selectedAction: MessageContextMenuAction = null;
+
+          const menu = Menu.buildFromTemplate(
+            normalizeMenuTemplate([
+              ...createTextContextMenuTemplate(input, {
+                isMac,
+                onLookUpSelection: () => {
+                  event.sender.showDefinitionForSelection();
+                },
+                onSearchSelection: () => {
+                  if (!selectedText) {
+                    return;
+                  }
+
+                  void shell.openExternal(
+                    `https://www.google.com/search?q=${encodeURIComponent(selectedText)}`,
+                  );
+                },
+              }),
+              { type: "separator" },
+              {
+                label: "Show in Graph",
+                click: () => {
+                  selectedAction = "show-in-graph";
+                },
+              },
+            ]),
+          );
+          const window = BrowserWindow.fromWebContents(event.sender) ?? undefined;
+
+          menu.popup({
+            window,
+            callback: () => resolve(selectedAction),
+            frame: event.senderFrame ?? event.sender.mainFrame,
+          });
+        });
+      },
+    },
+  );
 }

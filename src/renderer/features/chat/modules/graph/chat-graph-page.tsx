@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearch } from "@tanstack/react-router";
 import { WorkflowSquare03Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -29,6 +30,8 @@ const LazyChatGraphCanvas = React.lazy(() =>
 );
 
 export function ChatGraphPage() {
+  const search = useSearch({ from: "/chat" });
+  const { graphMessageId } = search;
   const activeTab = useWorkspaceStore((state) => state.activeTab());
   const activeChatId = activeTab?.type === "chat" ? activeTab.chatId : null;
 
@@ -53,11 +56,14 @@ export function ChatGraphPage() {
 
   const deferredMessages = React.useDeferredValue(allMessages);
   const deferredActiveBranchMessages = React.useDeferredValue(activeBranchMessages);
+  const [focusedMessageId, setFocusedMessageId] = React.useState<string | null>(
+    graphMessageId ?? null,
+  );
   const activeMessageIds = React.useMemo(
     () => new Set(deferredActiveBranchMessages.map((message) => message.id)),
     [deferredActiveBranchMessages],
   );
-  const selectedMessageId = deferredActiveBranchMessages.at(-1)?.id ?? null;
+  const selectedMessageId = focusedMessageId ?? deferredActiveBranchMessages.at(-1)?.id ?? null;
   const queryClient = useQueryClient();
 
   const switchBranchMutation = useMutation({
@@ -88,6 +94,8 @@ export function ChatGraphPage() {
   });
   const handleSelectBranch = React.useCallback(
     (messageId: string) => {
+      setFocusedMessageId(messageId);
+
       if (activeMessageIds.has(messageId)) {
         return;
       }
@@ -96,6 +104,14 @@ export function ChatGraphPage() {
     },
     [activeMessageIds, switchBranchMutation],
   );
+
+  React.useEffect(() => {
+    if (!graphMessageId) {
+      return;
+    }
+
+    setFocusedMessageId(graphMessageId);
+  }, [graphMessageId]);
 
   if (!activeChatId) {
     return (
@@ -140,6 +156,7 @@ export function ChatGraphPage() {
       <React.Suspense fallback={<ChatGraphCanvasFallback />}>
         <LazyChatGraphCanvas
           activeMessageIds={activeMessageIds}
+          focusMessageId={graphMessageId ?? null}
           messages={deferredMessages}
           onSelectBranch={handleSelectBranch}
           selectedMessageId={selectedMessageId}

@@ -16,6 +16,7 @@ export const IPC_CHANNELS = {
   },
   contextMenu: {
     showText: "contextMenu:showText",
+    showMessage: "contextMenu:showMessage",
   },
   chatTree: {
     get: "chatTree:get",
@@ -92,6 +93,8 @@ export interface TextContextMenuInput {
   hasSelection: boolean;
   selectionText: string;
 }
+
+export type MessageContextMenuAction = "show-in-graph" | null;
 
 export interface FolderInfo {
   id: string;
@@ -240,6 +243,7 @@ export interface IpcApi {
   getGlobalChatSettings: () => Promise<GlobalChatSettings>;
   updateGlobalChatSettings: (input: GlobalChatSettingsUpdateInput) => Promise<GlobalChatSettings>;
   showTextContextMenu: (input: TextContextMenuInput) => Promise<void>;
+  showMessageContextMenu: (input: TextContextMenuInput) => Promise<MessageContextMenuAction>;
   getChatTree: (workspaceId: string) => Promise<ChatTreeSnapshot>;
   getChatTreeChildren: (
     workspaceId: string,

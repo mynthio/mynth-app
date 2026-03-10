@@ -1,8 +1,15 @@
 import * as React from "react";
-import { Background, Controls, MiniMap, ReactFlow, type NodeMouseHandler } from "@xyflow/react";
+import {
+  Background,
+  Controls,
+  MiniMap,
+  ReactFlow,
+  type NodeMouseHandler,
+  type ReactFlowInstance,
+} from "@xyflow/react";
 import type { MynthUiMessage } from "@shared/chat/message-metadata";
 
-import { buildChatGraphLayout } from "./chat-graph-layout";
+import { NODE_HEIGHT, NODE_WIDTH, buildChatGraphLayout } from "./chat-graph-layout";
 import { ChatGraphNodeView } from "./chat-graph-node";
 
 import "@xyflow/react/dist/style.css";
@@ -19,17 +26,23 @@ const MINIMAP_COLORS = {
 
 interface ChatGraphCanvasProps {
   activeMessageIds: ReadonlySet<string>;
+  focusMessageId: string | null;
   messages: readonly MynthUiMessage[];
+  onFocusHandled?: (messageId: string) => void;
   onSelectBranch: (messageId: string) => void;
   selectedMessageId: string | null;
 }
 
 export function ChatGraphCanvas({
   activeMessageIds,
+  focusMessageId,
   messages,
+  onFocusHandled,
   onSelectBranch,
   selectedMessageId,
 }: ChatGraphCanvasProps) {
+  const [reactFlow, setReactFlow] = React.useState<ReactFlowInstance | null>(null);
+  const handledFocusIdRef = React.useRef<string | null>(null);
   const { edges, nodes } = React.useMemo(
     () => buildChatGraphLayout(messages, activeMessageIds, selectedMessageId),
     [activeMessageIds, messages, selectedMessageId],
@@ -41,6 +54,30 @@ export function ChatGraphCanvas({
     },
     [onSelectBranch],
   );
+
+  React.useEffect(() => {
+    if (!focusMessageId) {
+      handledFocusIdRef.current = null;
+      return;
+    }
+
+    if (!reactFlow?.viewportInitialized || handledFocusIdRef.current === focusMessageId) {
+      return;
+    }
+
+    const node = nodes.find((entry) => entry.id === focusMessageId);
+    if (!node) {
+      return;
+    }
+
+    handledFocusIdRef.current = focusMessageId;
+
+    void reactFlow.setCenter(node.position.x + NODE_WIDTH / 2, node.position.y + NODE_HEIGHT / 2, {
+      duration: 0,
+      zoom: Math.max(reactFlow.getZoom(), 0.95),
+    });
+    onFocusHandled?.(focusMessageId);
+  }, [focusMessageId, nodes, onFocusHandled, reactFlow]);
 
   return (
     <div className="h-full w-full bg-background">
@@ -58,6 +95,7 @@ export function ChatGraphCanvas({
         nodesConnectable={false}
         nodesDraggable={false}
         onlyRenderVisibleElements
+        onInit={setReactFlow}
         onNodeClick={handleNodeClick}
         panOnScroll
       >
