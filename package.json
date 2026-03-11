@@ -38,6 +38,8 @@
     "@ai-sdk/react": "^3.0.118",
     "@base-ui/react": "^1.2.0",
     "@dagrejs/dagre": "^2.0.4",
+    "@fontsource-variable/geist": "^5.2.8",
+    "@fontsource-variable/geist-mono": "^5.2.7",
     "@headless-tree/core": "^1.6.3",
     "@headless-tree/react": "^1.6.3",
     "@hono/node-server": "^1.19.11",

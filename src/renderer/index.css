@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
 @plugin "@tailwindcss/typography";
 @source "../../node_modules/streamdown/dist/*.js";
 
@@ -47,6 +49,10 @@
   --color-success: var(--success);
   --color-info-foreground: var(--info-foreground);
   --color-info: var(--info);
+  --color-chat-user-bubble: var(--chat-user-bubble);
+  --color-chat-user-bubble-foreground: var(--chat-user-bubble-foreground);
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
 }
 
 :root {
@@ -91,6 +97,8 @@
   --success-foreground: var(--color-emerald-700);
   --warning: var(--color-amber-500);
   --warning-foreground: var(--color-amber-700);
+  --chat-user-bubble: var(--color-neutral-800);
+  --chat-user-bubble-foreground: var(--color-neutral-50);
 }
 
 .dark {
@@ -132,6 +140,8 @@
   --success-foreground: var(--color-emerald-400);
   --warning: var(--color-amber-500);
   --warning-foreground: var(--color-amber-400);
+  --chat-user-bubble: oklch(0.28 0 0);
+  --chat-user-bubble-foreground: var(--color-neutral-100);
 }
 
 @layer base {
@@ -144,7 +154,10 @@
     height: 100%;
   }
   body {
-    @apply m-0 bg-background text-foreground;
+    @apply m-0 bg-background text-foreground font-sans;
+  }
+  code, kbd, pre, samp {
+    font-family: var(--font-mono);
   }
 }
 

@@ -40,7 +40,7 @@ const UserMessageTextPart = React.memo(function UserMessageTextPart({
   text,
 }: UserMessageTextPartProps) {
   return (
-    <Streamdown plugins={{ code }} className="text-[1.1rem] text-foreground">
+    <Streamdown plugins={{ code }} className="text-[0.9375rem] leading-[1.6]">
       {text}
     </Streamdown>
   );
@@ -60,7 +60,7 @@ const AssistantMessageTextPart = React.memo(function AssistantMessageTextPart({
       plugins={{ code }}
       animated
       isAnimating={isAnimating}
-      className="text-[1.1rem] text-card-foreground"
+      className="text-[1.0625rem] text-foreground/85 leading-[1.75]"
     >
       {text}
     </Streamdown>
@@ -81,7 +81,9 @@ const MessageTools = React.memo(function MessageTools({
     <div
       className={cn(
         "flex items-center gap-1 transition-opacity duration-150",
-        forceVisible ? "opacity-100" : "opacity-0 group-hover/message:opacity-100",
+        forceVisible
+          ? "opacity-100"
+          : "opacity-0 group-hover/message:opacity-100",
         className,
       )}
       {...props}
@@ -226,7 +228,9 @@ interface UserMessageProps {
   message: MynthUiMessage;
 }
 
-const UserMessage = React.memo(function UserMessage({ message }: UserMessageProps) {
+const UserMessage = React.memo(function UserMessage({
+  message,
+}: UserMessageProps) {
   const onContextMenu = useMessageContextMenu(message.id);
   const modelId = useChatModelId();
   const editingMessageId = useChatEditingMessageId();
@@ -247,14 +251,19 @@ const UserMessage = React.memo(function UserMessage({ message }: UserMessageProp
   return (
     <div className="group/message flex flex-col items-end gap-3">
       <div
-        className="max-w-[80%] rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground"
+        className="max-w-[75%] rounded-2xl bg-chat-user-bubble px-5 py-3 text-chat-user-bubble-foreground"
         onContextMenu={onContextMenu}
       >
         {isEditing ? (
-          <Textarea value={draft} onChange={(event) => setDraft(event.target.value)} />
+          <Textarea
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+          />
         ) : (
           message.parts.map((part, i) =>
-            part.type === "text" ? <UserMessageTextPart key={i} text={part.text} /> : null,
+            part.type === "text" ? (
+              <UserMessageTextPart key={i} text={part.text} />
+            ) : null,
           )
         )}
       </div>
@@ -279,16 +288,25 @@ interface AssistantMessageProps {
   message: MynthUiMessage;
 }
 
-const AssistantMessage = React.memo(function AssistantMessage({ message }: AssistantMessageProps) {
+const AssistantMessage = React.memo(function AssistantMessage({
+  message,
+}: AssistantMessageProps) {
   const isAnimating = useIsAnimatingMessage(message.id, message.role);
   const onContextMenu = useMessageContextMenu(message.id);
 
   return (
     <div className="group/message flex flex-col items-start gap-3">
-      <div className="max-w-[80%] rounded-lg py-2 text-sm" onContextMenu={onContextMenu}>
+      <div
+        className="max-w-[90%] py-2"
+        onContextMenu={onContextMenu}
+      >
         {message.parts.map((part, i) =>
           part.type === "text" ? (
-            <AssistantMessageTextPart key={i} text={part.text} isAnimating={isAnimating} />
+            <AssistantMessageTextPart
+              key={i}
+              text={part.text}
+              isAnimating={isAnimating}
+            />
           ) : null,
         )}
       </div>
@@ -304,7 +322,9 @@ interface ChatMessageProps {
   message: MynthUiMessage;
 }
 
-export const ChatMessage = React.memo(function ChatMessage({ message }: ChatMessageProps) {
+export const ChatMessage = React.memo(function ChatMessage({
+  message,
+}: ChatMessageProps) {
   if (message.role === "user") {
     return <UserMessage message={message} />;
   }
@@ -315,7 +335,9 @@ export const ChatMessage = React.memo(function ChatMessage({ message }: ChatMess
 function getMessageText(message: MynthUiMessage): string {
   return message.parts
     .filter(
-      (part): part is Extract<MynthUiMessage["parts"][number], { type: "text" }> =>
+      (
+        part,
+      ): part is Extract<MynthUiMessage["parts"][number], { type: "text" }> =>
         part.type === "text",
     )
     .map((part) => part.text)
