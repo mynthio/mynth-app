@@ -1,19 +1,11 @@
 import { BrowserWindow, Menu } from "electron";
 import {
   IPC_CHANNELS,
-  type ChatInfo,
   type ChatTreeChildrenSlice,
   type ChatTreeSnapshot,
   type ChatTreeUiState,
-  type FolderInfo,
-  type TabStateItem,
-  type TabsUiState,
 } from "@shared/ipc";
-import { parseChatId } from "@shared/chat/chat-id";
-import type { MynthUiMessage } from "@shared/chat/message-metadata";
-import { parseChatTitle } from "@shared/chat/chat-title";
 import { parseFolderId } from "@shared/folder/folder-id";
-import { parseFolderName } from "@shared/folder/folder-name";
 import { parseWorkspaceId } from "@shared/workspace/workspace-id";
 import type { IpcHandlerContext } from "../core/context";
 import { AppError } from "../core/errors";
@@ -36,71 +28,12 @@ function parseValidWorkspaceId(input: unknown): string {
   return parsed.value;
 }
 
-function parseValidFolderId(input: unknown): string {
-  const parsed = parseFolderId(input);
-  if (!parsed.ok) {
-    throw AppError.badRequest(parsed.error);
-  }
-
-  return parsed.value;
-}
-
 function parseNullableFolderId(input: unknown): string | null {
   if (input === null || input === undefined) {
     return null;
   }
 
-  return parseValidFolderId(input);
-}
-
-function parseValidChatId(input: unknown): string {
-  const parsed = parseChatId(input);
-  if (!parsed.ok) {
-    throw AppError.badRequest(parsed.error);
-  }
-
-  return parsed.value;
-}
-
-function parseValidTabId(input: unknown): string {
-  if (typeof input !== "string" || input.trim().length === 0) {
-    throw AppError.badRequest("tab.id must be a non-empty string.");
-  }
-
-  return input;
-}
-
-function parseValidTabType(input: unknown): "chat" {
-  if (input !== "chat") {
-    throw AppError.badRequest('tab.type must be "chat".');
-  }
-
-  return "chat";
-}
-
-function parseOptionalBranchId(input: unknown): string | null {
-  if (input === null || input === undefined) {
-    return null;
-  }
-
-  if (typeof input !== "string") {
-    throw AppError.badRequest("branchId must be a string.");
-  }
-
-  return input;
-}
-
-function parseValidFolderName(input: unknown): string {
-  const parsed = parseFolderName(input);
-  if (!parsed.ok) {
-    throw AppError.badRequest(parsed.error);
-  }
-
-  return parsed.value;
-}
-
-function parseValidChatTitle(input: unknown): string {
-  const parsed = parseChatTitle(input);
+  const parsed = parseFolderId(input);
   if (!parsed.ok) {
     throw AppError.badRequest(parsed.error);
   }
@@ -123,32 +56,6 @@ function parseStringArray(input: unknown, label: string): string[] {
   }
 
   return values;
-}
-
-function parseTabsArray(input: unknown): TabStateItem[] {
-  if (!Array.isArray(input)) {
-    throw AppError.badRequest("Tabs must be an array.");
-  }
-
-  return input.map((entry, index) => {
-    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
-      throw AppError.badRequest(`Tab at index ${index} must be an object.`);
-    }
-
-    const record = entry as Record<string, unknown>;
-    const allowedKeys = new Set(["id", "type", "chatId"]);
-    for (const key of Object.keys(record)) {
-      if (!allowedKeys.has(key)) {
-        throw AppError.badRequest(`Unsupported tab field "${key}".`);
-      }
-    }
-
-    return {
-      id: parseValidTabId(record.id),
-      type: parseValidTabType(record.type),
-      chatId: parseValidChatId(record.chatId),
-    };
-  });
 }
 
 export function registerChatTreeIpcModule(
@@ -198,149 +105,6 @@ export function registerChatTreeIpcModule(
       services.chatTree.setChatTreeUiState(workspaceId, expandedFolderIds),
   });
 
-  registerInvokeHandler<[string], TabsUiState>(context, registeredChannels, {
-    channel: IPC_CHANNELS.chatTree.getTabsUiState,
-    parseArgs: (args) => {
-      expectArgCount(args, 1);
-      return [parseValidWorkspaceId(args[0])];
-    },
-    handler: ({ services }, _event, workspaceId) => services.chatTree.getTabsUiState(workspaceId),
-  });
-
-  registerInvokeHandler<[string, TabStateItem[]], TabsUiState>(context, registeredChannels, {
-    channel: IPC_CHANNELS.chatTree.setTabsUiState,
-    parseArgs: (args) => {
-      expectArgCount(args, 2);
-      return [parseValidWorkspaceId(args[0]), parseTabsArray(args[1])];
-    },
-    handler: ({ services }, _event, workspaceId, tabs) =>
-      services.chatTree.setTabsUiState(workspaceId, tabs),
-  });
-
-  registerInvokeHandler<[string, string, string | null], FolderInfo>(context, registeredChannels, {
-    channel: IPC_CHANNELS.folders.create,
-    parseArgs: (args) => {
-      expectArgCount(args, 2, 3);
-      return [
-        parseValidWorkspaceId(args[0]),
-        parseValidFolderName(args[1]),
-        parseNullableFolderId(args[2]),
-      ];
-    },
-    handler: ({ services }, _event, workspaceId, name, parentId) =>
-      services.chatTree.createFolder({ workspaceId, name, parentId }),
-  });
-
-  registerInvokeHandler<[string, string], FolderInfo>(context, registeredChannels, {
-    channel: IPC_CHANNELS.folders.updateName,
-    parseArgs: (args) => {
-      expectArgCount(args, 2);
-      return [parseValidFolderId(args[0]), parseValidFolderName(args[1])];
-    },
-    handler: ({ services }, _event, id, name) => services.chatTree.updateFolderName(id, name),
-  });
-
-  registerInvokeHandler<[string, string | null], FolderInfo>(context, registeredChannels, {
-    channel: IPC_CHANNELS.folders.move,
-    parseArgs: (args) => {
-      expectArgCount(args, 2);
-      return [parseValidFolderId(args[0]), parseNullableFolderId(args[1])];
-    },
-    handler: ({ services }, _event, id, parentId) => services.chatTree.moveFolder(id, parentId),
-  });
-
-  registerInvokeHandler<[string], void>(context, registeredChannels, {
-    channel: IPC_CHANNELS.folders.delete,
-    parseArgs: (args) => {
-      expectArgCount(args, 1);
-      return [parseValidFolderId(args[0])];
-    },
-    handler: ({ services }, _event, id) => services.chatTree.deleteFolder(id),
-  });
-
-  registerInvokeHandler<[string], ChatInfo>(context, registeredChannels, {
-    channel: IPC_CHANNELS.chats.get,
-    parseArgs: (args) => {
-      expectArgCount(args, 1);
-      return [parseValidChatId(args[0])];
-    },
-    handler: ({ services }, _event, id) => services.chatTree.getChat(id),
-  });
-
-  registerInvokeHandler<[string, string | null], MynthUiMessage[]>(context, registeredChannels, {
-    channel: IPC_CHANNELS.chats.listMessages,
-    parseArgs: (args) => {
-      expectArgCount(args, 1, 2);
-      return [parseValidChatId(args[0]), parseOptionalBranchId(args[1])];
-    },
-    handler: ({ services }, _event, chatId, branchId) =>
-      services.chatMessages.listChatMessages(chatId, branchId),
-  });
-
-  registerInvokeHandler<[string], MynthUiMessage[]>(context, registeredChannels, {
-    channel: IPC_CHANNELS.chats.listAllMessages,
-    parseArgs: (args) => {
-      expectArgCount(args, 1);
-      return [parseValidChatId(args[0])];
-    },
-    handler: ({ services }, _event, chatId) => services.chatMessages.listAllChatMessages(chatId),
-  });
-
-  registerInvokeHandler<[string, string], MynthUiMessage[]>(context, registeredChannels, {
-    channel: IPC_CHANNELS.chats.switchBranch,
-    parseArgs: (args) => {
-      expectArgCount(args, 2);
-      const branchId = args[1];
-      if (typeof branchId !== "string" || branchId.length === 0) {
-        throw AppError.badRequest("branchId must be a non-empty string.");
-      }
-      return [parseValidChatId(args[0]), branchId];
-    },
-    handler: ({ services }, _event, chatId, branchId) =>
-      services.chatMessages.switchChatBranch(chatId, branchId),
-  });
-
-  registerInvokeHandler<[string, string, string | null], ChatInfo>(context, registeredChannels, {
-    channel: IPC_CHANNELS.chats.create,
-    parseArgs: (args) => {
-      expectArgCount(args, 2, 3);
-      return [
-        parseValidWorkspaceId(args[0]),
-        parseValidChatTitle(args[1]),
-        parseNullableFolderId(args[2]),
-      ];
-    },
-    handler: ({ services }, _event, workspaceId, title, folderId) =>
-      services.chatTree.createChat({ workspaceId, title, folderId }),
-  });
-
-  registerInvokeHandler<[string, string], ChatInfo>(context, registeredChannels, {
-    channel: IPC_CHANNELS.chats.updateTitle,
-    parseArgs: (args) => {
-      expectArgCount(args, 2);
-      return [parseValidChatId(args[0]), parseValidChatTitle(args[1])];
-    },
-    handler: ({ services }, _event, id, title) => services.chatTree.updateChatTitle(id, title),
-  });
-
-  registerInvokeHandler<[string, string | null], ChatInfo>(context, registeredChannels, {
-    channel: IPC_CHANNELS.chats.move,
-    parseArgs: (args) => {
-      expectArgCount(args, 2);
-      return [parseValidChatId(args[0]), parseNullableFolderId(args[1])];
-    },
-    handler: ({ services }, _event, id, folderId) => services.chatTree.moveChat(id, folderId),
-  });
-
-  registerInvokeHandler<[string], void>(context, registeredChannels, {
-    channel: IPC_CHANNELS.chats.delete,
-    parseArgs: (args) => {
-      expectArgCount(args, 1);
-      return [parseValidChatId(args[0])];
-    },
-    handler: ({ services }, _event, id) => services.chatTree.deleteChat(id),
-  });
-
   registerInvokeHandler<
     [string, string],
     "add-folder" | "add-chat" | "open-in-new-tab" | "rename" | "delete" | null
@@ -348,9 +112,12 @@ export function registerChatTreeIpcModule(
     channel: IPC_CHANNELS.chatTree.showContextMenu,
     parseArgs: (args) => {
       expectArgCount(args, 2);
-      if (typeof args[0] !== "string") throw AppError.badRequest("itemId must be a string.");
-      if (args[1] !== "folder" && args[1] !== "chat")
+      if (typeof args[0] !== "string") {
+        throw AppError.badRequest("itemId must be a string.");
+      }
+      if (args[1] !== "folder" && args[1] !== "chat") {
         throw AppError.badRequest("itemKind must be 'folder' or 'chat'.");
+      }
       return [args[0], args[1]];
     },
     handler: (_context, event, _itemId, itemKind) => {

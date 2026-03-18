@@ -14,7 +14,17 @@ export interface ProviderModelsSyncCompletedEvent {
   status: ProviderModelSyncStatus;
 }
 
-export type SystemEvent = AiServerEvent | ProviderModelsSyncCompletedEvent;
+export interface ProvidersStartupModelSyncCompletedEvent {
+  type: "providers:start-model-sync:completed";
+  totalProviders: number;
+  succeededProviders: number;
+  failedProviders: number;
+}
+
+export type SystemEvent =
+  | AiServerEvent
+  | ProviderModelsSyncCompletedEvent
+  | ProvidersStartupModelSyncCompletedEvent;
 
 export interface AiServerStateSnapshot {
   status: "idle" | "starting" | "ready" | "error";

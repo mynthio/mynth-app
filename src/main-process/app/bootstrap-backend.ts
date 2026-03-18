@@ -3,7 +3,10 @@ import { DEFAULT_WORKSPACE_ID, bootstrapStorage, type StorageBootstrapResult } f
 import { type IpcHandlerContext } from "../ipc/core/context";
 import { createTrustedSenderRegistry, type TrustedSenderRegistry } from "../ipc/trusted-senders";
 import { createAppServices, type AppServices } from "../services";
-import type { ProviderModelSyncStatus } from "@shared/events";
+import type {
+  ProviderModelSyncStatus,
+  ProvidersStartupModelSyncCompletedEvent,
+} from "@shared/events";
 
 export interface BackendBootstrapResult {
   services: AppServices;
@@ -17,6 +20,9 @@ interface BackendBootstrapOptions {
     providerId: string;
     status: ProviderModelSyncStatus;
   }) => void;
+  onProvidersStartupModelSyncCompleted?: (
+    payload: Omit<ProvidersStartupModelSyncCompletedEvent, "type">,
+  ) => void;
 }
 
 export function bootstrapBackend(options?: BackendBootstrapOptions): BackendBootstrapResult {
@@ -33,6 +39,7 @@ export function bootstrapBackend(options?: BackendBootstrapOptions): BackendBoot
 
   const services = createAppServices({
     onProviderModelsSyncCompleted: options?.onProviderModelsSyncCompleted,
+    onProvidersStartupModelSyncCompleted: options?.onProvidersStartupModelSyncCompleted,
   });
   const trustedSenders = createTrustedSenderRegistry();
   const ipcContext: IpcHandlerContext = {

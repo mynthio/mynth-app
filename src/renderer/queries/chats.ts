@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 
 import { chatsApi } from "../api/chats";
+import { messagesApi } from "../api/messages";
 import { queryKeys } from "./keys";
 
 export const CURRENT_BRANCH_QUERY_KEY = "__current__";
@@ -32,7 +33,7 @@ export function getChatMessagesQueryOptions(
         throw new Error("Chat ID is required.");
       }
 
-      return chatsApi.listMessages(chatId, branchId);
+      return messagesApi.listMessages(chatId, branchId);
     },
     enabled: options?.enabled ?? Boolean(chatId),
     staleTime: Number.POSITIVE_INFINITY,
@@ -50,7 +51,7 @@ export function getAllChatMessagesQueryOptions(
         throw new Error("Chat ID is required.");
       }
 
-      return chatsApi.listAllMessages(chatId);
+      return messagesApi.listAllMessages(chatId);
     },
     enabled: options?.enabled ?? Boolean(chatId),
     staleTime: Number.POSITIVE_INFINITY,

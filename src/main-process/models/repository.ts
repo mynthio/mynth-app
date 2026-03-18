@@ -7,6 +7,7 @@ export type ModelTableRow = typeof models.$inferSelect;
 export type ModelLifecycleStatus = "active" | "deprecated" | "removed";
 const MODEL_MUTABLE_FIELDS = ["isEnabled", "displayName"] as const;
 type ModelMutableField = (typeof MODEL_MUTABLE_FIELDS)[number];
+type ModelMutableUpdates = Partial<Pick<ModelTableRow, ModelMutableField>>;
 
 export interface SyncProviderModelInput {
   providerModelId: string;
@@ -16,7 +17,7 @@ export interface SyncProviderModelInput {
   lifecycleStatus: Exclude<ModelLifecycleStatus, "removed">;
 }
 
-export type UpdateModelInput = Partial<Pick<ModelTableRow, ModelMutableField>>;
+export type UpdateModelInput = ModelMutableUpdates;
 export type ProviderModelSyncContext = "provider-added" | "startup";
 export interface SyncProviderModelsOptions {
   context: ProviderModelSyncContext;
@@ -114,7 +115,7 @@ export function syncProviderModels(
   providerId: string,
   syncedModels: SyncProviderModelInput[],
   options: SyncProviderModelsOptions,
-): { inserted: number; updated: number; markedRemoved: number } {
+): { inserted: number; updated: number; markedDeprecated: number } {
   return getAppDatabase().transaction((tx) => {
     const enablementPolicy = getModelEnablementPolicyForSyncContext(options.context);
     const existingRows = tx.select().from(models).where(eq(models.providerId, providerId)).all();
@@ -125,7 +126,7 @@ export function syncProviderModels(
 
     let inserted = 0;
     let updated = 0;
-    let markedRemoved = 0;
+    let markedDeprecated = 0;
 
     for (const syncedModel of syncedModels) {
       seenProviderModelIds.add(syncedModel.providerModelId);
@@ -186,21 +187,21 @@ export function syncProviderModels(
         continue;
       }
 
-      if (existing.lifecycleStatus === "removed") {
+      if (existing.lifecycleStatus === "deprecated") {
         continue;
       }
 
       tx.update(models)
         .set({
-          lifecycleStatus: "removed",
+          lifecycleStatus: "deprecated",
           updatedAt: Date.now(),
         })
         .where(eq(models.id, existing.id))
         .run();
-      markedRemoved += 1;
+      markedDeprecated += 1;
     }
 
-    return { inserted, updated, markedRemoved };
+    return { inserted, updated, markedDeprecated };
   });
 }
 
@@ -208,15 +209,22 @@ function buildModelId(providerId: string, providerModelId: string): string {
   return `${providerId}:${providerModelId}`;
 }
 
-function pickDefinedModelFields<const TKeys extends readonly ModelMutableField[]>(
-  input: Partial<Pick<ModelTableRow, TKeys[number]>>,
-  keys: TKeys,
-): Partial<Pick<ModelTableRow, TKeys[number]>> {
-  const updates: Partial<Pick<ModelTableRow, TKeys[number]>> = {};
+function pickDefinedModelFields(
+  input: ModelMutableUpdates,
+  keys: readonly ModelMutableField[],
+): ModelMutableUpdates {
+  const updates: ModelMutableUpdates = {};
 
   for (const key of keys) {
-    if (input[key] !== undefined) {
-      updates[key] = input[key];
+    if (key === "displayName") {
+      if (input.displayName !== undefined) {
+        updates.displayName = input.displayName;
+      }
+      continue;
+    }
+
+    if (input.isEnabled !== undefined) {
+      updates.isEnabled = input.isEnabled;
     }
   }
 

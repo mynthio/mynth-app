@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useHotkey } from "@tanstack/react-hotkeys";
-import { ArrowUp01Icon } from "@hugeicons/core-free-icons";
+import { ArrowUp01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { chatsApi } from "@/api/chats";
@@ -10,12 +10,14 @@ import { Menu, MenuPopup, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "@/c
 import { Tooltip, TooltipPopup, TooltipTrigger } from "@/components/ui/tooltip";
 import { InputGroup, InputGroupAddon, InputGroupTextarea } from "@/components/ui/input-group";
 import {
+  useChatCanStop,
   ChatContextProvider,
   useChatIsInteractionLocked,
   useChatIsStreaming,
   useChatMessages,
   useChatModelId,
   useChatSendMessage,
+  useChatStop,
   useSetChatModelId,
 } from "@/features/chat/chat-context";
 import { ChatScrollToBottomProvider } from "@/features/chat/chat-scroll-context";
@@ -154,6 +156,8 @@ function ActiveChatContent() {
   const modelId = useChatModelId();
   const messages = useChatMessages();
   const sendMessage = useChatSendMessage();
+  const stopChat = useChatStop();
+  const canStop = useChatCanStop();
   const isInteractionLocked = useChatIsInteractionLocked();
   const isStreaming = useChatIsStreaming();
   const { containerRef, anchorRef, scrollToBottom } = useScrollToBottom(isStreaming);
@@ -271,18 +275,32 @@ function ActiveChatContent() {
                   <Tooltip>
                     <TooltipTrigger
                       render={
-                        <Button
-                          type="submit"
-                          aria-label="Send"
-                          className="ml-auto"
-                          size="icon-lg"
-                          disabled={!modelId || !input.trim() || isInteractionLocked}
-                        >
-                          <HugeiconsIcon icon={ArrowUp01Icon} />
-                        </Button>
+                        canStop ? (
+                          <Button
+                            aria-label="Stop"
+                            className="ml-auto"
+                            onClick={() => {
+                              void stopChat();
+                            }}
+                            size="icon-lg"
+                            type="button"
+                          >
+                            <HugeiconsIcon icon={Cancel01Icon} />
+                          </Button>
+                        ) : (
+                          <Button
+                            type="submit"
+                            aria-label="Send"
+                            className="ml-auto"
+                            size="icon-lg"
+                            disabled={!modelId || !input.trim() || isInteractionLocked}
+                          >
+                            <HugeiconsIcon icon={ArrowUp01Icon} />
+                          </Button>
+                        )
                       }
                     />
-                    <TooltipPopup>Send</TooltipPopup>
+                    <TooltipPopup>{canStop ? "Stop" : "Send"}</TooltipPopup>
                   </Tooltip>
                 </InputGroupAddon>
               </InputGroup>

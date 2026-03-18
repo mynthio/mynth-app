@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
 
-const require = createRequire(import.meta.url);
+const require = createRequire(__filename);
 
 function getElectronApp(): import("electron").App | null {
   if (!process.versions.electron) {

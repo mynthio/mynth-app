@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { chatTreeApi } from "../api/chat-tree";
+import { chatsApi } from "../api/chats";
+import { foldersApi } from "../api/folders";
 import { queryKeys } from "../queries/keys";
 
 export function useSetChatTreeUiState() {
@@ -21,9 +23,9 @@ export function useRenameChatTreeItem() {
   return useMutation({
     mutationFn: async ({ itemId, name }: { itemId: string; name: string }) => {
       if (itemId.startsWith("folder:")) {
-        return chatTreeApi.renameFolder(itemId.slice("folder:".length), name);
+        return foldersApi.updateName(itemId.slice("folder:".length), name);
       }
-      return chatTreeApi.renameChat(itemId.slice("chat:".length), name);
+      return chatsApi.updateTitle(itemId.slice("chat:".length), name);
     },
     onSuccess: (_result, variables) => {
       if (!variables.itemId.startsWith("chat:")) {
@@ -38,7 +40,7 @@ export function useRenameChatTreeItem() {
 export function useDeleteFolder() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => chatTreeApi.deleteFolder(id),
+    mutationFn: (id: string) => foldersApi.delete(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["chatTree"] });
     },
@@ -48,7 +50,7 @@ export function useDeleteFolder() {
 export function useDeleteChat() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => chatTreeApi.deleteChat(id),
+    mutationFn: (id: string) => chatsApi.delete(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["chatTree"] });
       void queryClient.invalidateQueries({ queryKey: queryKeys.chats.all });
@@ -59,13 +61,13 @@ export function useDeleteChat() {
 export function useMoveFolder() {
   return useMutation({
     mutationFn: ({ id, parentId }: { id: string; parentId: string | null }) =>
-      chatTreeApi.moveFolder(id, parentId),
+      foldersApi.move(id, parentId),
   });
 }
 
 export function useMoveChat() {
   return useMutation({
     mutationFn: ({ id, folderId }: { id: string; folderId: string | null }) =>
-      chatTreeApi.moveChat(id, folderId),
+      chatsApi.move(id, folderId),
   });
 }

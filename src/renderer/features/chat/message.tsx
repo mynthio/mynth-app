@@ -4,6 +4,7 @@ import { code } from "@streamdown/code";
 
 import type { MynthUiMessage } from "@shared/chat/message-metadata";
 import {
+  useChatContinueMessage,
   useChatIsInteractionLocked,
   useChatModelId,
   useChatRegenerateMessage,
@@ -81,9 +82,7 @@ const MessageTools = React.memo(function MessageTools({
     <div
       className={cn(
         "flex items-center gap-1 transition-opacity duration-150",
-        forceVisible
-          ? "opacity-100"
-          : "opacity-0 group-hover/message:opacity-100",
+        forceVisible ? "opacity-100" : "opacity-0 group-hover/message:opacity-100",
         className,
       )}
       {...props}
@@ -92,13 +91,29 @@ const MessageTools = React.memo(function MessageTools({
 });
 
 interface AssistantMessageToolsProps {
+  draft: string;
+  isEditing: boolean;
+  isInteractionLocked: boolean;
   message: MynthUiMessage;
+  messageText: string;
+  onDraftChange: (value: string) => void;
+  startEditingMessage: (messageId: string) => void;
+  stopEditingMessage: () => void;
+  submitEditedMessage: (messageId: string, text: string) => Promise<void>;
 }
 
 const AssistantMessageTools = React.memo(function AssistantMessageTools({
+  draft,
+  isEditing,
+  isInteractionLocked,
   message,
+  messageText,
+  onDraftChange,
+  startEditingMessage,
+  stopEditingMessage,
+  submitEditedMessage,
 }: AssistantMessageToolsProps) {
-  const isInteractionLocked = useChatIsInteractionLocked();
+  const continueMessage = useChatContinueMessage();
   const regenerate = useChatRegenerateMessage();
   const scrollToBottom = useChatScrollToBottom();
   const switchBranch = useChatSwitchBranch();
@@ -109,8 +124,34 @@ const AssistantMessageTools = React.memo(function AssistantMessageTools({
   const nextSiblingId = siblings[siblingIndex + 1];
   const hasSiblings = siblings.length > 1;
 
+  if (isEditing) {
+    return (
+      <EditableMessageTools
+        canSave={draft.trim().length > 0}
+        draft={draft}
+        messageId={message.id}
+        messageText={messageText}
+        onDraftChange={onDraftChange}
+        stopEditingMessage={stopEditingMessage}
+        submitEditedMessage={submitEditedMessage}
+      />
+    );
+  }
+
   return (
     <MessageTools>
+      <Button
+        size="xs"
+        variant="ghost"
+        disabled={isInteractionLocked}
+        onClick={() => {
+          scrollToBottom();
+          void continueMessage(message.id);
+        }}
+      >
+        Continue
+      </Button>
+
       <Button
         size="icon-sm"
         variant="ghost"
@@ -121,6 +162,15 @@ const AssistantMessageTools = React.memo(function AssistantMessageTools({
         }}
       >
         <HugeiconsIcon icon={Refresh04Icon} />
+      </Button>
+
+      <Button
+        size="icon-sm"
+        variant="secondary"
+        disabled={isInteractionLocked}
+        onClick={() => startEditingMessage(message.id)}
+      >
+        <HugeiconsIcon icon={Edit01Icon} />
       </Button>
 
       {hasSiblings && (
@@ -155,6 +205,52 @@ const AssistantMessageTools = React.memo(function AssistantMessageTools({
   );
 });
 
+interface EditableMessageToolsProps {
+  canSave: boolean;
+  draft: string;
+  messageId: string;
+  messageText: string;
+  onDraftChange: (value: string) => void;
+  stopEditingMessage: () => void;
+  submitEditedMessage: (messageId: string, text: string) => Promise<void>;
+}
+
+const EditableMessageTools = React.memo(function EditableMessageTools({
+  canSave,
+  draft,
+  messageId,
+  messageText,
+  onDraftChange,
+  stopEditingMessage,
+  submitEditedMessage,
+}: EditableMessageToolsProps) {
+  return (
+    <MessageTools forceVisible>
+      <Group>
+        <Button
+          size="xs"
+          disabled={!canSave}
+          onClick={() => {
+            void submitEditedMessage(messageId, draft);
+          }}
+        >
+          Save
+        </Button>
+        <Button
+          size="xs"
+          variant="secondary"
+          onClick={() => {
+            onDraftChange(messageText);
+            stopEditingMessage();
+          }}
+        >
+          Cancel
+        </Button>
+      </Group>
+    </MessageTools>
+  );
+});
+
 interface UserMessageToolsProps {
   draft: string;
   isEditing: boolean;
@@ -182,29 +278,15 @@ const UserMessageTools = React.memo(function UserMessageTools({
 }: UserMessageToolsProps) {
   if (isEditing) {
     return (
-      <MessageTools forceVisible>
-        <Group>
-          <Button
-            size="xs"
-            disabled={!modelId || !draft.trim()}
-            onClick={() => {
-              void submitEditedMessage(messageId, draft);
-            }}
-          >
-            Save
-          </Button>
-          <Button
-            size="xs"
-            variant="secondary"
-            onClick={() => {
-              onDraftChange(messageText);
-              stopEditingMessage();
-            }}
-          >
-            Cancel
-          </Button>
-        </Group>
-      </MessageTools>
+      <EditableMessageTools
+        canSave={Boolean(modelId) && draft.trim().length > 0}
+        draft={draft}
+        messageId={messageId}
+        messageText={messageText}
+        onDraftChange={onDraftChange}
+        stopEditingMessage={stopEditingMessage}
+        submitEditedMessage={submitEditedMessage}
+      />
     );
   }
 
@@ -228,9 +310,7 @@ interface UserMessageProps {
   message: MynthUiMessage;
 }
 
-const UserMessage = React.memo(function UserMessage({
-  message,
-}: UserMessageProps) {
+const UserMessage = React.memo(function UserMessage({ message }: UserMessageProps) {
   const onContextMenu = useMessageContextMenu(message.id);
   const modelId = useChatModelId();
   const editingMessageId = useChatEditingMessageId();
@@ -255,15 +335,10 @@ const UserMessage = React.memo(function UserMessage({
         onContextMenu={onContextMenu}
       >
         {isEditing ? (
-          <Textarea
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-          />
+          <Textarea value={draft} onChange={(event) => setDraft(event.target.value)} />
         ) : (
           message.parts.map((part, i) =>
-            part.type === "text" ? (
-              <UserMessageTextPart key={i} text={part.text} />
-            ) : null,
+            part.type === "text" ? <UserMessageTextPart key={i} text={part.text} /> : null,
           )
         )}
       </div>
@@ -288,30 +363,49 @@ interface AssistantMessageProps {
   message: MynthUiMessage;
 }
 
-const AssistantMessage = React.memo(function AssistantMessage({
-  message,
-}: AssistantMessageProps) {
+const AssistantMessage = React.memo(function AssistantMessage({ message }: AssistantMessageProps) {
+  const editingMessageId = useChatEditingMessageId();
+  const isInteractionLocked = useChatIsInteractionLocked();
+  const startEditingMessage = useChatStartEditingMessage();
+  const stopEditingMessage = useChatStopEditingMessage();
+  const submitEditedMessage = useChatSubmitEditedMessage();
   const isAnimating = useIsAnimatingMessage(message.id, message.role);
   const onContextMenu = useMessageContextMenu(message.id);
+  const isEditing = editingMessageId === message.id;
+  const messageText = React.useMemo(() => getMessageText(message), [message]);
+  const [draft, setDraft] = React.useState(messageText);
+
+  React.useEffect(() => {
+    if (!isEditing) {
+      setDraft(messageText);
+    }
+  }, [isEditing, messageText]);
 
   return (
     <div className="group/message flex flex-col items-start gap-3">
-      <div
-        className="max-w-[90%] py-2"
-        onContextMenu={onContextMenu}
-      >
-        {message.parts.map((part, i) =>
-          part.type === "text" ? (
-            <AssistantMessageTextPart
-              key={i}
-              text={part.text}
-              isAnimating={isAnimating}
-            />
-          ) : null,
+      <div className="max-w-[90%] py-2" onContextMenu={onContextMenu}>
+        {isEditing ? (
+          <Textarea value={draft} onChange={(event) => setDraft(event.target.value)} />
+        ) : (
+          message.parts.map((part, i) =>
+            part.type === "text" ? (
+              <AssistantMessageTextPart key={i} text={part.text} isAnimating={isAnimating} />
+            ) : null,
+          )
         )}
       </div>
 
-      <AssistantMessageTools message={message} />
+      <AssistantMessageTools
+        draft={draft}
+        isEditing={isEditing}
+        isInteractionLocked={isInteractionLocked}
+        message={message}
+        messageText={messageText}
+        onDraftChange={setDraft}
+        startEditingMessage={startEditingMessage}
+        stopEditingMessage={stopEditingMessage}
+        submitEditedMessage={submitEditedMessage}
+      />
     </div>
   );
 });
@@ -322,9 +416,7 @@ interface ChatMessageProps {
   message: MynthUiMessage;
 }
 
-export const ChatMessage = React.memo(function ChatMessage({
-  message,
-}: ChatMessageProps) {
+export const ChatMessage = React.memo(function ChatMessage({ message }: ChatMessageProps) {
   if (message.role === "user") {
     return <UserMessage message={message} />;
   }
@@ -335,9 +427,7 @@ export const ChatMessage = React.memo(function ChatMessage({
 function getMessageText(message: MynthUiMessage): string {
   return message.parts
     .filter(
-      (
-        part,
-      ): part is Extract<MynthUiMessage["parts"][number], { type: "text" }> =>
+      (part): part is Extract<MynthUiMessage["parts"][number], { type: "text" }> =>
         part.type === "text",
     )
     .map((part) => part.text)

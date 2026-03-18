@@ -9,6 +9,8 @@ export const IPC_CHANNELS = {
     setActive: "workspaces:setActive",
     update: "workspaces:update",
     updateSettings: "workspaces:updateSettings",
+    getTabsUiState: "workspaces:getTabsUiState",
+    setTabsUiState: "workspaces:setTabsUiState",
   },
   settings: {
     getGlobalChat: "settings:getGlobalChat",
@@ -23,8 +25,6 @@ export const IPC_CHANNELS = {
     getChildren: "chatTree:getChildren",
     getUiState: "chatTree:getUiState",
     setUiState: "chatTree:setUiState",
-    getTabsUiState: "chatTree:getTabsUiState",
-    setTabsUiState: "chatTree:setTabsUiState",
     showContextMenu: "chatTree:showContextMenu",
   },
   folders: {
@@ -35,13 +35,16 @@ export const IPC_CHANNELS = {
   },
   chats: {
     get: "chats:get",
-    listMessages: "chats:listMessages",
-    listAllMessages: "chats:listAllMessages",
-    switchBranch: "chats:switchBranch",
     create: "chats:create",
     updateTitle: "chats:updateTitle",
     move: "chats:move",
     delete: "chats:delete",
+  },
+  messages: {
+    listByChat: "messages:listByChat",
+    listAllByChat: "messages:listAllByChat",
+    switchBranch: "messages:switchBranch",
+    edit: "messages:edit",
   },
   providers: {
     list: "providers:list",
@@ -228,6 +231,8 @@ export interface SetProviderModelsEnabledResult {
   updatedCount: number;
 }
 
+export type EditMessageBehavior = "branch" | "overwrite";
+
 export interface IpcApi {
   onSystemEvent: (callback: (event: import("../events").SystemEvent) => void) => () => void;
   getSystemState: () => Promise<import("../events").SystemState>;
@@ -254,12 +259,17 @@ export interface IpcApi {
     workspaceId: string,
     expandedFolderIds: string[],
   ) => Promise<ChatTreeUiState>;
-  getTabsUiState: (workspaceId: string) => Promise<TabsUiState>;
-  setTabsUiState: (workspaceId: string, tabs: TabStateItem[]) => Promise<TabsUiState>;
+  getWorkspaceTabsUiState: (workspaceId: string) => Promise<TabsUiState>;
+  setWorkspaceTabsUiState: (workspaceId: string, tabs: TabStateItem[]) => Promise<TabsUiState>;
   getChat: (id: string) => Promise<ChatInfo>;
   listChatMessages: (chatId: string, branchId?: string | null) => Promise<MynthUiMessage[]>;
   listAllChatMessages: (chatId: string) => Promise<MynthUiMessage[]>;
   switchChatBranch: (chatId: string, branchId: string) => Promise<MynthUiMessage[]>;
+  editMessage: (
+    messageId: string,
+    text: string,
+    behavior: EditMessageBehavior,
+  ) => Promise<MynthUiMessage[]>;
   createFolder: (
     workspaceId: string,
     name: string,

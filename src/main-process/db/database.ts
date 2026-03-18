@@ -11,7 +11,7 @@ import * as schema from "./schema";
 
 export type AppDatabase = BetterSQLite3Database<typeof schema>;
 
-const _require = createRequire(import.meta.url);
+const _require = createRequire(__filename);
 const APP_DATABASE_FILENAME = "app.sqlite";
 let connection: { sqlite: BetterSqliteDatabase; db: AppDatabase } | null = null;
 

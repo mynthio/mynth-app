@@ -4,7 +4,7 @@ import { useSearch } from "@tanstack/react-router";
 import { WorkflowSquare03Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
-import { chatsApi } from "@/api/chats";
+import { messagesApi } from "@/api/messages";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Empty,
@@ -72,7 +72,7 @@ export function ChatGraphPage() {
         throw new Error("Chat ID is required.");
       }
 
-      return chatsApi.switchBranch(activeChatId, messageId);
+      return messagesApi.switchBranch(activeChatId, messageId);
     },
     onSuccess: (messages) => {
       if (!activeChatId) {

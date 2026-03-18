@@ -1,12 +1,14 @@
 import * as React from "react";
 import { type Chat } from "@ai-sdk/react";
+import { readUIMessageStream } from "ai";
 import { useStore } from "zustand";
 import { createStore, type StoreApi } from "zustand/vanilla";
 
-import { chatsApi } from "@/api/chats";
+import { messagesApi } from "@/api/messages";
 
-import { useChatStore } from "@/stores/chat-store";
-import type { MynthUiMessage } from "@shared/chat/message-metadata";
+import { createChatTransport, useChatStore } from "@/stores/chat-store";
+import { normalizeChatMessageMetadata, type MynthUiMessage } from "@shared/chat/message-metadata";
+import type { EditMessageBehavior } from "@shared/ipc";
 
 type ChatSendMessage = Chat<MynthUiMessage>["sendMessage"];
 type ChatRegenerate = Chat<MynthUiMessage>["regenerate"];
@@ -15,9 +17,12 @@ type ChatContextState = {
   modelId: string | null;
   historyError: string | null;
   editingMessageId: string | null;
+  continuingMessageId: string | null;
+  continuationError: string | null;
   setModelId: (modelId: string | null) => void;
   sendMessage: ChatSendMessage;
   regenerateMessage: (options?: Parameters<ChatRegenerate>[0]) => ReturnType<ChatRegenerate>;
+  continueMessage: (messageId: string) => Promise<void>;
   switchBranch: (branchId: string) => Promise<void>;
   startEditingMessage: (messageId: string) => void;
   stopEditingMessage: () => void;
@@ -50,10 +55,12 @@ type ChatContextProviderProps = {
 };
 
 function createChatContextStore({
+  apiUrl,
   chatId,
   initialModelId,
   transportRefs,
 }: {
+  apiUrl: string;
   chatId: string;
   initialModelId: string | null;
   transportRefs: ChatTransportRefs;
@@ -62,22 +69,41 @@ function createChatContextStore({
     modelId: initialModelId,
     historyError: null,
     editingMessageId: null,
+    continuingMessageId: null,
+    continuationError: null,
     setModelId: (modelId) =>
       set((current) => {
-        if (current.editingMessageId !== null || current.modelId === modelId) {
+        if (
+          current.editingMessageId !== null ||
+          current.continuingMessageId !== null ||
+          current.modelId === modelId
+        ) {
           return current;
         }
 
         return { ...current, modelId };
       }),
     sendMessage: (message, options) => {
-      const { editingMessageId, modelId: currentModelId } = get();
+      const {
+        editingMessageId,
+        continuingMessageId,
+        modelId: currentModelId,
+        continuationError,
+      } = get();
       if (editingMessageId !== null) {
+        return Promise.resolve();
+      }
+
+      if (continuingMessageId !== null) {
         return Promise.resolve();
       }
 
       if (!transportRefs.sendMessage || !currentModelId) {
         return Promise.resolve();
+      }
+
+      if (continuationError !== null) {
+        set((current) => ({ ...current, continuationError: null }));
       }
 
       transportRefs.markTabTouched?.();
@@ -88,13 +114,26 @@ function createChatContextStore({
       });
     },
     regenerateMessage: (options) => {
-      const { editingMessageId, modelId: currentModelId } = get();
+      const {
+        editingMessageId,
+        continuingMessageId,
+        modelId: currentModelId,
+        continuationError,
+      } = get();
       if (editingMessageId !== null) {
+        return Promise.resolve();
+      }
+
+      if (continuingMessageId !== null) {
         return Promise.resolve();
       }
 
       if (!transportRefs.regenerate || !currentModelId) {
         return Promise.resolve();
+      }
+
+      if (continuationError !== null) {
+        set((current) => ({ ...current, continuationError: null }));
       }
 
       transportRefs.markTabTouched?.();
@@ -104,13 +143,125 @@ function createChatContextStore({
         body: { ...options?.body, modelId: currentModelId },
       });
     },
+    continueMessage: async (messageId) => {
+      const {
+        editingMessageId,
+        continuingMessageId,
+        modelId: currentModelId,
+        continuationError,
+      } = get();
+      const status = transportRefs.getStatus?.() ?? "ready";
+      const isBusy = status === "streaming" || status === "submitted";
+
+      if (editingMessageId !== null || continuingMessageId !== null || isBusy) {
+        return;
+      }
+
+      if (!currentModelId || !transportRefs.getMessages || !transportRefs.setMessages) {
+        return;
+      }
+
+      const currentMessages = transportRefs.getMessages();
+      const baselineMessages = structuredClone(currentMessages) as MynthUiMessage[];
+      const messageIndex = baselineMessages.findIndex((message) => message.id === messageId);
+
+      if (messageIndex === -1) {
+        set((current) => ({
+          ...current,
+          continuationError: `Message "${messageId}" is not available for continuation.`,
+        }));
+        return;
+      }
+
+      const targetMessage = baselineMessages[messageIndex];
+      if (!targetMessage || targetMessage.role !== "assistant") {
+        set((current) => ({
+          ...current,
+          continuationError: `Message "${messageId}" is not available for continuation.`,
+        }));
+        return;
+      }
+
+      if (continuationError !== null) {
+        set((current) => ({ ...current, continuationError: null }));
+      }
+
+      set((current) => ({
+        ...current,
+        continuingMessageId: messageId,
+        continuationError: null,
+      }));
+
+      transportRefs.markTabTouched?.();
+
+      const requestMessages = baselineMessages.slice(0, messageIndex + 1);
+      const continuationTransport = createChatTransport(apiUrl, chatId);
+      let didStreamFinish = false;
+
+      try {
+        const stream = await continuationTransport.sendMessages({
+          abortSignal: undefined,
+          body: {
+            mode: "continue-message",
+            modelId: currentModelId,
+            targetMessageId: messageId,
+          },
+          chatId,
+          messageId: undefined,
+          messages: requestMessages,
+          trigger: "submit-message",
+        });
+
+        for await (const streamedMessage of readUIMessageStream<MynthUiMessage>({
+          message: structuredClone(targetMessage) as MynthUiMessage,
+          stream,
+        })) {
+          const mergedMessage = mergeContinuationMessage(targetMessage, streamedMessage);
+          React.startTransition(() => {
+            transportRefs.setMessages?.(
+              replaceMessageById(
+                baselineMessages,
+                messageId,
+                structuredClone(mergedMessage) as MynthUiMessage,
+              ),
+            );
+          });
+        }
+
+        didStreamFinish = true;
+
+        const persistedMessages = await messagesApi.listMessages(chatId);
+        React.startTransition(() => {
+          transportRefs.setMessages?.(persistedMessages);
+        });
+
+        set((current) => ({
+          ...current,
+          continuingMessageId: null,
+          continuationError: null,
+        }));
+      } catch (error) {
+        if (!didStreamFinish) {
+          React.startTransition(() => {
+            transportRefs.setMessages?.(baselineMessages);
+          });
+        }
+
+        set((current) => ({
+          ...current,
+          continuingMessageId: null,
+          continuationError: getErrorMessage(error, "Failed to continue the message."),
+        }));
+      }
+    },
     switchBranch: async (branchId) => {
-      if (get().editingMessageId !== null) {
+      const { editingMessageId, continuingMessageId } = get();
+      if (editingMessageId !== null || continuingMessageId !== null) {
         return;
       }
 
       if (!transportRefs.setMessages) return;
-      const newMessages = await chatsApi.switchBranch(chatId, branchId);
+      const newMessages = await messagesApi.switchBranch(chatId, branchId);
       transportRefs.setMessages(newMessages);
     },
     startEditingMessage: (messageId) =>
@@ -120,6 +271,7 @@ function createChatContextStore({
 
         if (
           isBusy ||
+          current.continuingMessageId !== null ||
           (current.editingMessageId !== null && current.editingMessageId !== messageId)
         ) {
           return current;
@@ -147,37 +299,44 @@ function createChatContextStore({
       }),
     submitEditedMessage: async (messageId, text) => {
       const trimmedText = text.trim();
-      const currentModelId = get().modelId;
 
-      if (!trimmedText || !currentModelId || !transportRefs.setMessages) {
+      if (!trimmedText || !transportRefs.setMessages) {
         return;
       }
 
       const currentMessages = transportRefs.getMessages?.() ?? [];
-      const messageIndex = currentMessages.findIndex(
-        (message) => message.id === messageId && message.role === "user",
-      );
+      const messageIndex = currentMessages.findIndex((message) => message.id === messageId);
 
       if (messageIndex === -1) {
         throw new Error(`Message "${messageId}" is not available for editing.`);
       }
 
-      const nextMessages = currentMessages.slice(0, messageIndex);
-      const parentId = nextMessages.at(-1)?.id ?? null;
+      const message = currentMessages[messageIndex];
+      if (!message || (message.role !== "user" && message.role !== "assistant")) {
+        throw new Error(`Message "${messageId}" is not available for editing.`);
+      }
+
+      const currentModelId = get().modelId;
+      if (message.role === "user" && !currentModelId) {
+        return;
+      }
+
+      const editBehavior: EditMessageBehavior =
+        message.role === "assistant" ? "overwrite" : "branch";
 
       set((current) => ({
         ...current,
         editingMessageId: null,
       }));
 
-      transportRefs.setMessages(nextMessages);
+      const persistedMessages = await messagesApi.editMessage(messageId, trimmedText, editBehavior);
+      transportRefs.setMessages(persistedMessages);
 
-      await get().sendMessage({
-        text: trimmedText,
-        metadata: {
-          parentId,
-        },
-      });
+      if (message.role === "assistant") {
+        return;
+      }
+
+      await get().regenerateMessage();
     },
   }));
 }
@@ -211,6 +370,7 @@ export function ChatContextProvider({
   if (!storeRef.current) {
     storeRef.current = createChatContextStore({
       chatId,
+      apiUrl,
       initialModelId: resolveModelId(enabledModelIds, initialModelId),
       transportRefs: transportRefs.current,
     });
@@ -250,7 +410,7 @@ export function ChatContextProvider({
         return;
       }
 
-      void chatsApi.listMessages(chatId).then((persistedMessages) => {
+      void messagesApi.listMessages(chatId).then((persistedMessages) => {
         if (isDisposed) {
           return;
         }
@@ -282,7 +442,7 @@ export function ChatContextProvider({
       return { ...current, historyError: null };
     });
 
-    void chatsApi
+    void messagesApi
       .listMessages(chatId)
       .then((persistedMessages) => {
         if (isDisposed) {
@@ -396,17 +556,38 @@ export function useChatSendMessage() {
   return useChatContext((state) => state.sendMessage);
 }
 
+export function useChatStop() {
+  const chat = useChatSession();
+
+  return React.useCallback(() => chat.stop(), [chat]);
+}
+
 export function useChatRegenerateMessage() {
   return useChatContext((state) => state.regenerateMessage);
+}
+
+export function useChatContinueMessage() {
+  return useChatContext((state) => state.continueMessage);
+}
+
+function useChatTransportBusy() {
+  const status = useChatStatusValue();
+  return status === "streaming" || status === "submitted";
 }
 
 export function useChatIsStreaming() {
   return useChatStatusValue() === "streaming";
 }
 
+export function useChatCanStop() {
+  return useChatTransportBusy();
+}
+
 export function useChatIsBusy() {
-  const status = useChatStatusValue();
-  return status === "streaming" || status === "submitted";
+  const isTransportBusy = useChatTransportBusy();
+  const continuingMessageId = useChatContext((state) => state.continuingMessageId);
+
+  return isTransportBusy || continuingMessageId !== null;
 }
 
 export function useChatIsSaveMode() {
@@ -422,13 +603,21 @@ export function useChatIsInteractionLocked() {
 
 export function useChatError() {
   const chat = useChatSession();
+  const continuationError = useChatContext((state) => state.continuationError);
   const subscribe = React.useCallback(
     (onStoreChange: () => void) => chat["~registerErrorCallback"](onStoreChange),
     [chat],
   );
   const getSnapshot = React.useCallback(() => chat.error, [chat]);
+  const chatError = useChatSnapshot(subscribe, getSnapshot);
 
-  return useChatSnapshot(subscribe, getSnapshot);
+  return React.useMemo(() => {
+    if (continuationError) {
+      return new Error(continuationError);
+    }
+
+    return chatError;
+  }, [chatError, continuationError]);
 }
 
 export function useChatHistoryError() {
@@ -440,10 +629,15 @@ export function useIsLastMessage(messageId: string) {
 }
 
 export function useIsAnimatingMessage(messageId: string, role: string) {
-  const isBusy = useChatIsBusy();
+  const isTransportBusy = useChatTransportBusy();
   const isLastMessage = useIsLastMessage(messageId);
+  const continuingMessageId = useChatContext((state) => state.continuingMessageId);
 
-  return role === "assistant" && isBusy && isLastMessage;
+  return (
+    role === "assistant" &&
+    ((continuingMessageId !== null && continuingMessageId === messageId) ||
+      (continuingMessageId === null && isTransportBusy && isLastMessage))
+  );
 }
 
 export function useChatSwitchBranch() {
@@ -452,6 +646,10 @@ export function useChatSwitchBranch() {
 
 export function useChatEditingMessageId() {
   return useChatContext((state) => state.editingMessageId);
+}
+
+export function useChatContinuingMessageId() {
+  return useChatContext((state) => state.continuingMessageId);
 }
 
 export function useChatStartEditingMessage() {
@@ -472,4 +670,117 @@ function resolveModelId(enabledModelIds: readonly string[], currentModelId: stri
   }
 
   return enabledModelIds[0] ?? null;
+}
+
+function replaceMessageById(
+  messages: readonly MynthUiMessage[],
+  messageId: string,
+  nextMessage: MynthUiMessage,
+) {
+  return messages.map((message) => (message.id === messageId ? nextMessage : message));
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message.trim() ? error.message : fallback;
+}
+
+function mergeContinuationMessage(
+  originalMessage: MynthUiMessage,
+  streamedMessage: MynthUiMessage,
+): MynthUiMessage {
+  const mergedMetadata = normalizeChatMessageMetadata(
+    {
+      ...(originalMessage.metadata ?? {}),
+      ...(streamedMessage.metadata ?? {}),
+    },
+    originalMessage.metadata?.parentId ?? null,
+  );
+
+  return {
+    ...streamedMessage,
+    parts: mergeContinuationParts(originalMessage.parts, streamedMessage.parts),
+    metadata: mergedMetadata,
+  };
+}
+
+function mergeContinuationParts(
+  originalParts: MynthUiMessage["parts"],
+  responseParts: MynthUiMessage["parts"],
+): MynthUiMessage["parts"] {
+  const continuationSuffix = extractContinuationSuffixParts(originalParts, responseParts);
+
+  if (continuationSuffix.length === 0) {
+    return structuredClone(originalParts) as MynthUiMessage["parts"];
+  }
+
+  const mergedParts = structuredClone(originalParts) as MynthUiMessage["parts"];
+  const lastOriginalTextIndex = findLastTextPartIndex(mergedParts);
+  const firstSuffixTextIndex = findFirstTextPartIndex(continuationSuffix);
+
+  if (lastOriginalTextIndex === -1 || firstSuffixTextIndex === -1) {
+    return [...mergedParts, ...continuationSuffix];
+  }
+
+  const suffixPrefixParts = continuationSuffix.slice(0, firstSuffixTextIndex);
+  const suffixFirstTextPart = continuationSuffix[firstSuffixTextIndex];
+  const suffixRemainingParts = continuationSuffix.slice(firstSuffixTextIndex + 1);
+  const originalLastTextPart = mergedParts[lastOriginalTextIndex];
+
+  if (
+    !suffixFirstTextPart ||
+    suffixFirstTextPart.type !== "text" ||
+    !originalLastTextPart ||
+    originalLastTextPart.type !== "text"
+  ) {
+    return [...mergedParts, ...continuationSuffix];
+  }
+
+  const nextLastTextPart = {
+    ...originalLastTextPart,
+    text: `${originalLastTextPart.text}${suffixFirstTextPart.text}`,
+    providerMetadata: suffixFirstTextPart.providerMetadata ?? originalLastTextPart.providerMetadata,
+    state: suffixFirstTextPart.state ?? originalLastTextPart.state,
+  };
+
+  mergedParts[lastOriginalTextIndex] = nextLastTextPart;
+
+  return [...mergedParts, ...suffixPrefixParts, ...suffixRemainingParts];
+}
+
+function extractContinuationSuffixParts(
+  originalParts: MynthUiMessage["parts"],
+  responseParts: MynthUiMessage["parts"],
+): MynthUiMessage["parts"] {
+  if (!startsWithParts(responseParts, originalParts)) {
+    return structuredClone(responseParts) as MynthUiMessage["parts"];
+  }
+
+  return structuredClone(responseParts.slice(originalParts.length)) as MynthUiMessage["parts"];
+}
+
+function startsWithParts(
+  candidateParts: readonly MynthUiMessage["parts"][number][],
+  prefixParts: readonly MynthUiMessage["parts"][number][],
+) {
+  if (candidateParts.length < prefixParts.length) {
+    return false;
+  }
+
+  return prefixParts.every(
+    (part, index) => JSON.stringify(candidateParts[index]) === JSON.stringify(part),
+  );
+}
+
+function findFirstTextPartIndex(parts: readonly MynthUiMessage["parts"][number][]) {
+  return parts.findIndex((part) => part.type === "text");
+}
+
+function findLastTextPartIndex(parts: readonly MynthUiMessage["parts"][number][]) {
+  for (let index = parts.length - 1; index >= 0; index -= 1) {
+    if (parts[index]?.type === "text") {
+      return index;
+    }
+  }
+
+  return -1;
 }

@@ -156,7 +156,10 @@
   body {
     @apply m-0 bg-background text-foreground font-sans;
   }
-  code, kbd, pre, samp {
+  code,
+  kbd,
+  pre,
+  samp {
     font-family: var(--font-mono);
   }
 }

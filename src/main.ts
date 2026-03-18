@@ -52,6 +52,22 @@ if (!app.requestSingleInstanceLock()) {
     }
   }
 
+  function startProviderModelSyncOnStartup() {
+    if (!backend) {
+      throw new Error("Backend is not initialized.");
+    }
+
+    queueMicrotask(() => {
+      if (!backend) {
+        return;
+      }
+
+      void backend.services.providers.syncProvidersOnStartup().catch((error) => {
+        console.error("Startup provider model sync crashed.", error);
+      });
+    });
+  }
+
   function openMainWindow() {
     if (!backend) {
       throw new Error("Backend is not initialized.");
@@ -85,10 +101,23 @@ if (!app.requestSingleInstanceLock()) {
               status,
             });
           },
+          onProvidersStartupModelSyncCompleted: ({
+            totalProviders,
+            succeededProviders,
+            failedProviders,
+          }) => {
+            broadcastSystemEvent({
+              type: "providers:start-model-sync:completed",
+              totalProviders,
+              succeededProviders,
+              failedProviders,
+            });
+          },
         });
         registerIpcHandlers(backend.ipcContext);
         ipcMain.handle(SYSTEM_STATE_CHANNEL, () => getSystemState());
         openMainWindow();
+        startProviderModelSyncOnStartup();
         void startAiServer();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

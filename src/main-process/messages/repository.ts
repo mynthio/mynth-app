@@ -90,6 +90,11 @@ export function listAllMessagesByChatId(chatId: string): MessageRow[] {
   return addSiblingMetadata(allMessages, childrenByParentId);
 }
 
+export function getMessageById(id: string): MessageRow | null {
+  const row = getAppDatabase().select().from(messages).where(eq(messages.id, id)).get();
+  return row ? toMessageRow(row) : null;
+}
+
 export function upsertMessage(input: UpsertMessageInput): MessageRow {
   const db = getAppDatabase();
   const existing = db.select().from(messages).where(eq(messages.id, input.id)).get();

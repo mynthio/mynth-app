@@ -4,7 +4,10 @@ import { createModelService, type ModelService } from "./model-service";
 import { createProviderService, type ProviderService } from "./provider-service";
 import { createSettingsService, type SettingsService } from "./settings-service";
 import { createWorkspaceService, type WorkspaceService } from "./workspace-service";
-import type { ProviderModelSyncStatus } from "@shared/events";
+import type {
+  ProviderModelSyncStatus,
+  ProvidersStartupModelSyncCompletedEvent,
+} from "@shared/events";
 
 export interface AppServices {
   workspaces: WorkspaceService;
@@ -20,6 +23,9 @@ interface AppServicesOptions {
     providerId: string;
     status: ProviderModelSyncStatus;
   }) => void;
+  onProvidersStartupModelSyncCompleted?: (
+    payload: Omit<ProvidersStartupModelSyncCompletedEvent, "type">,
+  ) => void;
 }
 
 export function createAppServices(options?: AppServicesOptions): AppServices {
@@ -31,6 +37,7 @@ export function createAppServices(options?: AppServicesOptions): AppServices {
     models: createModelService(),
     providers: createProviderService({
       onModelSyncCompleted: options?.onProviderModelsSyncCompleted,
+      onStartupSyncCompleted: options?.onProvidersStartupModelSyncCompleted,
     }),
   };
 }

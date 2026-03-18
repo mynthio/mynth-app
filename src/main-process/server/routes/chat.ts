@@ -1,13 +1,18 @@
 import { Hono } from "hono";
-import { streamText, convertToModelMessages, generateId } from "ai";
+import { consumeStream, convertToModelMessages, streamText } from "ai";
 import { parseChatId } from "@shared/chat/chat-id";
 import {
   normalizeChatMessageMetadata,
   type ChatMessageMetadata,
   type MynthUiMessage,
 } from "@shared/chat/message-metadata";
-import { getChatById, setChatCurrentBranch } from "../../chat-tree/repository";
-import { upsertMessage } from "../../messages/repository";
+import { createUuidV7 } from "@shared/uuidv7";
+import {
+  getChatById,
+  getChatCurrentBranchId,
+  setChatCurrentBranch,
+} from "../../chat-tree/repository";
+import { getMessageById, upsertMessage } from "../../messages/repository";
 import { getModelById } from "../../models/repository";
 import { getProviderById } from "../../providers/repository";
 import { resolveProviderRuntimeContext } from "../../providers/runtime-config";
@@ -15,14 +20,20 @@ import { createLanguageModel } from "../providers/language-model-factory";
 import { buildResponseMetadata } from "../providers/metadata-extractor";
 import type { ProviderId } from "@shared/providers/catalog";
 
+const CONTINUATION_PROMPT =
+  "Continue directly from where you left off. Do not repeat any previous content, do not add any introduction or summary. Just pick up exactly at the end of your last sentence.";
+
 export function createChatRoute() {
   const app = new Hono();
 
   app.post("/api/chat", async (c) => {
     const body = await c.req.json();
     const messages: MynthUiMessage[] = Array.isArray(body.messages) ? body.messages : [];
+    const mode = body.mode === "continue-message" ? "continue-message" : "default";
     const modelId: string | undefined = body.modelId;
     const requestChatId = typeof body.chatId === "string" ? body.chatId : undefined;
+    const targetMessageId =
+      typeof body.targetMessageId === "string" ? body.targetMessageId : undefined;
     const parsedChatId = parseChatId(requestChatId);
 
     if (!modelId) {
@@ -61,9 +72,39 @@ export function createChatRoute() {
     }
 
     const lastRequestMessage = messages.at(-1);
-    const assistantParentId = lastRequestMessage?.id ?? null;
+    let continuationTargetMessage: ReturnType<typeof getMessageById> = null;
+    let responseParentId = lastRequestMessage?.id ?? null;
 
-    if (lastRequestMessage?.role === "user") {
+    if (mode === "continue-message") {
+      if (!targetMessageId) {
+        return c.json({ error: "targetMessageId is required" }, 400);
+      }
+
+      if (!lastRequestMessage || lastRequestMessage.id !== targetMessageId) {
+        return c.json({ error: "Continuation target must be the last request message" }, 400);
+      }
+
+      if (lastRequestMessage.role !== "assistant") {
+        return c.json({ error: "Continuation target must be an assistant message" }, 400);
+      }
+
+      continuationTargetMessage = getMessageById(targetMessageId);
+      if (!continuationTargetMessage) {
+        return c.json({ error: "Continuation target message not found" }, 400);
+      }
+
+      if (continuationTargetMessage.chatId !== chat.id) {
+        return c.json({ error: "Continuation target message does not belong to this chat" }, 400);
+      }
+
+      if (continuationTargetMessage.role !== "assistant") {
+        return c.json({ error: "Continuation target must be an assistant message" }, 400);
+      }
+
+      responseParentId = continuationTargetMessage.parentId;
+    }
+
+    if (mode !== "continue-message" && lastRequestMessage?.role === "user") {
       const parentId = lastRequestMessage.metadata?.parentId ?? null;
 
       upsertMessage({
@@ -76,12 +117,32 @@ export function createChatRoute() {
       });
     }
 
+    if (mode === "continue-message" && lastRequestMessage?.role === "assistant") {
+      console.log("[chat:continue] last assistant message content");
+      console.log(getMessageText(lastRequestMessage));
+    }
+
     const startTime = Date.now();
     let capturedResponseMetadata: Omit<ChatMessageMetadata, "parentId"> | undefined;
+    const modelInputMessages =
+      mode === "continue-message"
+        ? [
+            ...messages,
+            {
+              id: `continue-user:${targetMessageId ?? "unknown"}`,
+              role: "user" as const,
+              parts: [{ type: "text" as const, text: CONTINUATION_PROMPT }],
+              metadata: {
+                parentId: lastRequestMessage?.id ?? null,
+              },
+            } satisfies MynthUiMessage,
+          ]
+        : messages;
 
     const result = streamText({
+      abortSignal: c.req.raw.signal,
       model: languageModel,
-      messages: await convertToModelMessages(messages),
+      messages: await convertToModelMessages(modelInputMessages),
       onFinish: ({ usage }) => {
         capturedResponseMetadata = buildResponseMetadata(
           usage,
@@ -93,13 +154,17 @@ export function createChatRoute() {
     });
 
     return result.toUIMessageStreamResponse({
-      generateMessageId: generateId,
+      consumeSseStream: consumeStream,
+      generateMessageId:
+        mode === "continue-message" && continuationTargetMessage
+          ? () => continuationTargetMessage.id
+          : createUuidV7,
       messageMetadata: ({ part }) => {
         if (part.type === "start") {
-          return { parentId: assistantParentId };
+          return { parentId: responseParentId };
         }
         if (part.type === "finish") {
-          return { parentId: assistantParentId, ...capturedResponseMetadata };
+          return { parentId: responseParentId, ...capturedResponseMetadata };
         }
         return undefined;
       },
@@ -108,9 +173,45 @@ export function createChatRoute() {
           return;
         }
 
+        if (responseMessage.parts.length === 0) {
+          return;
+        }
+
+        if (mode === "continue-message") {
+          console.log("[chat:continue] model response content");
+          console.log(getMessageText(responseMessage));
+        }
+
+        if (mode === "continue-message" && continuationTargetMessage) {
+          const mergedParts = mergeContinuationParts(
+            continuationTargetMessage.parts as MynthUiMessage["parts"],
+            responseMessage.parts,
+          );
+
+          upsertMessage({
+            id: continuationTargetMessage.id,
+            chatId: chat.id,
+            parentId: continuationTargetMessage.parentId,
+            role: "assistant",
+            parts: mergedParts,
+            metadata: {
+              ...continuationTargetMessage.metadata,
+              parentId: continuationTargetMessage.parentId,
+              ...capturedResponseMetadata,
+            },
+          });
+
+          setChatCurrentBranch(chat.id, getChatCurrentBranchId(chat.id), {
+            settingsPatch: {
+              modelId: model.id,
+            },
+          });
+          return;
+        }
+
         const parentId = normalizeChatMessageMetadata(
           responseMessage.metadata,
-          assistantParentId,
+          responseParentId,
         ).parentId;
 
         upsertMessage({
@@ -132,4 +233,96 @@ export function createChatRoute() {
   });
 
   return app;
+}
+
+function getMessageText(message: { parts: MynthUiMessage["parts"] }) {
+  return message.parts
+    .filter(
+      (part): part is Extract<MynthUiMessage["parts"][number], { type: "text" }> =>
+        part.type === "text",
+    )
+    .map((part) => part.text)
+    .join("\n");
+}
+
+function mergeContinuationParts(
+  originalParts: MynthUiMessage["parts"],
+  responseParts: MynthUiMessage["parts"],
+): MynthUiMessage["parts"] {
+  const continuationSuffix = extractContinuationSuffixParts(originalParts, responseParts);
+
+  if (continuationSuffix.length === 0) {
+    return structuredClone(originalParts) as MynthUiMessage["parts"];
+  }
+
+  const mergedParts = structuredClone(originalParts) as MynthUiMessage["parts"];
+  const lastOriginalTextIndex = findLastTextPartIndex(mergedParts);
+  const firstSuffixTextIndex = findFirstTextPartIndex(continuationSuffix);
+
+  if (lastOriginalTextIndex === -1 || firstSuffixTextIndex === -1) {
+    return [...mergedParts, ...continuationSuffix];
+  }
+
+  const suffixPrefixParts = continuationSuffix.slice(0, firstSuffixTextIndex);
+  const suffixFirstTextPart = continuationSuffix[firstSuffixTextIndex];
+  const suffixRemainingParts = continuationSuffix.slice(firstSuffixTextIndex + 1);
+  const originalLastTextPart = mergedParts[lastOriginalTextIndex];
+
+  if (
+    !suffixFirstTextPart ||
+    suffixFirstTextPart.type !== "text" ||
+    !originalLastTextPart ||
+    originalLastTextPart.type !== "text"
+  ) {
+    return [...mergedParts, ...continuationSuffix];
+  }
+
+  const nextLastTextPart = {
+    ...originalLastTextPart,
+    text: `${originalLastTextPart.text}${suffixFirstTextPart.text}`,
+    providerMetadata: suffixFirstTextPart.providerMetadata ?? originalLastTextPart.providerMetadata,
+    state: suffixFirstTextPart.state ?? originalLastTextPart.state,
+  };
+
+  mergedParts[lastOriginalTextIndex] = nextLastTextPart;
+
+  return [...mergedParts, ...suffixPrefixParts, ...suffixRemainingParts];
+}
+
+function extractContinuationSuffixParts(
+  originalParts: MynthUiMessage["parts"],
+  responseParts: MynthUiMessage["parts"],
+): MynthUiMessage["parts"] {
+  if (!startsWithParts(responseParts, originalParts)) {
+    return structuredClone(responseParts) as MynthUiMessage["parts"];
+  }
+
+  return structuredClone(responseParts.slice(originalParts.length)) as MynthUiMessage["parts"];
+}
+
+function startsWithParts(
+  candidateParts: readonly MynthUiMessage["parts"][number][],
+  prefixParts: readonly MynthUiMessage["parts"][number][],
+) {
+  if (candidateParts.length < prefixParts.length) {
+    return false;
+  }
+
+  return prefixParts.every(
+    (part, index) => JSON.stringify(candidateParts[index]) === JSON.stringify(part),
+  );
+}
+
+function findFirstTextPartIndex(parts: readonly MynthUiMessage["parts"][number][]) {
+  return parts.findIndex((part) => part.type === "text");
+}
+
+function findLastTextPartIndex(parts: readonly MynthUiMessage["parts"][number][]) {
+  for (let index = parts.length - 1; index >= 0; index -= 1) {
+    if (parts[index]?.type === "text") {
+      return index;
+    }
+  }
+
+  return -1;
 }

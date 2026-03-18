@@ -2,11 +2,14 @@ import {
   type ActiveWorkspaceInfo,
   type GetActiveWorkspaceOptions,
   IPC_CHANNELS,
+  type TabStateItem,
+  type TabsUiState,
   type WorkspaceInfo,
   type WorkspaceSettings,
   type WorkspaceSettingsPatch,
   type WorkspaceUpdateInput,
 } from "@shared/ipc";
+import { parseChatId } from "@shared/chat/chat-id";
 import { parseWorkspaceColor } from "@shared/workspace/workspace-color";
 import { parseWorkspaceId } from "@shared/workspace/workspace-id";
 import { parseWorkspaceName } from "@shared/workspace/workspace-name";
@@ -90,6 +93,57 @@ function parseWorkspaceSettingsUpdateInput(args: unknown[]): [string, WorkspaceS
   }
 
   return [workspaceId, rawPatch as WorkspaceSettingsPatch];
+}
+
+function parseValidTabId(input: unknown): string {
+  if (typeof input !== "string" || input.trim().length === 0) {
+    throw AppError.badRequest("tab.id must be a non-empty string.");
+  }
+
+  return input;
+}
+
+function parseValidChatId(input: unknown): string {
+  const parsedId = parseChatId(input);
+  if (!parsedId.ok) {
+    throw AppError.badRequest(parsedId.error);
+  }
+
+  return parsedId.value;
+}
+
+function parseValidTabType(input: unknown): "chat" {
+  if (input !== "chat") {
+    throw AppError.badRequest('tab.type must be "chat".');
+  }
+
+  return "chat";
+}
+
+function parseTabsArray(input: unknown): TabStateItem[] {
+  if (!Array.isArray(input)) {
+    throw AppError.badRequest("Tabs must be an array.");
+  }
+
+  return input.map((entry, index) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw AppError.badRequest(`Tab at index ${index} must be an object.`);
+    }
+
+    const record = entry as Record<string, unknown>;
+    const allowedKeys = new Set(["id", "type", "chatId"]);
+    for (const key of Object.keys(record)) {
+      if (!allowedKeys.has(key)) {
+        throw AppError.badRequest(`Unsupported tab field "${key}".`);
+      }
+    }
+
+    return {
+      id: parseValidTabId(record.id),
+      type: parseValidTabType(record.type),
+      chatId: parseValidChatId(record.chatId),
+    };
+  });
 }
 
 function parseGetActiveWorkspaceInput(args: unknown[]): [GetActiveWorkspaceOptions] {
@@ -179,4 +233,23 @@ export function registerWorkspaceIpcModule(
         services.workspaces.updateWorkspaceSettings(id, settingsPatch),
     },
   );
+
+  registerInvokeHandler<[string], TabsUiState>(context, registeredChannels, {
+    channel: IPC_CHANNELS.workspaces.getTabsUiState,
+    parseArgs: (args) => {
+      expectArgCount(args, 1);
+      return [parseValidWorkspaceId(args[0])];
+    },
+    handler: ({ services }, _event, workspaceId) => services.chatTree.getTabsUiState(workspaceId),
+  });
+
+  registerInvokeHandler<[string, TabStateItem[]], TabsUiState>(context, registeredChannels, {
+    channel: IPC_CHANNELS.workspaces.setTabsUiState,
+    parseArgs: (args) => {
+      expectArgCount(args, 2);
+      return [parseValidWorkspaceId(args[0]), parseTabsArray(args[1])];
+    },
+    handler: ({ services }, _event, workspaceId, tabs) =>
+      services.chatTree.setTabsUiState(workspaceId, tabs),
+  });
 }

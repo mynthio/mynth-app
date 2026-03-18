@@ -7,20 +7,6 @@ type ChatTreeApi = Pick<
   | "getChatTreeChildren"
   | "getChatTreeUiState"
   | "setChatTreeUiState"
-  | "getTabsUiState"
-  | "setTabsUiState"
-  | "getChat"
-  | "listChatMessages"
-  | "listAllChatMessages"
-  | "switchChatBranch"
-  | "createFolder"
-  | "updateFolderName"
-  | "moveFolder"
-  | "deleteFolder"
-  | "createChat"
-  | "updateChatTitle"
-  | "moveChat"
-  | "deleteChat"
   | "showChatTreeItemContextMenu"
 >;
 
@@ -32,25 +18,6 @@ export function createChatTreeApi(): ChatTreeApi {
     getChatTreeUiState: (workspaceId) => invokeIpc(IPC_CHANNELS.chatTree.getUiState, workspaceId),
     setChatTreeUiState: (workspaceId, expandedFolderIds) =>
       invokeIpc(IPC_CHANNELS.chatTree.setUiState, workspaceId, expandedFolderIds),
-    getTabsUiState: (workspaceId) => invokeIpc(IPC_CHANNELS.chatTree.getTabsUiState, workspaceId),
-    setTabsUiState: (workspaceId, tabs) =>
-      invokeIpc(IPC_CHANNELS.chatTree.setTabsUiState, workspaceId, tabs),
-    getChat: (id) => invokeIpc(IPC_CHANNELS.chats.get, id),
-    listChatMessages: (chatId, branchId) =>
-      invokeIpc(IPC_CHANNELS.chats.listMessages, chatId, branchId),
-    listAllChatMessages: (chatId) => invokeIpc(IPC_CHANNELS.chats.listAllMessages, chatId),
-    switchChatBranch: (chatId, branchId) =>
-      invokeIpc(IPC_CHANNELS.chats.switchBranch, chatId, branchId),
-    createFolder: (workspaceId, name, parentId) =>
-      invokeIpc(IPC_CHANNELS.folders.create, workspaceId, name, parentId),
-    updateFolderName: (id, name) => invokeIpc(IPC_CHANNELS.folders.updateName, id, name),
-    moveFolder: (id, parentId) => invokeIpc(IPC_CHANNELS.folders.move, id, parentId),
-    deleteFolder: (id) => invokeIpc(IPC_CHANNELS.folders.delete, id),
-    createChat: (workspaceId, title, folderId) =>
-      invokeIpc(IPC_CHANNELS.chats.create, workspaceId, title, folderId),
-    updateChatTitle: (id, title) => invokeIpc(IPC_CHANNELS.chats.updateTitle, id, title),
-    moveChat: (id, folderId) => invokeIpc(IPC_CHANNELS.chats.move, id, folderId),
-    deleteChat: (id) => invokeIpc(IPC_CHANNELS.chats.delete, id),
     showChatTreeItemContextMenu: (itemId, itemKind) =>
       invokeIpc(IPC_CHANNELS.chatTree.showContextMenu, itemId, itemKind),
   };

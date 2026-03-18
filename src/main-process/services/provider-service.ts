@@ -12,7 +12,10 @@ import type {
   SaveProviderInput,
   SaveProviderResult,
 } from "@shared/ipc";
-import type { ProviderModelSyncStatus } from "@shared/events";
+import type {
+  ProviderModelSyncStatus,
+  ProvidersStartupModelSyncCompletedEvent,
+} from "@shared/events";
 import {
   getSupportedProviderById,
   type ProviderHostPortConfigValue,
@@ -49,6 +52,7 @@ export interface ProviderService {
   testCredentials(input: ProviderCredentialTestInput): Promise<ProviderCredentialTestResult>;
   saveProvider(input: SaveProviderInput): SaveProviderResult;
   deleteProvider(providerId: string): void;
+  syncProvidersOnStartup(): Promise<void>;
 }
 
 interface ProviderModelSyncCompletedPayload {
@@ -56,8 +60,14 @@ interface ProviderModelSyncCompletedPayload {
   status: ProviderModelSyncStatus;
 }
 
+interface ProvidersStartupModelSyncCompletedPayload extends Omit<
+  ProvidersStartupModelSyncCompletedEvent,
+  "type"
+> {}
+
 interface ProviderServiceOptions {
   onModelSyncCompleted?: (payload: ProviderModelSyncCompletedPayload) => void;
+  onStartupSyncCompleted?: (payload: ProvidersStartupModelSyncCompletedPayload) => void;
 }
 
 export function createProviderService(options?: ProviderServiceOptions): ProviderService {
@@ -143,21 +153,51 @@ export function createProviderService(options?: ProviderServiceOptions): Provide
 
       deleteStoredProvider(providerId);
     },
+
+    async syncProvidersOnStartup() {
+      const providerRows = listStoredProviders();
+      const results = await Promise.all(
+        providerRows.map((providerRow) =>
+          syncProviderModelsInBackground(providerRow.id, "startup"),
+        ),
+      );
+
+      let succeededProviders = 0;
+      let failedProviders = 0;
+
+      for (const result of results) {
+        if (result === "succeeded") {
+          succeededProviders += 1;
+          continue;
+        }
+
+        if (result === "failed") {
+          failedProviders += 1;
+        }
+      }
+
+      emitStartupSyncCompleted(options?.onStartupSyncCompleted, {
+        totalProviders: providerRows.length,
+        succeededProviders,
+        failedProviders,
+      });
+    },
   };
 
   async function syncProviderModelsInBackground(
     providerId: string,
     syncContext: ProviderModelSyncContext,
-  ): Promise<void> {
+  ): Promise<ProviderModelSyncStatus | null> {
     if (inFlightModelSyncProviderIds.has(providerId)) {
-      return;
+      return null;
     }
 
     inFlightModelSyncProviderIds.add(providerId);
     try {
-      await runProviderModelSync(providerId, syncContext, options?.onModelSyncCompleted);
+      return await runProviderModelSync(providerId, syncContext, options?.onModelSyncCompleted);
     } catch (error) {
       console.error(`Provider model sync crashed for provider "${providerId}".`, error);
+      return "failed";
     } finally {
       inFlightModelSyncProviderIds.delete(providerId);
     }
@@ -332,10 +372,10 @@ async function runProviderModelSync(
   providerId: string,
   syncContext: ProviderModelSyncContext,
   onModelSyncCompleted?: (payload: ProviderModelSyncCompletedPayload) => void,
-): Promise<void> {
+): Promise<ProviderModelSyncStatus> {
   const providerRow = getProviderById(providerId);
   if (!providerRow) {
-    return;
+    return "failed";
   }
 
   const startedAt = Date.now();
@@ -369,6 +409,7 @@ async function runProviderModelSync(
       providerId,
       status: "succeeded",
     });
+    return "succeeded";
   } catch (error) {
     const endedAt = Date.now();
     updateProviderModelsSyncStatus(providerId, "failed");
@@ -384,6 +425,7 @@ async function runProviderModelSync(
       providerId,
       status: "failed",
     });
+    return "failed";
   }
 }
 
@@ -399,6 +441,21 @@ function emitModelSyncCompleted(
     handler(payload);
   } catch (error) {
     console.error("Provider model sync completion callback failed.", error);
+  }
+}
+
+function emitStartupSyncCompleted(
+  handler: ((payload: ProvidersStartupModelSyncCompletedPayload) => void) | undefined,
+  payload: ProvidersStartupModelSyncCompletedPayload,
+): void {
+  if (!handler) {
+    return;
+  }
+
+  try {
+    handler(payload);
+  } catch (error) {
+    console.error("Provider startup model sync completion callback failed.", error);
   }
 }
 

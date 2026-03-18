@@ -1,5 +1,6 @@
 import type {
   GetActiveWorkspaceOptions,
+  TabStateItem,
   WorkspaceSettingsPatch,
   WorkspaceUpdateInput,
 } from "@shared/ipc";
@@ -52,6 +53,15 @@ export const workspaceApi = {
       throw new Error(parsedWorkspaceId.error);
     }
 
-    return window.electronAPI.getTabsUiState(parsedWorkspaceId.value);
+    return window.electronAPI.getWorkspaceTabsUiState(parsedWorkspaceId.value);
+  },
+
+  setTabsUiState(workspaceId: string, tabs: TabStateItem[]) {
+    const parsedWorkspaceId = parseWorkspaceId(workspaceId);
+    if (!parsedWorkspaceId.ok) {
+      throw new Error(parsedWorkspaceId.error);
+    }
+
+    return window.electronAPI.setWorkspaceTabsUiState(parsedWorkspaceId.value, tabs);
   },
 };

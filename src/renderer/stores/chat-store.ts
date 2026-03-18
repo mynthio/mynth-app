@@ -4,11 +4,21 @@ import { DefaultChatTransport, type ChatStatus } from "ai";
 import { create } from "zustand";
 
 import { chatMessageMetadataSchema, type MynthUiMessage } from "@shared/chat/message-metadata";
+import { createUuidV7 } from "@shared/uuidv7";
 
 interface ChatStoreState {
   chatEntries: Map<string, Chat<MynthUiMessage>>;
   getOrCreateChat: (chatId: string, apiUrl: string) => Chat<MynthUiMessage>;
   removeChat: (chatId: string) => void;
+}
+
+export function createChatTransport(apiUrl: string, chatId: string) {
+  return new DefaultChatTransport<MynthUiMessage>({
+    api: apiUrl,
+    prepareSendMessagesRequest: ({ body, trigger, messages, messageId }) => ({
+      body: { ...body, chatId, messages, trigger, messageId },
+    }),
+  });
 }
 
 export const useChatStore = create<ChatStoreState>((set, get) => ({
@@ -20,12 +30,8 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
 
     const chat = new Chat<MynthUiMessage>({
       id: chatId,
-      transport: new DefaultChatTransport<MynthUiMessage>({
-        api: apiUrl,
-        prepareSendMessagesRequest: ({ body, trigger, messages, messageId }) => ({
-          body: { ...body, chatId, messages, trigger, messageId },
-        }),
-      }),
+      generateId: createUuidV7,
+      transport: createChatTransport(apiUrl, chatId),
       messageMetadataSchema: chatMessageMetadataSchema,
     });
 
