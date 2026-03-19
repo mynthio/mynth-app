@@ -1,5 +1,7 @@
-import { rename } from "node:fs/promises";
+import { execFile as execFileCallback } from "node:child_process";
+import { access, rename } from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
 import type { ForgeConfig, ForgeMakeResult } from "@electron-forge/shared-types";
 import { MakerSquirrel } from "@electron-forge/maker-squirrel";
 import { MakerZIP } from "@electron-forge/maker-zip";
@@ -16,7 +18,34 @@ const APP_WEBSITE = "https://mynth.io";
 const ICON_BASE_PATH = path.resolve(__dirname, "assets/icons/icon");
 const WINDOWS_ICON_PATH = `${ICON_BASE_PATH}.ico`;
 const LINUX_ICON_PATH = `${ICON_BASE_PATH}.png`;
+const APPLE_CODESIGN_IDENTITY = process.env.APPLE_CODESIGN_IDENTITY;
+const APPLE_ID = process.env.APPLE_ID;
+const APPLE_APP_SPECIFIC_PASSWORD = process.env.APPLE_APP_SPECIFIC_PASSWORD;
+const APPLE_TEAM_ID = process.env.APPLE_TEAM_ID;
 const isPrereleaseTag = (process.env.GITHUB_REF_NAME ?? "").includes("-");
+const execFile = promisify(execFileCallback);
+const hasMacDeveloperSigningIdentity = Boolean(APPLE_CODESIGN_IDENTITY);
+const shouldNotarizeMacApp =
+  hasMacDeveloperSigningIdentity &&
+  Boolean(APPLE_ID && APPLE_APP_SPECIFIC_PASSWORD && APPLE_TEAM_ID);
+
+const macPackagerConfig = hasMacDeveloperSigningIdentity
+  ? {
+      osxSign: {
+        hardenedRuntime: true,
+        identity: APPLE_CODESIGN_IDENTITY as string,
+      },
+      ...(shouldNotarizeMacApp
+        ? {
+            osxNotarize: {
+              appleId: APPLE_ID as string,
+              appleIdPassword: APPLE_APP_SPECIFIC_PASSWORD as string,
+              teamId: APPLE_TEAM_ID as string,
+            },
+          }
+        : {}),
+    }
+  : {};
 
 const releasePlatformName = (platform: ForgeMakeResult["platform"]) => {
   switch (platform) {
@@ -64,6 +93,27 @@ const renamedArtifactPath = (makeResult: ForgeMakeResult, artifactPath: string) 
   return path.join(artifactDir, `${releaseName}${artifactExtension}`);
 };
 
+const pathExists = async (targetPath: string) => {
+  try {
+    await access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const runCodesign = async (args: string[]) => {
+  await execFile("codesign", args);
+};
+
+const ensureMacAppSignature = async (appPath: string) => {
+  if (!hasMacDeveloperSigningIdentity) {
+    await runCodesign(["--force", "--deep", "--sign", "-", appPath]);
+  }
+
+  await runCodesign(["--verify", "--deep", "--strict", "--verbose=2", appPath]);
+};
+
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
@@ -73,6 +123,7 @@ const config: ForgeConfig = {
     executableName: APP_NAME,
     icon: ICON_BASE_PATH,
     name: APP_NAME,
+    ...macPackagerConfig,
     win32metadata: {
       CompanyName: APP_NAME,
       FileDescription: APP_NAME,
@@ -83,6 +134,21 @@ const config: ForgeConfig = {
   },
   rebuildConfig: {},
   hooks: {
+    postPackage: async (_forgeConfig, packageResult) => {
+      if (packageResult.platform !== "darwin" || process.platform !== "darwin") {
+        return;
+      }
+
+      for (const outputPath of packageResult.outputPaths) {
+        const appPath = path.join(outputPath, `${APP_NAME}.app`);
+
+        if (!(await pathExists(appPath))) {
+          continue;
+        }
+
+        await ensureMacAppSignature(appPath);
+      }
+    },
     postMake: async (_forgeConfig, makeResults) => {
       for (const makeResult of makeResults) {
         makeResult.artifacts = await Promise.all(
