@@ -12,6 +12,7 @@ import { InputGroup, InputGroupAddon, InputGroupTextarea } from "@/components/ui
 import {
   useChatCanStop,
   ChatContextProvider,
+  useChatRegenerateMessage,
   useChatIsInteractionLocked,
   useChatIsStreaming,
   useChatMessages,
@@ -156,12 +157,15 @@ function ActiveChatContent() {
   const modelId = useChatModelId();
   const messages = useChatMessages();
   const sendMessage = useChatSendMessage();
+  const regenerateMessage = useChatRegenerateMessage();
   const stopChat = useChatStop();
   const canStop = useChatCanStop();
   const isInteractionLocked = useChatIsInteractionLocked();
   const isStreaming = useChatIsStreaming();
   const { containerRef, anchorRef, scrollToBottom } = useScrollToBottom(isStreaming);
   const { data: globalChatSettings } = useQuery(globalChatSettingsQueryOptions);
+  const lastMessage = messages.at(-1) ?? null;
+  const lastUserMessageId = lastMessage?.role === "user" ? lastMessage.id : null;
 
   const promptStickyPosition = globalChatSettings?.promptStickyPosition ?? true;
   const submitBehavior = globalChatSettings?.formSubmitBehavior ?? "enter";
@@ -247,6 +251,23 @@ function ActiveChatContent() {
               promptStickyPosition ? "sticky bottom-4" : null,
             )}
           >
+            {lastUserMessageId && !canStop ? (
+              <div className="mb-3 flex justify-center">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={!modelId || isInteractionLocked}
+                  onClick={() => {
+                    scrollToBottom();
+                    void regenerateMessage({ messageId: lastUserMessageId });
+                  }}
+                >
+                  Generate
+                </Button>
+              </div>
+            ) : null}
+
             <form
               onSubmit={(e) => {
                 e.preventDefault();
