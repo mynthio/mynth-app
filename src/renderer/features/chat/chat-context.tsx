@@ -21,17 +21,24 @@ type ChatContextState = {
   continuationError: string | null;
   setModelId: (modelId: string | null) => void;
   sendMessage: ChatSendMessage;
+  stopGeneration: () => Promise<void>;
   regenerateMessage: (options?: Parameters<ChatRegenerate>[0]) => ReturnType<ChatRegenerate>;
   continueMessage: (messageId: string) => Promise<void>;
   switchBranch: (branchId: string) => Promise<void>;
   startEditingMessage: (messageId: string) => void;
   stopEditingMessage: () => void;
-  submitEditedMessage: (messageId: string, text: string) => Promise<void>;
+  submitEditedMessage: (
+    messageId: string,
+    text: string,
+    behavior: EditMessageBehavior,
+  ) => Promise<void>;
 };
 
 type ChatTransportRefs = {
   sendMessage: ChatSendMessage | null;
   regenerate: ChatRegenerate | null;
+  stopChat: (() => Promise<void>) | null;
+  stopContinuation: (() => void) | null;
   getMessages: (() => MynthUiMessage[]) | null;
   getStatus: (() => Chat<MynthUiMessage>["status"]) | null;
   setMessages:
@@ -83,6 +90,16 @@ function createChatContextStore({
 
         return { ...current, modelId };
       }),
+    stopGeneration: async () => {
+      const { continuingMessageId } = get();
+
+      if (continuingMessageId !== null) {
+        transportRefs.stopContinuation?.();
+        return;
+      }
+
+      await transportRefs.stopChat?.();
+    },
     sendMessage: (message, options) => {
       const {
         editingMessageId,
@@ -196,11 +213,17 @@ function createChatContextStore({
 
       const requestMessages = baselineMessages.slice(0, messageIndex + 1);
       const continuationTransport = createChatTransport(apiUrl, chatId);
+      const continuationAbortController = new AbortController();
+      let lastStreamedContinuationMessage: MynthUiMessage | null = null;
       let didStreamFinish = false;
+
+      transportRefs.stopContinuation = () => {
+        continuationAbortController.abort();
+      };
 
       try {
         const stream = await continuationTransport.sendMessages({
-          abortSignal: undefined,
+          abortSignal: continuationAbortController.signal,
           body: {
             mode: "continue-message",
             modelId: currentModelId,
@@ -217,6 +240,8 @@ function createChatContextStore({
           stream,
         })) {
           const mergedMessage = mergeContinuationMessage(targetMessage, streamedMessage);
+          lastStreamedContinuationMessage = structuredClone(mergedMessage) as MynthUiMessage;
+
           React.startTransition(() => {
             transportRefs.setMessages?.(
               replaceMessageById(
@@ -241,6 +266,39 @@ function createChatContextStore({
           continuationError: null,
         }));
       } catch (error) {
+        if (isAbortError(error)) {
+          const optimisticMessages = lastStreamedContinuationMessage
+            ? replaceMessageById(
+                baselineMessages,
+                messageId,
+                structuredClone(lastStreamedContinuationMessage) as MynthUiMessage,
+              )
+            : baselineMessages;
+
+          React.startTransition(() => {
+            transportRefs.setMessages?.(optimisticMessages);
+          });
+
+          const persistedMessages = await syncContinuationMessagesAfterAbort({
+            chatId,
+            fallbackMessages: optimisticMessages,
+            messageId,
+            originalMessage: targetMessage,
+          });
+
+          React.startTransition(() => {
+            transportRefs.setMessages?.(persistedMessages);
+          });
+
+          set((current) => ({
+            ...current,
+            continuingMessageId: null,
+            continuationError: null,
+          }));
+
+          return;
+        }
+
         if (!didStreamFinish) {
           React.startTransition(() => {
             transportRefs.setMessages?.(baselineMessages);
@@ -252,6 +310,8 @@ function createChatContextStore({
           continuingMessageId: null,
           continuationError: getErrorMessage(error, "Failed to continue the message."),
         }));
+      } finally {
+        transportRefs.stopContinuation = null;
       }
     },
     switchBranch: async (branchId) => {
@@ -297,7 +357,7 @@ function createChatContextStore({
           editingMessageId: null,
         };
       }),
-    submitEditedMessage: async (messageId, text) => {
+    submitEditedMessage: async (messageId, text, behavior) => {
       const trimmedText = text.trim();
 
       if (!trimmedText || !transportRefs.setMessages) {
@@ -321,18 +381,15 @@ function createChatContextStore({
         return;
       }
 
-      const editBehavior: EditMessageBehavior =
-        message.role === "assistant" ? "overwrite" : "branch";
-
       set((current) => ({
         ...current,
         editingMessageId: null,
       }));
 
-      const persistedMessages = await messagesApi.editMessage(messageId, trimmedText, editBehavior);
+      const persistedMessages = await messagesApi.editMessage(messageId, trimmedText, behavior);
       transportRefs.setMessages(persistedMessages);
 
-      if (message.role === "assistant") {
+      if (message.role === "assistant" || behavior !== "branch") {
         return;
       }
 
@@ -360,6 +417,8 @@ export function ChatContextProvider({
   const transportRefs = React.useRef<ChatTransportRefs>({
     sendMessage: null,
     regenerate: null,
+    stopChat: null,
+    stopContinuation: null,
     getMessages: null,
     getStatus: null,
     setMessages: null,
@@ -379,6 +438,7 @@ export function ChatContextProvider({
   const store = storeRef.current;
   transportRefs.current.sendMessage = chat.sendMessage;
   transportRefs.current.regenerate = chat.regenerate;
+  transportRefs.current.stopChat = chat.stop;
   transportRefs.current.getMessages = () => chat.messages;
   transportRefs.current.getStatus = () => chat.status;
   transportRefs.current.setMessages = (messagesParam) => {
@@ -557,9 +617,7 @@ export function useChatSendMessage() {
 }
 
 export function useChatStop() {
-  const chat = useChatSession();
-
-  return React.useCallback(() => chat.stop(), [chat]);
+  return useChatContext((state) => state.stopGeneration);
 }
 
 export function useChatRegenerateMessage() {
@@ -580,7 +638,10 @@ export function useChatIsStreaming() {
 }
 
 export function useChatCanStop() {
-  return useChatTransportBusy();
+  const isTransportBusy = useChatTransportBusy();
+  const continuingMessageId = useChatContext((state) => state.continuingMessageId);
+
+  return isTransportBusy || continuingMessageId !== null;
 }
 
 export function useChatIsBusy() {
@@ -682,6 +743,54 @@ function replaceMessageById(
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message.trim() ? error.message : fallback;
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof Error && error.name === "AbortError";
+}
+
+async function syncContinuationMessagesAfterAbort({
+  chatId,
+  fallbackMessages,
+  messageId,
+  originalMessage,
+}: {
+  chatId: string;
+  fallbackMessages: MynthUiMessage[];
+  messageId: string;
+  originalMessage: MynthUiMessage;
+}) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const persistedMessages = await messagesApi.listMessages(chatId).catch(() => null);
+
+    if (persistedMessages) {
+      const persistedMessage = persistedMessages.find((message) => message.id === messageId);
+
+      if (
+        persistedMessage &&
+        !areMessagePartsEqual(persistedMessage.parts, originalMessage.parts)
+      ) {
+        return persistedMessages;
+      }
+    }
+
+    await wait(60 * (attempt + 1));
+  }
+
+  return fallbackMessages;
+}
+
+function areMessagePartsEqual(
+  left: readonly MynthUiMessage["parts"][number][],
+  right: readonly MynthUiMessage["parts"][number][],
+) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function wait(ms: number) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
 }
 
 function mergeContinuationMessage(

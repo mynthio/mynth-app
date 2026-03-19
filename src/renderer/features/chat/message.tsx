@@ -3,6 +3,7 @@ import { Streamdown } from "streamdown";
 import { code } from "@streamdown/code";
 
 import type { MynthUiMessage } from "@shared/chat/message-metadata";
+import type { EditMessageBehavior } from "@shared/ipc";
 import {
   useChatContinueMessage,
   useChatIsInteractionLocked,
@@ -99,7 +100,11 @@ interface AssistantMessageToolsProps {
   onDraftChange: (value: string) => void;
   startEditingMessage: (messageId: string) => void;
   stopEditingMessage: () => void;
-  submitEditedMessage: (messageId: string, text: string) => Promise<void>;
+  submitEditedMessage: (
+    messageId: string,
+    text: string,
+    behavior: EditMessageBehavior,
+  ) => Promise<void>;
 }
 
 const AssistantMessageTools = React.memo(function AssistantMessageTools({
@@ -212,7 +217,11 @@ interface EditableMessageToolsProps {
   messageText: string;
   onDraftChange: (value: string) => void;
   stopEditingMessage: () => void;
-  submitEditedMessage: (messageId: string, text: string) => Promise<void>;
+  submitEditedMessage: (
+    messageId: string,
+    text: string,
+    behavior: EditMessageBehavior,
+  ) => Promise<void>;
 }
 
 const EditableMessageTools = React.memo(function EditableMessageTools({
@@ -231,10 +240,20 @@ const EditableMessageTools = React.memo(function EditableMessageTools({
           size="xs"
           disabled={!canSave}
           onClick={() => {
-            void submitEditedMessage(messageId, draft);
+            void submitEditedMessage(messageId, draft, "overwrite");
           }}
         >
           Save
+        </Button>
+        <Button
+          size="xs"
+          variant="secondary"
+          disabled={!canSave}
+          onClick={() => {
+            void submitEditedMessage(messageId, draft, "branch");
+          }}
+        >
+          Save as new branch
         </Button>
         <Button
           size="xs"
@@ -261,7 +280,11 @@ interface UserMessageToolsProps {
   onDraftChange: (value: string) => void;
   startEditingMessage: (messageId: string) => void;
   stopEditingMessage: () => void;
-  submitEditedMessage: (messageId: string, text: string) => Promise<void>;
+  submitEditedMessage: (
+    messageId: string,
+    text: string,
+    behavior: EditMessageBehavior,
+  ) => Promise<void>;
 }
 
 const UserMessageTools = React.memo(function UserMessageTools({
