@@ -1,3 +1,4 @@
+import path from "node:path";
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import started from "electron-squirrel-startup";
 import { bootstrapBackend } from "./main-process/app/bootstrap-backend";
@@ -5,12 +6,23 @@ import { createMainWindow } from "./main-process/app/create-main-window";
 import { closeAppDatabase } from "./main-process/db/database";
 import { registerIpcHandlers } from "./main-process/ipc";
 import { createAiServer } from "./main-process/server";
+import { getDefaultAppIdentifier } from "./main-process/system/paths";
 import {
   SYSTEM_EVENT_CHANNEL,
   SYSTEM_STATE_CHANNEL,
   type SystemEvent,
   type SystemState,
 } from "./shared/events";
+
+const APP_NAME = "Mynth";
+const APP_IDENTIFIER = getDefaultAppIdentifier();
+
+app.setName(APP_NAME);
+app.setPath("userData", path.join(app.getPath("appData"), APP_IDENTIFIER));
+
+if (process.platform === "win32") {
+  app.setAppUserModelId(APP_IDENTIFIER);
+}
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {

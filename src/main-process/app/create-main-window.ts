@@ -10,6 +10,18 @@ export interface CreateMainWindowOptions {
   onClosed?: () => void;
 }
 
+function getMainWindowIconPath(): string | undefined {
+  if (process.platform === "linux") {
+    return path.join(__dirname, "../../assets/icons/icon.png");
+  }
+
+  if (process.platform === "win32") {
+    return path.join(__dirname, "../../assets/icons/icon.ico");
+  }
+
+  return undefined;
+}
+
 export function createMainWindow(options: CreateMainWindowOptions): BrowserWindow {
   const isMac = process.platform === "darwin";
   const windowState = createPersistentWindowState({
@@ -22,6 +34,7 @@ export function createMainWindow(options: CreateMainWindowOptions): BrowserWindo
 
   const mainWindow = new BrowserWindow({
     ...windowState.browserWindowOptions,
+    icon: getMainWindowIconPath(),
     ...(isMac
       ? {
           titleBarStyle: "hiddenInset" as const,
@@ -33,6 +46,7 @@ export function createMainWindow(options: CreateMainWindowOptions): BrowserWindo
           },
         }
       : {}),
+    title: "Mynth",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,

@@ -1,8 +1,8 @@
 ![Mynth banner](./assets/frame-86.png)
 
-# Mynth Desktop
+# Mynth
 
-Local-first AI chat desktop app (Electron Forge + React). Early stage.
+Mynth app (Electron Forge + React). Early stage.
 
 ## Product docs
 

@@ -1,5 +1,5 @@
 # Mynth — global application config
-# This file lives at: <AppData>/app.mynth.io/<channel>/config.toml
+# This file lives at: <AppData>/com.mynth.io/<data|data-dev>/config.toml
 # Missing keys fall back to built-in defaults.
 
 [app]

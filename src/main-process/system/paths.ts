@@ -4,6 +4,17 @@ import { homedir } from "node:os";
 
 const require = createRequire(__filename);
 
+export function getDefaultAppIdentifier(): string {
+  return process.env["MYNTH_APP_IDENTIFIER"] ?? "com.mynth.io";
+}
+
+export function getDefaultAppChannel(): string {
+  return (
+    process.env["MYNTH_APP_CHANNEL"] ??
+    (process.env["NODE_ENV"] === "production" ? "data" : "data-dev")
+  );
+}
+
 function getElectronApp(): import("electron").App | null {
   if (!process.versions.electron) {
     return null;
@@ -44,9 +55,8 @@ export function getUserDataDirectory(): string {
     return process.env["MYNTH_USER_DATA_DIR"];
   }
 
-  const appIdentifier = process.env["MYNTH_APP_IDENTIFIER"] ?? "app.mynth.io";
-  const channel =
-    process.env["MYNTH_APP_CHANNEL"] ?? (process.env["NODE_ENV"] === "production" ? "prod" : "dev");
+  const appIdentifier = getDefaultAppIdentifier();
+  const channel = getDefaultAppChannel();
 
   const electronApp = getElectronApp();
   if (electronApp) {

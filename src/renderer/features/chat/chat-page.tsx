@@ -254,7 +254,7 @@ function ActiveChatContent() {
               }}
             >
               <InputGroup
-                className="dark:bg-background shadow-xl shadow-black/20 p-3"
+                className="dark:bg-background shadow-xl shadow-black/20 p-3 backdrop-blur-xl dark:backdrop-blur-xl"
                 style={
                   {
                     "--radius-lg": "30px",

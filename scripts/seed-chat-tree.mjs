@@ -46,9 +46,9 @@ function getUserDataDirectory() {
     return process.env.MYNTH_USER_DATA_DIR;
   }
 
-  const appIdentifier = process.env.MYNTH_APP_IDENTIFIER ?? "app.mynth.io";
+  const appIdentifier = process.env.MYNTH_APP_IDENTIFIER ?? "com.mynth.io";
   const channel =
-    process.env.MYNTH_APP_CHANNEL ?? (process.env.NODE_ENV === "production" ? "prod" : "dev");
+    process.env.MYNTH_APP_CHANNEL ?? (process.env.NODE_ENV === "production" ? "data" : "data-dev");
   return join(getAppDataDirectory(), appIdentifier, channel);
 }
 

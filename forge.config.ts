@@ -10,6 +10,12 @@ import { AutoUnpackNativesPlugin } from "@electron-forge/plugin-auto-unpack-nati
 import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
 
+const APP_NAME = "Mynth";
+const APP_IDENTIFIER = "com.mynth.io";
+const APP_WEBSITE = "https://mynth.io";
+const ICON_BASE_PATH = path.resolve(__dirname, "assets/icons/icon");
+const WINDOWS_ICON_PATH = `${ICON_BASE_PATH}.ico`;
+const LINUX_ICON_PATH = `${ICON_BASE_PATH}.png`;
 const isPrereleaseTag = (process.env.GITHUB_REF_NAME ?? "").includes("-");
 
 const releasePlatformName = (platform: ForgeMakeResult["platform"]) => {
@@ -61,7 +67,19 @@ const renamedArtifactPath = (makeResult: ForgeMakeResult, artifactPath: string) 
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    appBundleId: APP_IDENTIFIER,
+    appCategoryType: "public.app-category.productivity",
     extraResource: ["src/main-process/db/migrations"],
+    executableName: APP_NAME,
+    icon: ICON_BASE_PATH,
+    name: APP_NAME,
+    win32metadata: {
+      CompanyName: APP_NAME,
+      FileDescription: APP_NAME,
+      InternalName: APP_NAME,
+      OriginalFilename: `${APP_NAME}.exe`,
+      ProductName: APP_NAME,
+    },
   },
   rebuildConfig: {},
   hooks: {
@@ -84,7 +102,25 @@ const config: ForgeConfig = {
       return makeResults;
     },
   },
-  makers: [new MakerSquirrel({}), new MakerZIP({}, ["darwin"]), new MakerRpm({}), new MakerDeb({})],
+  makers: [
+    new MakerSquirrel({
+      setupIcon: WINDOWS_ICON_PATH,
+    }),
+    new MakerZIP({}, ["darwin"]),
+    new MakerRpm({
+      options: {
+        homepage: APP_WEBSITE,
+        icon: LINUX_ICON_PATH,
+      },
+    }),
+    new MakerDeb({
+      options: {
+        homepage: APP_WEBSITE,
+        icon: LINUX_ICON_PATH,
+        maintainer: "Mynth <hello@mynth.io>",
+      },
+    }),
+  ],
   publishers: [
     {
       name: "@electron-forge/publisher-github",
