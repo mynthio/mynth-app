@@ -5,9 +5,6 @@ import path from "node:path";
 const external = [
   "better-sqlite3",
   "electron",
-  "@hono/node-server",
-  "ai",
-  "@openrouter/ai-sdk-provider",
   ...builtinModules,
   ...builtinModules.map((moduleName) => `node:${moduleName}`),
 ];

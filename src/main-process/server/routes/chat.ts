@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { consumeStream, convertToModelMessages, streamText } from "ai";
+import { consumeStream, convertToModelMessages, smoothStream, streamText } from "ai";
 import { parseChatId } from "@shared/chat/chat-id";
 import {
   normalizeChatMessageMetadata,
@@ -142,6 +142,7 @@ export function createChatRoute() {
     const result = streamText({
       abortSignal: c.req.raw.signal,
       model: languageModel,
+      experimental_transform: smoothStream(),
       messages: await convertToModelMessages(modelInputMessages),
       onFinish: ({ usage }) => {
         capturedResponseMetadata = buildResponseMetadata(
@@ -155,6 +156,7 @@ export function createChatRoute() {
 
     return result.toUIMessageStreamResponse({
       consumeSseStream: consumeStream,
+
       generateMessageId:
         mode === "continue-message" && continuationTargetMessage
           ? () => continuationTargetMessage.id

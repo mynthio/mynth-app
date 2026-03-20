@@ -60,7 +60,7 @@ const AssistantMessageTextPart = React.memo(function AssistantMessageTextPart({
   return (
     <Streamdown
       plugins={{ code }}
-      animated
+      animated={{ animation: "blurIn", duration: 50, easing: "ease-out" }}
       isAnimating={isAnimating}
       className="text-[1.0625rem] text-foreground/85 leading-[1.75]"
     >

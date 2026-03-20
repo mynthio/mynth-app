@@ -1,5 +1,5 @@
 import { execFile as execFileCallback } from "node:child_process";
-import { access, rename } from "node:fs/promises";
+import { access, cp, mkdir, rename } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import type { ForgeConfig, ForgeMakeResult } from "@electron-forge/shared-types";
@@ -102,6 +102,25 @@ const pathExists = async (targetPath: string) => {
   }
 };
 
+const copyPackagedNodeModules = async (buildPath: string) => {
+  const packagedNodeModulesPath = path.join(buildPath, "node_modules");
+  const runtimeDependencies = ["better-sqlite3", "bindings"];
+
+  await mkdir(packagedNodeModulesPath, { recursive: true });
+
+  await Promise.all(
+    runtimeDependencies.map(async (dependencyName) => {
+      const sourcePath = path.resolve(__dirname, "node_modules", dependencyName);
+      const targetPath = path.join(packagedNodeModulesPath, dependencyName);
+
+      await cp(sourcePath, targetPath, {
+        force: true,
+        recursive: true,
+      });
+    }),
+  );
+};
+
 const runCodesign = async (args: string[]) => {
   await execFile("codesign", args);
 };
@@ -116,7 +135,9 @@ const ensureMacAppSignature = async (appPath: string) => {
 
 const config: ForgeConfig = {
   packagerConfig: {
-    asar: true,
+    asar: {
+      unpack: "**/*.node",
+    },
     appBundleId: APP_IDENTIFIER,
     appCategoryType: "public.app-category.productivity",
     extraResource: ["src/main-process/db/migrations"],
@@ -134,6 +155,9 @@ const config: ForgeConfig = {
   },
   rebuildConfig: {},
   hooks: {
+    packageAfterCopy: async (_forgeConfig, buildPath) => {
+      await copyPackagedNodeModules(buildPath);
+    },
     postPackage: async (_forgeConfig, packageResult) => {
       if (packageResult.platform !== "darwin" || process.platform !== "darwin") {
         return;
