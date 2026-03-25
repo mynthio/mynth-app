@@ -1,3 +1,4 @@
+import type { ChatSettingsUpdateInput } from "@shared/ipc";
 import "../lib/electron-api";
 import { parseWorkspaceId } from "@shared/workspace/workspace-id";
 
@@ -15,8 +16,16 @@ export const chatsApi = {
     return window.electronAPI.createChat(parsedWorkspaceId.value, title, folderId);
   },
 
+  clone(id: string) {
+    return window.electronAPI.cloneChat(id);
+  },
+
   updateTitle(id: string, title: string) {
     return window.electronAPI.updateChatTitle(id, title);
+  },
+
+  updateSettings(id: string, input: ChatSettingsUpdateInput) {
+    return window.electronAPI.updateChatSettings(id, input);
   },
 
   move(id: string, folderId: string | null) {

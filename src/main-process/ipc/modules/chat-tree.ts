@@ -1,10 +1,13 @@
 import { BrowserWindow, Menu } from "electron";
 import {
   IPC_CHANNELS,
+  type ChatTreeItemRef,
   type ChatTreeChildrenSlice,
   type ChatTreeSnapshot,
   type ChatTreeUiState,
+  type DeleteChatTreeItemsResult,
 } from "@shared/ipc";
+import { parseChatId } from "@shared/chat/chat-id";
 import { parseFolderId } from "@shared/folder/folder-id";
 import { parseWorkspaceId } from "@shared/workspace/workspace-id";
 import type { IpcHandlerContext } from "../core/context";
@@ -58,6 +61,46 @@ function parseStringArray(input: unknown, label: string): string[] {
   return values;
 }
 
+function parseChatTreeItemRefs(input: unknown): ChatTreeItemRef[] {
+  if (!Array.isArray(input)) {
+    throw AppError.badRequest("Chat tree items must be an array.");
+  }
+
+  const items: ChatTreeItemRef[] = [];
+
+  for (const entry of input) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw AppError.badRequest("Each chat tree item must be an object.");
+    }
+
+    const record = entry as Record<string, unknown>;
+
+    if (record.kind === "chat") {
+      const parsedChatId = parseChatId(record.id);
+      if (!parsedChatId.ok) {
+        throw AppError.badRequest(parsedChatId.error);
+      }
+
+      items.push({ kind: "chat", id: parsedChatId.value });
+      continue;
+    }
+
+    if (record.kind === "folder") {
+      const parsedFolderId = parseFolderId(record.id);
+      if (!parsedFolderId.ok) {
+        throw AppError.badRequest(parsedFolderId.error);
+      }
+
+      items.push({ kind: "folder", id: parsedFolderId.value });
+      continue;
+    }
+
+    throw AppError.badRequest("Chat tree item kind must be 'chat' or 'folder'.");
+  }
+
+  return items;
+}
+
 export function registerChatTreeIpcModule(
   context: IpcHandlerContext,
   registeredChannels: Set<string>,
@@ -105,9 +148,23 @@ export function registerChatTreeIpcModule(
       services.chatTree.setChatTreeUiState(workspaceId, expandedFolderIds),
   });
 
+  registerInvokeHandler<[string, ChatTreeItemRef[]], DeleteChatTreeItemsResult>(
+    context,
+    registeredChannels,
+    {
+      channel: IPC_CHANNELS.chatTree.deleteItems,
+      parseArgs: (args) => {
+        expectArgCount(args, 2);
+        return [parseValidWorkspaceId(args[0]), parseChatTreeItemRefs(args[1])];
+      },
+      handler: ({ services }, _event, workspaceId, items) =>
+        services.chatTree.deleteChatTreeItems(workspaceId, items),
+    },
+  );
+
   registerInvokeHandler<
     [string, string],
-    "add-folder" | "add-chat" | "open-in-new-tab" | "rename" | "delete" | null
+    "add-folder" | "add-chat" | "open-in-new-tab" | "clone" | "rename" | "delete" | null
   >(context, registeredChannels, {
     channel: IPC_CHANNELS.chatTree.showContextMenu,
     parseArgs: (args) => {
@@ -122,10 +179,16 @@ export function registerChatTreeIpcModule(
     },
     handler: (_context, event, _itemId, itemKind) => {
       return new Promise<
-        "add-folder" | "add-chat" | "open-in-new-tab" | "rename" | "delete" | null
+        "add-folder" | "add-chat" | "open-in-new-tab" | "clone" | "rename" | "delete" | null
       >((resolve) => {
-        let selected: "add-folder" | "add-chat" | "open-in-new-tab" | "rename" | "delete" | null =
-          null;
+        let selected:
+          | "add-folder"
+          | "add-chat"
+          | "open-in-new-tab"
+          | "clone"
+          | "rename"
+          | "delete"
+          | null = null;
 
         const menu = Menu.buildFromTemplate([
           ...(itemKind === "folder"
@@ -151,6 +214,12 @@ export function registerChatTreeIpcModule(
                   label: "Open in New Tab",
                   click: () => {
                     selected = "open-in-new-tab";
+                  },
+                },
+                {
+                  label: "Clone",
+                  click: () => {
+                    selected = "clone";
                   },
                 },
                 { type: "separator" as const },

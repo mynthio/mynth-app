@@ -44,6 +44,10 @@ import {
   type ParsedProviderRuntimeConfig,
 } from "../providers/runtime-config";
 import { AppError } from "../ipc/core/errors";
+import {
+  getSdkProviderRegistryEntry,
+  type ProviderRequestSpec,
+} from "../server/providers/sdk-provider-registry";
 import { encryptString, isEncryptionAvailable } from "./safe-storage";
 
 export interface ProviderService {
@@ -107,12 +111,25 @@ export function createProviderService(options?: ProviderServiceOptions): Provide
 
       const config = parseProviderDraftConfig(provider, input.config);
 
-      switch (input.providerId) {
-        case "ollama":
-          return testOllamaCredentials(getRequiredDraftHostPortConfigValue(config, "endpoint"));
-        case "openrouter":
-          return testOpenRouterCredentials(getRequiredDraftSecretConfigValue(config, "apiKey"));
+      if (input.providerId === "ollama") {
+        return testOllamaCredentials(getRequiredDraftHostPortConfigValue(config, "endpoint"));
       }
+
+      if (input.providerId === "openrouter") {
+        return testOpenRouterCredentials(getRequiredDraftSecretConfigValue(config, "apiKey"));
+      }
+
+      const providerEntry = getSdkProviderRegistryEntry(input.providerId);
+      if (!providerEntry) {
+        throw AppError.badRequest(
+          `Provider "${input.providerId}" does not support credential testing.`,
+        );
+      }
+
+      return testSdkProviderCredentials(
+        provider,
+        providerEntry.buildModelsRequest(getRequiredDraftSecretConfigValue(config, "apiKey")),
+      );
     },
 
     saveProvider(input) {
@@ -468,79 +485,22 @@ interface ProviderModelSyncHandlerInput {
 async function fetchModelsForProviderSync(
   input: ProviderModelSyncHandlerInput,
 ): Promise<SyncProviderModelInput[]> {
-  switch (input.providerDef.id) {
-    case "ollama":
-      return fetchOllamaModelsForSync(input);
-    case "openrouter":
-      return fetchOpenRouterModelsForSync(input);
+  if (input.providerDef.id === "ollama") {
+    return fetchOllamaModelsForSync(input);
   }
-}
 
-async function fetchOpenRouterModelsForSync({
-  parsedConfig,
-}: ProviderModelSyncHandlerInput): Promise<SyncProviderModelInput[]> {
-  const apiKey = getRequiredParsedSecretConfigValue(parsedConfig, "apiKey");
-  const endpoint = "https://openrouter.ai/api/v1/models";
-  const timeoutMs = 15_000;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const response = await fetch(endpoint, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        Accept: "application/json",
-      },
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      throw new Error(`OpenRouter model fetch failed with status ${response.status}.`);
-    }
-
-    const body = (await response.json()) as unknown;
-    const data = extractOpenRouterModelsArray(body);
-    const seenProviderModelIds = new Set<string>();
-    const normalized: SyncProviderModelInput[] = [];
-
-    for (const rawModel of data) {
-      if (!rawModel || typeof rawModel !== "object" || Array.isArray(rawModel)) {
-        continue;
-      }
-
-      const providerModelId = readTrimmedString((rawModel as Record<string, unknown>).id);
-      if (!providerModelId || seenProviderModelIds.has(providerModelId)) {
-        continue;
-      }
-
-      seenProviderModelIds.add(providerModelId);
-
-      const displayName = readTrimmedString((rawModel as Record<string, unknown>).name) ?? null;
-      const lifecycleStatus =
-        (rawModel as Record<string, unknown>).deprecated === true ||
-        (rawModel as Record<string, unknown>).archived === true
-          ? "deprecated"
-          : "active";
-
-      normalized.push({
-        providerModelId,
-        canonicalModelId: "unknown",
-        displayName,
-        metadata: rawModel as Record<string, unknown>,
-        lifecycleStatus,
-      });
-    }
-
-    return normalized;
-  } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError") {
-      throw new Error("OpenRouter model fetch timed out.", { cause: error });
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
+  const providerEntry = getSdkProviderRegistryEntry(input.providerDef.id);
+  if (!providerEntry) {
+    throw new Error(`Provider "${input.providerDef.id}" does not support model sync.`);
   }
+
+  return fetchSdkProviderModelsForSync(
+    input.providerDef.id,
+    providerEntry.buildModelsRequest(
+      getRequiredParsedSecretConfigValue(input.parsedConfig, "apiKey"),
+    ),
+    providerEntry.parseModels,
+  );
 }
 
 async function fetchOllamaModelsForSync({
@@ -600,19 +560,6 @@ async function fetchOllamaModelsForSync({
   } finally {
     clearTimeout(timeoutId);
   }
-}
-
-function extractOpenRouterModelsArray(body: unknown): unknown[] {
-  if (!body || typeof body !== "object" || Array.isArray(body)) {
-    throw new Error("OpenRouter model response must be an object.");
-  }
-
-  const data = (body as { data?: unknown }).data;
-  if (!Array.isArray(data)) {
-    throw new Error("OpenRouter model response is missing a data array.");
-  }
-
-  return data;
 }
 
 function extractOllamaModelsArray(body: unknown): unknown[] {
@@ -751,6 +698,37 @@ async function testOpenRouterCredentials(apiKey: string): Promise<ProviderCreden
   }
 }
 
+async function testSdkProviderCredentials(
+  provider: SupportedProviderDefinition,
+  request: ProviderRequestSpec,
+): Promise<ProviderCredentialTestResult> {
+  try {
+    const body = await fetchJsonWithTimeout(request);
+    const providerEntry = getSdkProviderRegistryEntry(provider.id);
+    providerEntry?.parseModels(body);
+
+    return {
+      providerId: provider.id,
+      ok: true,
+      message: `${provider.name} API key is valid.`,
+    };
+  } catch (error) {
+    if (error instanceof Error) {
+      return {
+        providerId: provider.id,
+        ok: false,
+        message: `${provider.name} credential test failed: ${error.message}`,
+      };
+    }
+
+    return {
+      providerId: provider.id,
+      ok: false,
+      message: `${provider.name} credential test failed due to an unknown error.`,
+    };
+  }
+}
+
 async function testOllamaCredentials(
   endpointConfig: ProviderHostPortConfigValue,
 ): Promise<ProviderCredentialTestResult> {
@@ -806,4 +784,47 @@ async function testOllamaCredentials(
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+async function fetchSdkProviderModelsForSync(
+  providerId: Exclude<ProviderId, "ollama">,
+  request: ProviderRequestSpec,
+  parseModels: (body: unknown) => SyncProviderModelInput[],
+): Promise<SyncProviderModelInput[]> {
+  const body = await fetchJsonWithTimeout(request, `${getProviderName(providerId)} model fetch`);
+  return parseModels(body);
+}
+
+async function fetchJsonWithTimeout(
+  request: ProviderRequestSpec,
+  operationName = "Provider request",
+): Promise<unknown> {
+  const timeoutMs = request.timeoutMs ?? 15_000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(request.url, {
+      ...request.init,
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`${operationName} failed with status ${response.status}.`);
+    }
+
+    return (await response.json()) as unknown;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error(`${operationName} timed out.`, { cause: error });
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function getProviderName(providerId: ProviderId): string {
+  return getSupportedProviderById(providerId)?.name ?? providerId;
 }

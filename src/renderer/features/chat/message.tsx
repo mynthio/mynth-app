@@ -6,15 +6,11 @@ import type { MynthUiMessage } from "@shared/chat/message-metadata";
 import type { EditMessageBehavior } from "@shared/ipc";
 import {
   useChatContinueMessage,
-  useChatIsInteractionLocked,
-  useChatModelId,
   useChatRegenerateMessage,
   useChatStartEditingMessage,
   useChatStopEditingMessage,
   useChatSubmitEditedMessage,
   useChatSwitchBranch,
-  useChatEditingMessageId,
-  useIsAnimatingMessage,
 } from "@/features/chat/chat-context";
 import { useChatScrollToBottom } from "@/features/chat/chat-scroll-context";
 import { useMessageContextMenu } from "@/hooks/use-message-context-menu";
@@ -32,6 +28,13 @@ import { cn } from "@/lib/utils";
 import { Group } from "@/components/ui/group";
 import { Textarea } from "@/components/ui/textarea";
 
+const STREAMDOWN_PLUGINS = { code };
+const STREAMDOWN_ANIMATION = {
+  animation: "blurIn",
+  duration: 50,
+  easing: "ease-out",
+} as const;
+
 // --- Text parts ---
 
 interface UserMessageTextPartProps {
@@ -42,7 +45,11 @@ const UserMessageTextPart = React.memo(function UserMessageTextPart({
   text,
 }: UserMessageTextPartProps) {
   return (
-    <Streamdown plugins={{ code }} className="text-[0.9375rem] leading-[1.6]">
+    <Streamdown
+      mode="static"
+      plugins={STREAMDOWN_PLUGINS}
+      className="text-[0.9375rem] leading-[1.6]"
+    >
       {text}
     </Streamdown>
   );
@@ -59,8 +66,9 @@ const AssistantMessageTextPart = React.memo(function AssistantMessageTextPart({
 }: AssistantMessageTextPartProps) {
   return (
     <Streamdown
-      plugins={{ code }}
-      animated={{ animation: "blurIn", duration: 50, easing: "ease-out" }}
+      mode={isAnimating ? "streaming" : "static"}
+      plugins={STREAMDOWN_PLUGINS}
+      animated={STREAMDOWN_ANIMATION}
       isAnimating={isAnimating}
       className="text-[1.0625rem] text-foreground/85 leading-[1.75]"
     >
@@ -330,18 +338,22 @@ const UserMessageTools = React.memo(function UserMessageTools({
 // --- Role-specific message components ---
 
 interface UserMessageProps {
+  isEditing: boolean;
+  isInteractionLocked: boolean;
   message: MynthUiMessage;
+  modelId: string | null;
 }
 
-const UserMessage = React.memo(function UserMessage({ message }: UserMessageProps) {
+const UserMessage = React.memo(function UserMessage({
+  isEditing,
+  isInteractionLocked,
+  message,
+  modelId,
+}: UserMessageProps) {
   const onContextMenu = useMessageContextMenu(message.id);
-  const modelId = useChatModelId();
-  const editingMessageId = useChatEditingMessageId();
-  const isInteractionLocked = useChatIsInteractionLocked();
   const startEditingMessage = useChatStartEditingMessage();
   const stopEditingMessage = useChatStopEditingMessage();
   const submitEditedMessage = useChatSubmitEditedMessage();
-  const isEditing = editingMessageId === message.id;
   const messageText = React.useMemo(() => getMessageText(message), [message]);
   const [draft, setDraft] = React.useState(messageText);
 
@@ -383,18 +395,22 @@ const UserMessage = React.memo(function UserMessage({ message }: UserMessageProp
 });
 
 interface AssistantMessageProps {
+  isAnimating: boolean;
+  isEditing: boolean;
+  isInteractionLocked: boolean;
   message: MynthUiMessage;
 }
 
-const AssistantMessage = React.memo(function AssistantMessage({ message }: AssistantMessageProps) {
-  const editingMessageId = useChatEditingMessageId();
-  const isInteractionLocked = useChatIsInteractionLocked();
+const AssistantMessage = React.memo(function AssistantMessage({
+  isAnimating,
+  isEditing,
+  isInteractionLocked,
+  message,
+}: AssistantMessageProps) {
   const startEditingMessage = useChatStartEditingMessage();
   const stopEditingMessage = useChatStopEditingMessage();
   const submitEditedMessage = useChatSubmitEditedMessage();
-  const isAnimating = useIsAnimatingMessage(message.id, message.role);
   const onContextMenu = useMessageContextMenu(message.id);
-  const isEditing = editingMessageId === message.id;
   const messageText = React.useMemo(() => getMessageText(message), [message]);
   const [draft, setDraft] = React.useState(messageText);
 
@@ -436,15 +452,39 @@ const AssistantMessage = React.memo(function AssistantMessage({ message }: Assis
 // --- Message dispatcher ---
 
 interface ChatMessageProps {
+  isAnimating: boolean;
+  isEditing: boolean;
+  isInteractionLocked: boolean;
   message: MynthUiMessage;
+  modelId: string | null;
 }
 
-export const ChatMessage = React.memo(function ChatMessage({ message }: ChatMessageProps) {
+export const ChatMessage = React.memo(function ChatMessage({
+  isAnimating,
+  isEditing,
+  isInteractionLocked,
+  message,
+  modelId,
+}: ChatMessageProps) {
   if (message.role === "user") {
-    return <UserMessage message={message} />;
+    return (
+      <UserMessage
+        isEditing={isEditing}
+        isInteractionLocked={isInteractionLocked}
+        message={message}
+        modelId={modelId}
+      />
+    );
   }
 
-  return <AssistantMessage message={message} />;
+  return (
+    <AssistantMessage
+      isAnimating={isAnimating}
+      isEditing={isEditing}
+      isInteractionLocked={isInteractionLocked}
+      message={message}
+    />
+  );
 });
 
 function getMessageText(message: MynthUiMessage): string {

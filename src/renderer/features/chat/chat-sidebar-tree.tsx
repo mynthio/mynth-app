@@ -1,12 +1,12 @@
 import * as React from "react";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { mergeProps } from "@base-ui/react/merge-props";
 import { useTree } from "@headless-tree/react";
 import {
   asyncDataLoaderFeature,
-  selectionFeature,
+  dragAndDropFeature,
   hotkeysCoreFeature,
   renamingFeature,
-  dragAndDropFeature,
+  selectionFeature,
 } from "@headless-tree/core";
 import type { ItemInstance } from "@headless-tree/core";
 import {
@@ -21,7 +21,17 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogPopup,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Sidebar, SidebarContent } from "@/components/ui/sidebar";
 import {
   Tree,
@@ -35,19 +45,17 @@ import { chatTreeApi } from "@/api/chat-tree";
 import { useChatStatus } from "@/stores/chat-store";
 import { cn } from "@/lib/utils";
 import {
-  useSetChatTreeUiState,
-  useRenameChatTreeItem,
-  useMoveFolder,
+  useDeleteChatTreeItems,
   useMoveChat,
+  useMoveFolder,
+  useRenameChatTreeItem,
+  useSetChatTreeUiState,
 } from "@/mutations/chat-tree";
-import { useCreateChat } from "@/mutations/chats";
+import { useCreateChat, useCloneChat } from "@/mutations/chats";
 import { useCreateFolder } from "@/mutations/folders";
-import { DeleteChatDialog } from "@/features/chat/delete-chat-dialog";
-import { DeleteFolderDialog } from "@/features/chat/delete-folder-dialog";
 
-import type { ChatInfo, ChatTreeFolderListItem } from "@shared/ipc";
+import type { ChatInfo, ChatTreeFolderListItem, ChatTreeItemRef } from "@shared/ipc";
 import { useWorkspaceStore } from "../workspace/store";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 
 type ChatTreeNodeData =
   | { kind: "folder"; folder: ChatTreeFolderListItem }
@@ -91,14 +99,14 @@ function ChatSidebarTreeInner({
   workspaceId: string;
   initialExpandedFolderIds: string[];
 }) {
-  const navigate = useNavigate();
-  const { deleteChat, deleteFolder } = useSearch({ from: "/chat" });
   const setChatTreeUiState = useSetChatTreeUiState();
 
+  const deleteItemsMutation = useDeleteChatTreeItems();
   const renameChatTreeItem = useRenameChatTreeItem();
   const moveFolderMutation = useMoveFolder();
   const moveChatMutation = useMoveChat();
   const createChatMutation = useCreateChat();
+  const cloneChatMutation = useCloneChat();
   const createFolderMutation = useCreateFolder();
 
   const openTab = useWorkspaceStore((s) => s.openTab);
@@ -106,8 +114,13 @@ function ChatSidebarTreeInner({
   const [expandedItems, setExpandedItems] = React.useState<string[]>(() =>
     initialExpandedFolderIds.map((id) => `folder:${id}`),
   );
+  const [selectedItems, setSelectedItems] = React.useState<string[]>([]);
   const [renamingItem, setRenamingItemRaw] = React.useState<string | null | undefined>(null);
   const [renamingValue, setRenamingValueRaw] = React.useState<string | undefined>("");
+  const [pendingDeleteItems, setPendingDeleteItems] = React.useState<ChatTreeItemRef[] | null>(
+    null,
+  );
+  const selectedItemIdSet = React.useMemo(() => new Set(selectedItems), [selectedItems]);
 
   const setRenamingItem = React.useCallback(
     (
@@ -152,8 +165,9 @@ function ChatSidebarTreeInner({
       renamingFeature,
       dragAndDropFeature,
     ],
-    state: { expandedItems, renamingItem, renamingValue },
+    state: { expandedItems, renamingItem, renamingValue, selectedItems },
     setExpandedItems,
+    setSelectedItems,
     setRenamingItem,
     setRenamingValue,
     canReorder: false,
@@ -258,6 +272,17 @@ function ChatSidebarTreeInner({
     }
   }, [tree]);
 
+  const openDeleteDialog = React.useCallback((itemIds: readonly string[]) => {
+    const itemRefs = itemIds
+      .map(parseTreeItemRef)
+      .filter((item): item is ChatTreeItemRef => item !== null);
+    if (itemRefs.length === 0) {
+      return;
+    }
+
+    setPendingDeleteItems(itemRefs);
+  }, []);
+
   const createChat = React.useCallback(
     async (folderId: string | null) => {
       await createChatMutation.mutateAsync({
@@ -295,6 +320,46 @@ function ChatSidebarTreeInner({
       );
     },
     [openTab],
+  );
+
+  const handleDeleteConfirm = React.useCallback(() => {
+    if (!pendingDeleteItems || pendingDeleteItems.length === 0) {
+      return;
+    }
+
+    deleteItemsMutation.mutate(
+      {
+        workspaceId,
+        items: pendingDeleteItems,
+      },
+      {
+        onSuccess: () => {
+          setSelectedItems([]);
+          invalidateTree();
+          tree.rebuildTree();
+        },
+        onSettled: () => {
+          setPendingDeleteItems(null);
+        },
+      },
+    );
+  }, [deleteItemsMutation, invalidateTree, pendingDeleteItems, tree, workspaceId]);
+
+  const handleTreeKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== "Backspace" || pendingDeleteItems || selectedItems.length === 0) {
+        return;
+      }
+
+      if (!(event.target instanceof HTMLElement) || isEditableElement(event.target)) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      openDeleteDialog(selectedItems);
+    },
+    [openDeleteDialog, pendingDeleteItems, selectedItems],
   );
 
   return (
@@ -335,7 +400,9 @@ function ChatSidebarTreeInner({
       ) : (
         <Tree
           className="relative min-h-0 flex-1 gap-0.5 pb-8 px-1"
-          {...tree.getContainerProps("Chat tree")}
+          {...mergeProps<"div">(tree.getContainerProps("Chat tree"), {
+            onKeyDown: handleTreeKeyDown,
+          })}
         >
           <TreeDragLine style={tree.getDragLineStyle()} />
           {visibleItems.map((item) => {
@@ -365,27 +432,18 @@ function ChatSidebarTreeInner({
                   void createChat(item.getId().slice("folder:".length));
                 } else if (action === "open-in-new-tab" && data.kind === "chat") {
                   openChat(data.chat.id, "new-tab");
+                } else if (action === "clone" && data.kind === "chat") {
+                  void cloneChatMutation.mutateAsync({ id: data.chat.id }).then(() => {
+                    invalidateTree();
+                  });
                 } else if (action === "rename") {
                   item.startRenaming();
                 } else if (action === "delete") {
-                  const rawId = item.getId();
-                  if (itemKind === "folder") {
-                    void navigate({
-                      search: (prev) => ({
-                        ...prev,
-                        deleteChat: undefined,
-                        deleteFolder: rawId.slice("folder:".length),
-                      }),
-                    });
-                  } else {
-                    void navigate({
-                      search: (prev) => ({
-                        ...prev,
-                        deleteChat: rawId.slice("chat:".length),
-                        deleteFolder: undefined,
-                      }),
-                    });
-                  }
+                  openDeleteDialog(
+                    selectedItemIdSet.has(item.getId()) && selectedItems.length > 1
+                      ? selectedItems
+                      : [item.getId()],
+                  );
                 }
               });
             };
@@ -411,17 +469,24 @@ function ChatSidebarTreeInner({
             }
 
             if (data.kind === "chat") {
+              const chatItemProps = mergeProps<"div">(item.getProps(), {
+                onClick: (event) => {
+                  if (event.defaultPrevented || isSelectionModifierEvent(event)) {
+                    return;
+                  }
+
+                  openChat(data.chat.id, "auto");
+                },
+                onContextMenu: handleContextMenu,
+              });
+
               return (
                 <TreeItem
                   key={item.getKey()}
                   level={depth}
-                  {...item.getProps()}
+                  {...chatItemProps}
                   data-selected={item.isSelected() || undefined}
                   data-drop-target={item.isDragTarget() || undefined}
-                  onClickCapture={() => {
-                    openChat(data.chat.id, "auto");
-                  }}
-                  onContextMenu={handleContextMenu}
                 >
                   <ChatTreeItemIcon chatId={data.chat.id} />
                   <TreeItemLabel>{data.chat.title}</TreeItemLabel>
@@ -432,15 +497,17 @@ function ChatSidebarTreeInner({
             if (data.kind === "folder") {
               const isExpanded = item.isExpanded();
               const hasChildren = data.folder.childFolderCount + data.folder.childChatCount > 0;
+              const folderItemProps = mergeProps<"div">(item.getProps(), {
+                onContextMenu: handleContextMenu,
+              });
 
               return (
                 <TreeItem
                   key={item.getKey()}
                   level={depth}
-                  {...item.getProps()}
+                  {...folderItemProps}
                   data-selected={item.isSelected() || undefined}
                   data-drop-target={item.isDragTarget() || undefined}
-                  onContextMenu={handleContextMenu}
                 >
                   <TreeItemIcon
                     className={cn("text-muted-foreground", !hasChildren && "opacity-50")}
@@ -459,8 +526,16 @@ function ChatSidebarTreeInner({
           })}
         </Tree>
       )}
-      <DeleteChatDialog chatId={deleteChat} onSuccess={invalidateTree} />
-      <DeleteFolderDialog folderId={deleteFolder} onSuccess={invalidateTree} />
+      <DeleteTreeItemsDialog
+        items={pendingDeleteItems}
+        isPending={deleteItemsMutation.isPending}
+        onClose={() => {
+          if (!deleteItemsMutation.isPending) {
+            setPendingDeleteItems(null);
+          }
+        }}
+        onConfirm={handleDeleteConfirm}
+      />
     </>
   );
 }
@@ -490,4 +565,68 @@ function getItemDepth(item: ItemInstance<ChatTreeNodeData>): number {
     current = current.getParent();
   }
   return depth;
+}
+
+function parseTreeItemRef(itemId: string): ChatTreeItemRef | null {
+  if (itemId.startsWith("chat:")) {
+    return { kind: "chat", id: itemId.slice("chat:".length) };
+  }
+
+  if (itemId.startsWith("folder:")) {
+    return { kind: "folder", id: itemId.slice("folder:".length) };
+  }
+
+  return null;
+}
+
+function isSelectionModifierEvent(event: React.MouseEvent<HTMLElement>): boolean {
+  return event.shiftKey || event.metaKey || event.ctrlKey;
+}
+
+function isEditableElement(element: HTMLElement): boolean {
+  return (
+    element.isContentEditable ||
+    element.closest("input, textarea, select, [contenteditable='true'], [contenteditable='']") !==
+      null
+  );
+}
+
+function DeleteTreeItemsDialog({
+  items,
+  isPending,
+  onClose,
+  onConfirm,
+}: {
+  items: ChatTreeItemRef[] | null;
+  isPending: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const itemCount = items?.length ?? 0;
+  const hasFolders = items?.some((item) => item.kind === "folder") ?? false;
+
+  return (
+    <AlertDialog open={itemCount > 0} onOpenChange={(open) => !open && onClose()}>
+      <AlertDialogPopup>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Selected Items</AlertDialogTitle>
+          <AlertDialogDescription>
+            {`This will permanently delete ${itemCount} selected ${itemCount === 1 ? "item" : "items"}.`}
+            {hasFolders
+              ? " Selected folders will also delete all nested chats and subfolders."
+              : ""}
+            {" This action cannot be undone."}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogClose render={<Button variant="secondary" disabled={isPending} />}>
+            Cancel
+          </AlertDialogClose>
+          <Button variant="destructive" onClick={onConfirm} disabled={isPending}>
+            Delete
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogPopup>
+    </AlertDialog>
+  );
 }

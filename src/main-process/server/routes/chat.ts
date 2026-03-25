@@ -124,7 +124,7 @@ export function createChatRoute() {
 
     const startTime = Date.now();
     let capturedResponseMetadata: Omit<ChatMessageMetadata, "parentId"> | undefined;
-    const modelInputMessages =
+    const modelInputMessages = prependSystemPrompt(
       mode === "continue-message"
         ? [
             ...messages,
@@ -137,12 +137,15 @@ export function createChatRoute() {
               },
             } satisfies MynthUiMessage,
           ]
-        : messages;
+        : messages,
+      chat.id,
+      chat.settings.systemPrompt,
+    );
 
     const result = streamText({
       abortSignal: c.req.raw.signal,
       model: languageModel,
-      experimental_transform: smoothStream(),
+      experimental_transform: smoothStream({ chunking: "line" }),
       messages: await convertToModelMessages(modelInputMessages),
       onFinish: ({ usage }) => {
         capturedResponseMetadata = buildResponseMetadata(
@@ -245,6 +248,28 @@ function getMessageText(message: { parts: MynthUiMessage["parts"] }) {
     )
     .map((part) => part.text)
     .join("\n");
+}
+
+function prependSystemPrompt(
+  messages: MynthUiMessage[],
+  chatId: string,
+  systemPrompt: string | null | undefined,
+) {
+  if (typeof systemPrompt !== "string" || systemPrompt.trim().length === 0) {
+    return messages;
+  }
+
+  return [
+    {
+      id: `system-prompt:${chatId}`,
+      role: "system" as const,
+      parts: [{ type: "text" as const, text: systemPrompt }],
+      metadata: {
+        parentId: null,
+      },
+    } satisfies MynthUiMessage,
+    ...messages,
+  ];
 }
 
 function mergeContinuationParts(

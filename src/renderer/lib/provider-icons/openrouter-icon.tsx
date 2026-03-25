@@ -1,14 +1,14 @@
-import type { SVGProps } from "react";
+import type { ProviderIconProps } from "./remote-provider-icon";
 
-export function OpenRouterIcon(props: SVGProps<SVGSVGElement>) {
+export function OpenRouterIcon({ className }: ProviderIconProps) {
   return (
     <svg
+      className={className}
       viewBox="0 0 512 512"
       xmlns="http://www.w3.org/2000/svg"
       fill="currentColor"
       stroke="currentColor"
       aria-hidden="true"
-      {...props}
     >
       <path
         d="M3 248.945C18 248.945 76 236 106 219C136 202 136 202 198 158C276.497 102.293 332 120.945 423 120.945"

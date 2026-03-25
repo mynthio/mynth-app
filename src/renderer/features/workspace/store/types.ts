@@ -40,6 +40,7 @@ export interface TabsSliceValue {
 export interface TabsSlice extends TabsSliceValue {
   openTab: (content: TabContent, opts?: { mode: "auto" | "new-tab" }) => void;
   closeTab: (tabId: string) => void;
+  removeTabsByChatIds: (chatIds: readonly string[]) => void;
 
   setActiveTab: (tabId: string) => void;
 
@@ -53,6 +54,7 @@ export interface TreeSliceValue {
 export interface TreeSlice extends TreeSliceValue {
   toggleNode: (nodeId: string) => void;
   setExpandedNodes: (nodes: string[]) => void;
+  removeExpandedNodes: (nodes: readonly string[]) => void;
 
   collapseAll: () => void;
 }

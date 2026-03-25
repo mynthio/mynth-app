@@ -25,6 +25,7 @@ export const IPC_CHANNELS = {
     getChildren: "chatTree:getChildren",
     getUiState: "chatTree:getUiState",
     setUiState: "chatTree:setUiState",
+    deleteItems: "chatTree:deleteItems",
     showContextMenu: "chatTree:showContextMenu",
   },
   folders: {
@@ -36,7 +37,9 @@ export const IPC_CHANNELS = {
   chats: {
     get: "chats:get",
     create: "chats:create",
+    clone: "chats:clone",
     updateTitle: "chats:updateTitle",
+    updateSettings: "chats:updateSettings",
     move: "chats:move",
     delete: "chats:delete",
   },
@@ -120,6 +123,12 @@ export interface ChatInfo {
 
 export interface ChatSettings {
   modelId?: string | null;
+  systemPrompt?: string | null;
+}
+
+export interface ChatSettingsUpdateInput {
+  modelId?: string | null;
+  systemPrompt?: string | null;
 }
 
 export interface ChatTreeFolderNode extends FolderInfo {
@@ -147,6 +156,17 @@ export interface ChatTreeChildrenSlice {
 
 export interface ChatTreeUiState {
   expandedFolderIds: string[];
+}
+
+export interface ChatTreeItemRef {
+  kind: "chat" | "folder";
+  id: string;
+}
+
+export interface DeleteChatTreeItemsResult {
+  workspaceId: string;
+  deletedChatIds: string[];
+  deletedFolderIds: string[];
 }
 
 export type TabType = "chat";
@@ -259,6 +279,10 @@ export interface IpcApi {
     workspaceId: string,
     expandedFolderIds: string[],
   ) => Promise<ChatTreeUiState>;
+  deleteChatTreeItems: (
+    workspaceId: string,
+    items: ChatTreeItemRef[],
+  ) => Promise<DeleteChatTreeItemsResult>;
   getWorkspaceTabsUiState: (workspaceId: string) => Promise<TabsUiState>;
   setWorkspaceTabsUiState: (workspaceId: string, tabs: TabStateItem[]) => Promise<TabsUiState>;
   getChat: (id: string) => Promise<ChatInfo>;
@@ -279,13 +303,17 @@ export interface IpcApi {
   moveFolder: (id: string, parentId: string | null) => Promise<FolderInfo>;
   deleteFolder: (id: string) => Promise<void>;
   createChat: (workspaceId: string, title: string, folderId?: string | null) => Promise<ChatInfo>;
+  cloneChat: (chatId: string) => Promise<ChatInfo>;
   updateChatTitle: (id: string, title: string) => Promise<ChatInfo>;
+  updateChatSettings: (id: string, input: ChatSettingsUpdateInput) => Promise<ChatInfo>;
   moveChat: (id: string, folderId: string | null) => Promise<ChatInfo>;
   deleteChat: (id: string) => Promise<void>;
   showChatTreeItemContextMenu: (
     itemId: string,
     itemKind: "folder" | "chat",
-  ) => Promise<"add-folder" | "add-chat" | "open-in-new-tab" | "rename" | "delete" | null>;
+  ) => Promise<
+    "add-folder" | "add-chat" | "open-in-new-tab" | "clone" | "rename" | "delete" | null
+  >;
   listProviders: () => Promise<ProviderInfo[]>;
   listProviderModels: (providerId: string) => Promise<ProviderModelInfo[]>;
   testProviderCredentials: (

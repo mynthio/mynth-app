@@ -1,18 +1,22 @@
 import {
   createChat,
+  cloneChat as cloneChatInRepo,
   createFolder,
+  deleteChatTreeItems as deleteChatTreeItemsInRepo,
   deleteChat,
-  deleteFolderRecursive,
   getChatById,
+  getFolderById,
   getChatTreeChildren,
   getChatTree,
   listWorkspaceChatIds,
   listWorkspaceFolderIds,
   moveChat,
   moveFolder,
+  updateChatSettings,
   updateChatTitle,
   updateFolderName,
   type ChatRow,
+  type DeleteChatTreeItemsResult as DeleteChatTreeItemsResultRecord,
   type ChatTreeChildrenSlice as ChatTreeChildrenSliceRecord,
   type ChatTreeFolderListItem as ChatTreeFolderListItemRecord,
   type ChatTreeFolderNode as ChatTreeFolderNodeRecord,
@@ -23,11 +27,14 @@ import { parseChatId } from "@shared/chat/chat-id";
 import { parseFolderId } from "@shared/folder/folder-id";
 import type {
   ChatInfo,
+  ChatSettingsUpdateInput,
+  ChatTreeItemRef,
   ChatTreeChildrenSlice,
   ChatTreeFolderListItem,
   ChatTreeFolderNode,
   ChatTreeSnapshot,
   ChatTreeUiState,
+  DeleteChatTreeItemsResult,
   FolderInfo,
   TabsUiState,
   TabStateItem,
@@ -52,8 +59,11 @@ export interface ChatTreeService {
   updateFolderName(id: string, name: string): FolderInfo;
   moveFolder(id: string, parentId: string | null): FolderInfo;
   deleteFolder(id: string): void;
+  deleteChatTreeItems(workspaceId: string, items: ChatTreeItemRef[]): DeleteChatTreeItemsResult;
   createChat(input: { workspaceId: string; title: string; folderId: string | null }): ChatInfo;
+  cloneChat(chatId: string): ChatInfo;
   updateChatTitle(id: string, title: string): ChatInfo;
+  updateChatSettings(id: string, settingsPatch: ChatSettingsUpdateInput): ChatInfo;
   moveChat(id: string, folderId: string | null): ChatInfo;
   deleteChat(id: string): void;
 }
@@ -111,6 +121,16 @@ function toChatTreeChildrenSlice(slice: ChatTreeChildrenSliceRecord): ChatTreeCh
     parentFolderId: slice.parentFolderId,
     folders: slice.folders.map(toChatTreeFolderListItem),
     chats: slice.chats.map(toChatInfo),
+  };
+}
+
+function toDeleteChatTreeItemsResult(
+  result: DeleteChatTreeItemsResultRecord,
+): DeleteChatTreeItemsResult {
+  return {
+    workspaceId: result.workspaceId,
+    deletedChatIds: result.deletedChatIds,
+    deletedFolderIds: result.deletedFolderIds,
   };
 }
 
@@ -217,6 +237,26 @@ function pruneTabsForWorkspace(workspaceId: string, tabs: readonly TabStateItem[
 }
 
 export function createChatTreeService(): ChatTreeService {
+  function applyDeletionUiCleanup(result: DeleteChatTreeItemsResultRecord): void {
+    const currentUiState = readChatTreeUiState(result.workspaceId);
+    const deletedFolderIds = new Set(result.deletedFolderIds);
+    const nextExpandedFolderIds = currentUiState.expandedFolderIds.filter(
+      (folderId) => !deletedFolderIds.has(folderId),
+    );
+
+    if (nextExpandedFolderIds.length !== currentUiState.expandedFolderIds.length) {
+      writeChatTreeUiState(result.workspaceId, nextExpandedFolderIds);
+    }
+
+    const currentTabsUiState = readTabsUiState(result.workspaceId);
+    const deletedChatIds = new Set(result.deletedChatIds);
+    const nextTabs = currentTabsUiState.tabs.filter((tab) => !deletedChatIds.has(tab.chatId));
+
+    if (nextTabs.length !== currentTabsUiState.tabs.length) {
+      writeTabsUiState(result.workspaceId, nextTabs);
+    }
+  }
+
   function readChatTreeUiState(workspaceId: string): ChatTreeUiState {
     const workspaceSettings = getWorkspaceSettings(workspaceId);
     const normalizedFolderIds = normalizeExpandedFolderIds(
@@ -319,28 +359,37 @@ export function createChatTreeService(): ChatTreeService {
     },
 
     deleteFolder(id: string): void {
-      const deletionResult = deleteFolderRecursive(id);
-      if (deletionResult.deletedFolderIds.length === 0) {
-        return;
+      const folder = getFolderById(id);
+      if (!folder) {
+        throw new Error(`Folder "${id}" does not exist.`);
       }
 
-      const currentUiState = readChatTreeUiState(deletionResult.workspaceId);
-      const deletedFolderIds = new Set(deletionResult.deletedFolderIds);
-      const nextExpandedFolderIds = currentUiState.expandedFolderIds.filter(
-        (folderId) => !deletedFolderIds.has(folderId),
-      );
+      const deletionResult = deleteChatTreeItemsInRepo(folder.workspaceId, [
+        { kind: "folder", id },
+      ]);
+      applyDeletionUiCleanup(deletionResult);
+    },
 
-      if (nextExpandedFolderIds.length !== currentUiState.expandedFolderIds.length) {
-        writeChatTreeUiState(deletionResult.workspaceId, nextExpandedFolderIds);
-      }
+    deleteChatTreeItems(workspaceId: string, items: ChatTreeItemRef[]): DeleteChatTreeItemsResult {
+      const deletionResult = deleteChatTreeItemsInRepo(workspaceId, items);
+      applyDeletionUiCleanup(deletionResult);
+      return toDeleteChatTreeItemsResult(deletionResult);
     },
 
     createChat(input): ChatInfo {
       return toChatInfo(createChat(input));
     },
 
+    cloneChat(chatId: string): ChatInfo {
+      return toChatInfo(cloneChatInRepo(chatId));
+    },
+
     updateChatTitle(id: string, title: string): ChatInfo {
       return toChatInfo(updateChatTitle(id, title));
+    },
+
+    updateChatSettings(id: string, settingsPatch: ChatSettingsUpdateInput): ChatInfo {
+      return toChatInfo(updateChatSettings(id, settingsPatch));
     },
 
     moveChat(id: string, folderId: string | null): ChatInfo {
@@ -349,12 +398,11 @@ export function createChatTreeService(): ChatTreeService {
 
     deleteChat(id: string): void {
       const deletedChat = deleteChat(id);
-      const currentTabsUiState = readTabsUiState(deletedChat.workspaceId);
-      const nextTabs = currentTabsUiState.tabs.filter((tab) => tab.chatId !== deletedChat.id);
-
-      if (nextTabs.length !== currentTabsUiState.tabs.length) {
-        writeTabsUiState(deletedChat.workspaceId, nextTabs);
-      }
+      applyDeletionUiCleanup({
+        workspaceId: deletedChat.workspaceId,
+        deletedChatIds: [deletedChat.id],
+        deletedFolderIds: [],
+      });
     },
   };
 }

@@ -81,6 +81,30 @@ export const createTabsSlice: WorkspaceSliceCreator<TabsSlice> = (set, get) => (
     });
   },
 
+  removeTabsByChatIds: (chatIds) => {
+    if (chatIds.length === 0) {
+      return;
+    }
+
+    const deletedChatIds = new Set(chatIds);
+
+    set((state) => {
+      const nextTabs = state.tabs.filter(
+        (tab) => tab.type !== "chat" || !deletedChatIds.has(tab.chatId),
+      );
+
+      if (nextTabs.length === state.tabs.length) {
+        return;
+      }
+
+      state.tabs = nextTabs;
+
+      if (state.activeTabId && !nextTabs.some((tab) => tab.id === state.activeTabId)) {
+        state.activeTabId = nextTabs.at(-1)?.id ?? null;
+      }
+    });
+  },
+
   setActiveTab: (tabId) => {
     set((state) => {
       state.activeTabId = tabId;

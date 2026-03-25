@@ -1,4 +1,4 @@
-import { IPC_CHANNELS, type ChatInfo } from "@shared/ipc";
+import { IPC_CHANNELS, type ChatInfo, type ChatSettingsUpdateInput } from "@shared/ipc";
 import { parseChatId } from "@shared/chat/chat-id";
 import { parseChatTitle } from "@shared/chat/chat-title";
 import { parseFolderId } from "@shared/folder/folder-id";
@@ -55,6 +55,48 @@ function parseValidChatTitle(input: unknown): string {
   return parsed.value;
 }
 
+function parseChatSettingsUpdateInput(args: unknown[]): [string, ChatSettingsUpdateInput] {
+  expectArgCount(args, 2);
+
+  const chatId = parseValidChatId(args[0]);
+  const rawInput = args[1];
+
+  if (!rawInput || typeof rawInput !== "object" || Array.isArray(rawInput)) {
+    throw AppError.badRequest("Chat settings update payload must be an object.");
+  }
+
+  const inputRecord = rawInput as Record<string, unknown>;
+  const allowedKeys = new Set(["modelId", "systemPrompt"]);
+  for (const key of Object.keys(inputRecord)) {
+    if (!allowedKeys.has(key)) {
+      throw AppError.badRequest(`Unsupported chat settings update field "${key}".`);
+    }
+  }
+
+  const parsedInput: ChatSettingsUpdateInput = {};
+
+  if (inputRecord.modelId !== undefined) {
+    if (inputRecord.modelId !== null && typeof inputRecord.modelId !== "string") {
+      throw AppError.badRequest("modelId must be a string or null.");
+    }
+
+    parsedInput.modelId = inputRecord.modelId;
+  }
+
+  if (inputRecord.systemPrompt !== undefined) {
+    if (inputRecord.systemPrompt !== null && typeof inputRecord.systemPrompt !== "string") {
+      throw AppError.badRequest("systemPrompt must be a string or null.");
+    }
+
+    parsedInput.systemPrompt =
+      typeof inputRecord.systemPrompt === "string" && inputRecord.systemPrompt.trim().length === 0
+        ? null
+        : inputRecord.systemPrompt;
+  }
+
+  return [chatId, parsedInput];
+}
+
 export function registerChatsIpcModule(
   context: IpcHandlerContext,
   registeredChannels: Set<string>,
@@ -82,6 +124,15 @@ export function registerChatsIpcModule(
       services.chatTree.createChat({ workspaceId, title, folderId }),
   });
 
+  registerInvokeHandler<[string], ChatInfo>(context, registeredChannels, {
+    channel: IPC_CHANNELS.chats.clone,
+    parseArgs: (args) => {
+      expectArgCount(args, 1);
+      return [parseValidChatId(args[0])];
+    },
+    handler: ({ services }, _event, chatId) => services.chatTree.cloneChat(chatId),
+  });
+
   registerInvokeHandler<[string, string], ChatInfo>(context, registeredChannels, {
     channel: IPC_CHANNELS.chats.updateTitle,
     parseArgs: (args) => {
@@ -89,6 +140,12 @@ export function registerChatsIpcModule(
       return [parseValidChatId(args[0]), parseValidChatTitle(args[1])];
     },
     handler: ({ services }, _event, id, title) => services.chatTree.updateChatTitle(id, title),
+  });
+
+  registerInvokeHandler<[string, ChatSettingsUpdateInput], ChatInfo>(context, registeredChannels, {
+    channel: IPC_CHANNELS.chats.updateSettings,
+    parseArgs: parseChatSettingsUpdateInput,
+    handler: ({ services }, _event, id, input) => services.chatTree.updateChatSettings(id, input),
   });
 
   registerInvokeHandler<[string, string | null], ChatInfo>(context, registeredChannels, {

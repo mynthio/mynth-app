@@ -1,6 +1,8 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { ChatInfo, ChatSettingsUpdateInput } from "@shared/ipc";
 
 import { chatsApi } from "../api/chats";
+import { queryKeys } from "../queries/keys";
 
 export function useCreateChat() {
   return useMutation({
@@ -16,6 +18,12 @@ export function useCreateChat() {
   });
 }
 
+export function useCloneChat() {
+  return useMutation({
+    mutationFn: ({ id }: { id: string }) => chatsApi.clone(id),
+  });
+}
+
 export function useUpdateChatTitle() {
   return useMutation({
     mutationFn: ({ id, title }: { id: string; title: string }) => chatsApi.updateTitle(id, title),
@@ -26,6 +34,49 @@ export function useMoveChat() {
   return useMutation({
     mutationFn: ({ id, folderId }: { id: string; folderId: string | null }) =>
       chatsApi.move(id, folderId),
+  });
+}
+
+export function useUpdateChatSettings() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: ChatSettingsUpdateInput }) =>
+      chatsApi.updateSettings(id, input),
+    onMutate: async ({ id, input }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.chats.byId(id), exact: true });
+
+      const previous = queryClient.getQueryData<ChatInfo>(queryKeys.chats.byId(id));
+      if (previous) {
+        queryClient.setQueryData<ChatInfo>(queryKeys.chats.byId(id), {
+          ...previous,
+          settings: {
+            ...previous.settings,
+            ...input,
+          },
+        });
+      }
+
+      return { previous, id };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKeys.chats.byId(context.id), context.previous);
+      }
+    },
+    onSuccess: (next) => {
+      queryClient.setQueryData(queryKeys.chats.byId(next.id), next);
+    },
+    onSettled: (_data, _error, variables) => {
+      if (!variables) {
+        return;
+      }
+
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.chats.byId(variables.id),
+        exact: true,
+      });
+    },
   });
 }
 

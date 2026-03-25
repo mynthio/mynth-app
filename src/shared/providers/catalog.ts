@@ -1,4 +1,16 @@
-export type ProviderId = "openrouter" | "ollama";
+export type ProviderId =
+  | "openrouter"
+  | "openai"
+  | "anthropic"
+  | "google"
+  | "groq"
+  | "xai"
+  | "mistral"
+  | "togetherai"
+  | "deepseek"
+  | "cohere"
+  | "huggingface"
+  | "ollama";
 
 export interface ProviderHostPortConfigValue {
   host: string;
@@ -35,11 +47,15 @@ export interface SupportedProviderDefinition {
   configFields: Record<string, ProviderConfigFieldDefinition>;
 }
 
-export const SUPPORTED_PROVIDERS: readonly SupportedProviderDefinition[] = [
-  {
-    id: "openrouter",
-    name: "OpenRouter",
-    description: "Use OpenRouter API keys to access models from multiple providers.",
+function createApiKeyProviderDefinition(
+  id: Exclude<ProviderId, "ollama">,
+  name: string,
+  description: string,
+): SupportedProviderDefinition {
+  return {
+    id,
+    name,
+    description,
     isAvailable: true,
     supportsCredentialTest: true,
     configFields: {
@@ -47,11 +63,57 @@ export const SUPPORTED_PROVIDERS: readonly SupportedProviderDefinition[] = [
         type: "secret",
         required: true,
         label: "API Key",
-        description: "OpenRouter API Key from dashboard",
-        placeholder: "Enter your OpenRouter API key",
+        description: `${name} API key`,
+        placeholder: `Enter your ${name} API key`,
       },
     },
-  },
+  };
+}
+
+export const SUPPORTED_PROVIDERS: readonly SupportedProviderDefinition[] = [
+  createApiKeyProviderDefinition(
+    "openrouter",
+    "OpenRouter",
+    "Use OpenRouter API keys to access models from multiple providers.",
+  ),
+  createApiKeyProviderDefinition("openai", "OpenAI", "Use OpenAI API keys to access GPT models."),
+  createApiKeyProviderDefinition(
+    "anthropic",
+    "Anthropic",
+    "Use Anthropic API keys to access Claude models.",
+  ),
+  createApiKeyProviderDefinition(
+    "google",
+    "Google",
+    "Use Google AI Studio API keys to access Gemini models.",
+  ),
+  createApiKeyProviderDefinition("groq", "Groq", "Use Groq API keys to access Groq-hosted models."),
+  createApiKeyProviderDefinition("xai", "xAI", "Use xAI API keys to access Grok models."),
+  createApiKeyProviderDefinition(
+    "mistral",
+    "Mistral",
+    "Use Mistral API keys to access Mistral models.",
+  ),
+  createApiKeyProviderDefinition(
+    "togetherai",
+    "Together AI",
+    "Use Together AI API keys to access Together-hosted models.",
+  ),
+  createApiKeyProviderDefinition(
+    "deepseek",
+    "DeepSeek",
+    "Use DeepSeek API keys to access DeepSeek chat models.",
+  ),
+  createApiKeyProviderDefinition(
+    "cohere",
+    "Cohere",
+    "Use Cohere API keys to access Cohere chat models.",
+  ),
+  createApiKeyProviderDefinition(
+    "huggingface",
+    "Hugging Face",
+    "Use Hugging Face API keys to access hosted chat models.",
+  ),
   {
     id: "ollama",
     name: "Ollama",

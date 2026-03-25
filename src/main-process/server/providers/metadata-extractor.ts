@@ -8,7 +8,7 @@ type ProviderMetadataAdapter = (
   usage: LanguageModelUsage,
 ) => Partial<Omit<ChatMessageMetadata, "parentId">>;
 
-const providerAdapters: Record<ProviderId, ProviderMetadataAdapter> = {
+const providerAdapters: Partial<Record<ProviderId, ProviderMetadataAdapter>> = {
   openrouter: extractOpenRouterMetadata,
   ollama: extractOllamaMetadata,
 };

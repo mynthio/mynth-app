@@ -1,9 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { ChatTreeItemRef } from "@shared/ipc";
 
 import { chatTreeApi } from "../api/chat-tree";
 import { chatsApi } from "../api/chats";
 import { foldersApi } from "../api/folders";
 import { queryKeys } from "../queries/keys";
+import { useWorkspaceStore } from "../features/workspace/store";
 
 export function useSetChatTreeUiState() {
   return useMutation({
@@ -38,21 +40,41 @@ export function useRenameChatTreeItem() {
 }
 
 export function useDeleteFolder() {
-  const queryClient = useQueryClient();
+  const deleteItems = useDeleteChatTreeItems();
+
   return useMutation({
-    mutationFn: (id: string) => foldersApi.delete(id),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["chatTree"] });
-    },
+    mutationFn: async ({ workspaceId, id }: { workspaceId: string; id: string }) =>
+      deleteItems.mutateAsync({
+        workspaceId,
+        items: [{ kind: "folder", id }],
+      }),
   });
 }
 
 export function useDeleteChat() {
-  const queryClient = useQueryClient();
+  const deleteItems = useDeleteChatTreeItems();
+
   return useMutation({
-    mutationFn: (id: string) => chatsApi.delete(id),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["chatTree"] });
+    mutationFn: async ({ workspaceId, id }: { workspaceId: string; id: string }) =>
+      deleteItems.mutateAsync({
+        workspaceId,
+        items: [{ kind: "chat", id }],
+      }),
+  });
+}
+
+export function useDeleteChatTreeItems() {
+  const queryClient = useQueryClient();
+  const removeTabsByChatIds = useWorkspaceStore((s) => s.removeTabsByChatIds);
+  const removeExpandedNodes = useWorkspaceStore((s) => s.removeExpandedNodes);
+
+  return useMutation({
+    mutationFn: ({ workspaceId, items }: { workspaceId: string; items: ChatTreeItemRef[] }) =>
+      chatTreeApi.deleteItems(workspaceId, items),
+    onSuccess: (result) => {
+      removeTabsByChatIds(result.deletedChatIds);
+      removeExpandedNodes(result.deletedFolderIds);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.chatTree.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.chats.all });
     },
   });

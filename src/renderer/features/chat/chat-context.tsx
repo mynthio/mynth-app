@@ -45,6 +45,7 @@ type ChatTransportRefs = {
     | ((messages: MynthUiMessage[] | ((messages: MynthUiMessage[]) => MynthUiMessage[])) => void)
     | null;
   markTabTouched: (() => void) | null;
+  markStopped: (() => void) | null;
 };
 
 type ChatContextStoreApi = StoreApi<ChatContextState>;
@@ -98,6 +99,7 @@ function createChatContextStore({
         return;
       }
 
+      transportRefs.markStopped?.();
       await transportRefs.stopChat?.();
     },
     sendMessage: (message, options) => {
@@ -279,17 +281,6 @@ function createChatContextStore({
             transportRefs.setMessages?.(optimisticMessages);
           });
 
-          const persistedMessages = await syncContinuationMessagesAfterAbort({
-            chatId,
-            fallbackMessages: optimisticMessages,
-            messageId,
-            originalMessage: targetMessage,
-          });
-
-          React.startTransition(() => {
-            transportRefs.setMessages?.(persistedMessages);
-          });
-
           set((current) => ({
             ...current,
             continuingMessageId: null,
@@ -414,6 +405,7 @@ export function ChatContextProvider({
     [chatId],
   );
 
+  const wasStoppedRef = React.useRef(false);
   const transportRefs = React.useRef<ChatTransportRefs>({
     sendMessage: null,
     regenerate: null,
@@ -423,6 +415,7 @@ export function ChatContextProvider({
     getStatus: null,
     setMessages: null,
     markTabTouched: null,
+    markStopped: null,
   });
   const storeRef = React.useRef<ChatContextStoreApi | null>(null);
 
@@ -442,11 +435,21 @@ export function ChatContextProvider({
   transportRefs.current.getMessages = () => chat.messages;
   transportRefs.current.getStatus = () => chat.status;
   transportRefs.current.setMessages = (messagesParam) => {
-    chat.messages =
+    const nextMessages =
       typeof messagesParam === "function" ? messagesParam(chat.messages) : messagesParam;
+    const reconciledMessages = reconcileMessages(chat.messages, nextMessages);
+
+    if (reconciledMessages === chat.messages) {
+      return;
+    }
+
+    chat.messages = reconciledMessages;
   };
   transportRefs.current.markTabTouched = () => {
     // FIXME: placeholder
+  };
+  transportRefs.current.markStopped = () => {
+    wasStoppedRef.current = true;
   };
 
   React.useEffect(() => {
@@ -470,12 +473,19 @@ export function ChatContextProvider({
         return;
       }
 
+      if (wasStoppedRef.current) {
+        wasStoppedRef.current = false;
+        // Generation was stopped explicitly — the UI already has the streamed
+        // content, so leave it as-is rather than reloading stale DB data.
+        return;
+      }
+
       void messagesApi.listMessages(chatId).then((persistedMessages) => {
         if (isDisposed) {
           return;
         }
 
-        chat.messages = persistedMessages;
+        transportRefs.current.setMessages?.(persistedMessages);
       });
     });
 
@@ -483,7 +493,7 @@ export function ChatContextProvider({
       isDisposed = true;
       unsubscribe();
     };
-  }, [chat, chatId]);
+  }, [chat, chatId, wasStoppedRef]);
 
   React.useEffect(() => {
     let isDisposed = false;
@@ -509,7 +519,7 @@ export function ChatContextProvider({
           return;
         }
 
-        chat.messages = persistedMessages;
+        transportRefs.current.setMessages?.(persistedMessages);
       })
       .catch((loadError) => {
         if (isDisposed) {
@@ -576,18 +586,6 @@ function useChatStatusValue() {
     [chat],
   );
   const getSnapshot = React.useCallback(() => chat.status, [chat]);
-
-  return useChatSnapshot(subscribe, getSnapshot);
-}
-
-function useLastMessageId() {
-  const chat = useChatSession();
-  const subscribe = React.useCallback(
-    (onStoreChange: () => void) =>
-      chat["~registerMessagesCallback"](onStoreChange, CHAT_STREAM_THROTTLE_MS),
-    [chat],
-  );
-  const getSnapshot = React.useCallback(() => chat.messages.at(-1)?.id ?? null, [chat]);
 
   return useChatSnapshot(subscribe, getSnapshot);
 }
@@ -685,22 +683,6 @@ export function useChatHistoryError() {
   return useChatContext((state) => state.historyError);
 }
 
-export function useIsLastMessage(messageId: string) {
-  return useLastMessageId() === messageId;
-}
-
-export function useIsAnimatingMessage(messageId: string, role: string) {
-  const isTransportBusy = useChatTransportBusy();
-  const isLastMessage = useIsLastMessage(messageId);
-  const continuingMessageId = useChatContext((state) => state.continuingMessageId);
-
-  return (
-    role === "assistant" &&
-    ((continuingMessageId !== null && continuingMessageId === messageId) ||
-      (continuingMessageId === null && isTransportBusy && isLastMessage))
-  );
-}
-
 export function useChatSwitchBranch() {
   return useChatContext((state) => state.switchBranch);
 }
@@ -741,56 +723,48 @@ function replaceMessageById(
   return messages.map((message) => (message.id === messageId ? nextMessage : message));
 }
 
+function reconcileMessages(
+  currentMessages: readonly MynthUiMessage[],
+  nextMessages: readonly MynthUiMessage[],
+) {
+  if (currentMessages.length === 0) {
+    return [...nextMessages];
+  }
+
+  let didChange = currentMessages.length !== nextMessages.length;
+  const reconciledMessages = nextMessages.map((nextMessage, index) => {
+    const currentMessage = currentMessages[index];
+
+    if (currentMessage && areMessagesEquivalent(currentMessage, nextMessage)) {
+      return currentMessage;
+    }
+
+    didChange = true;
+    return nextMessage;
+  });
+
+  return didChange ? reconciledMessages : currentMessages;
+}
+
+function areMessagesEquivalent(currentMessage: MynthUiMessage, nextMessage: MynthUiMessage) {
+  if (currentMessage === nextMessage) {
+    return true;
+  }
+
+  return (
+    currentMessage.id === nextMessage.id &&
+    currentMessage.role === nextMessage.role &&
+    JSON.stringify(currentMessage.parts) === JSON.stringify(nextMessage.parts) &&
+    JSON.stringify(currentMessage.metadata ?? null) === JSON.stringify(nextMessage.metadata ?? null)
+  );
+}
+
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message.trim() ? error.message : fallback;
 }
 
 function isAbortError(error: unknown) {
   return error instanceof Error && error.name === "AbortError";
-}
-
-async function syncContinuationMessagesAfterAbort({
-  chatId,
-  fallbackMessages,
-  messageId,
-  originalMessage,
-}: {
-  chatId: string;
-  fallbackMessages: MynthUiMessage[];
-  messageId: string;
-  originalMessage: MynthUiMessage;
-}) {
-  for (let attempt = 0; attempt < 6; attempt += 1) {
-    const persistedMessages = await messagesApi.listMessages(chatId).catch(() => null);
-
-    if (persistedMessages) {
-      const persistedMessage = persistedMessages.find((message) => message.id === messageId);
-
-      if (
-        persistedMessage &&
-        !areMessagePartsEqual(persistedMessage.parts, originalMessage.parts)
-      ) {
-        return persistedMessages;
-      }
-    }
-
-    await wait(60 * (attempt + 1));
-  }
-
-  return fallbackMessages;
-}
-
-function areMessagePartsEqual(
-  left: readonly MynthUiMessage["parts"][number][],
-  right: readonly MynthUiMessage["parts"][number][],
-) {
-  return JSON.stringify(left) === JSON.stringify(right);
-}
-
-function wait(ms: number) {
-  return new Promise<void>((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
 }
 
 function mergeContinuationMessage(

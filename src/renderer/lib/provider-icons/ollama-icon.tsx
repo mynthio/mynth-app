@@ -1,7 +1,7 @@
-import type { SVGProps } from "react";
 import { cn } from "../utils";
+import type { ProviderIconProps } from "./remote-provider-icon";
 
-export function OllamaIcon({ className }: SVGProps<SVGSVGElement>) {
+export function OllamaIcon({ className }: ProviderIconProps) {
   return (
     <svg
       className={cn("dark:text-foreground", className)}
