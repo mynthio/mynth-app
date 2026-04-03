@@ -3,7 +3,7 @@ import { useForm } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardPanel, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -54,7 +54,7 @@ export function CreateWorkspacePage() {
           <CardTitle>Workspace Details</CardTitle>
           <CardDescription>Choose a name for the new workspace.</CardDescription>
         </CardHeader>
-        <CardPanel>
+        <CardContent>
           <Form
             noValidate
             onSubmit={(event) => {
@@ -126,7 +126,7 @@ export function CreateWorkspacePage() {
               ) : null}
             </div>
           </Form>
-        </CardPanel>
+        </CardContent>
       </Card>
     </div>
   );

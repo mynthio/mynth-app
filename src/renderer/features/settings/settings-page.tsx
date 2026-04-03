@@ -5,7 +5,7 @@ import { Tick01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardPanel, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -104,7 +104,7 @@ function GlobalChatSettingsCard() {
         <CardTitle>Chat</CardTitle>
         <CardDescription>Global behavior for the chat composer.</CardDescription>
       </CardHeader>
-      <CardPanel className="space-y-4">
+      <CardContent className="space-y-4">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
             <p className="font-medium text-sm">Prompt Sticky Position</p>
@@ -140,7 +140,7 @@ function GlobalChatSettingsCard() {
         </div>
 
         {updateError ? <p className="text-destructive-foreground text-xs">{updateError}</p> : null}
-      </CardPanel>
+      </CardContent>
     </Card>
   );
 }
@@ -184,7 +184,7 @@ function WorkspaceNameForm({ workspaceId, workspaceName }: WorkspaceNameFormProp
         <CardTitle>Workspace Name</CardTitle>
         <CardDescription>Update how this workspace appears in settings and chat.</CardDescription>
       </CardHeader>
-      <CardPanel>
+      <CardContent>
         <Form
           noValidate
           onSubmit={(event) => {
@@ -255,7 +255,7 @@ function WorkspaceNameForm({ workspaceId, workspaceName }: WorkspaceNameFormProp
             ) : null}
           </div>
         </Form>
-      </CardPanel>
+      </CardContent>
     </Card>
   );
 }
@@ -289,7 +289,7 @@ function WorkspaceColorPicker({ workspaceId, currentColor }: WorkspaceColorPicke
         <CardTitle>Workspace Color</CardTitle>
         <CardDescription>Choose a color to identify this workspace in the sidebar.</CardDescription>
       </CardHeader>
-      <CardPanel>
+      <CardContent>
         <div className="flex flex-wrap gap-2.5">
           <button
             type="button"
@@ -330,7 +330,7 @@ function WorkspaceColorPicker({ workspaceId, currentColor }: WorkspaceColorPicke
           })}
         </div>
         {error ? <p className="mt-2 text-destructive-foreground text-xs">{error}</p> : null}
-      </CardPanel>
+      </CardContent>
     </Card>
   );
 }

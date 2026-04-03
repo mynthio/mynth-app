@@ -23,11 +23,11 @@ import { HugeiconsIcon } from "@hugeicons/react";
 
 import {
   AlertDialog,
-  AlertDialogClose,
+  AlertDialogCancel,
+  AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogPopup,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
@@ -366,7 +366,7 @@ function ChatSidebarTreeInner({
     <>
       <div className="flex items-center gap-1 px-2">
         <InputGroup className="w-full">
-          <InputGroupInput name="search" placeholder="Search tree..." type="text" size="sm" />
+          <InputGroupInput name="search" placeholder="Search tree..." type="text" />
 
           <InputGroupAddon>
             <HugeiconsIcon icon={Search01Icon} className="size-3" />
@@ -607,7 +607,7 @@ function DeleteTreeItemsDialog({
 
   return (
     <AlertDialog open={itemCount > 0} onOpenChange={(open) => !open && onClose()}>
-      <AlertDialogPopup>
+      <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Selected Items</AlertDialogTitle>
           <AlertDialogDescription>
@@ -619,14 +619,14 @@ function DeleteTreeItemsDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogClose render={<Button variant="secondary" disabled={isPending} />}>
+          <AlertDialogCancel variant="secondary" disabled={isPending}>
             Cancel
-          </AlertDialogClose>
+          </AlertDialogCancel>
           <Button variant="destructive" onClick={onConfirm} disabled={isPending}>
             Delete
           </Button>
         </AlertDialogFooter>
-      </AlertDialogPopup>
+      </AlertDialogContent>
     </AlertDialog>
   );
 }

@@ -5,16 +5,16 @@ import { getSupportedProviderById } from "@shared/providers/catalog";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
-  AlertDialogClose,
+  AlertDialogCancel,
+  AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogPopup,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardPanel, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useDeleteProvider } from "@/mutations/providers";
@@ -51,7 +51,7 @@ export function ProviderConfigTab({ providerId }: ProviderConfigTabProps) {
         <CardTitle>Config</CardTitle>
         <CardDescription>Provider configuration summary for this profile.</CardDescription>
       </CardHeader>
-      <CardPanel className="space-y-4">
+      <CardContent className="space-y-4">
         {providersQuery.isPending ? (
           <div className="text-muted-foreground text-sm">Loading provider config...</div>
         ) : providersQuery.isError ? (
@@ -107,7 +107,7 @@ export function ProviderConfigTab({ providerId }: ProviderConfigTabProps) {
                 ))}
               </div>
             ) : (
-              <Alert variant="warning">
+              <Alert variant="default">
                 <AlertTitle>Unsupported provider definition</AlertTitle>
                 <AlertDescription>
                   This provider record exists, but the provider catalog entry is not available in
@@ -116,7 +116,7 @@ export function ProviderConfigTab({ providerId }: ProviderConfigTabProps) {
               </Alert>
             )}
 
-            <Alert variant="info">
+            <Alert variant="default">
               <AlertTitle>Editing config here is not available yet</AlertTitle>
               <AlertDescription>
                 Use the provider setup flow to create a new provider profile when you need different
@@ -125,13 +125,13 @@ export function ProviderConfigTab({ providerId }: ProviderConfigTabProps) {
             </Alert>
 
             {deleteProvider.isError ? (
-              <Alert variant="error">
+              <Alert variant="destructive">
                 <AlertTitle>Failed to delete provider</AlertTitle>
                 <AlertDescription>{getErrorMessage(deleteProvider.error)}</AlertDescription>
               </Alert>
             ) : null}
 
-            <Alert variant="warning">
+            <Alert variant="default">
               <AlertTitle>Delete provider</AlertTitle>
               <AlertDescription>
                 Deleting this provider permanently removes the provider profile and all connected
@@ -152,7 +152,7 @@ export function ProviderConfigTab({ providerId }: ProviderConfigTabProps) {
             </Alert>
           </>
         )}
-      </CardPanel>
+      </CardContent>
 
       <AlertDialog
         open={isDeleteDialogOpen}
@@ -160,7 +160,7 @@ export function ProviderConfigTab({ providerId }: ProviderConfigTabProps) {
           setIsDeleteDialogOpen(open);
         }}
       >
-        <AlertDialogPopup>
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Provider</AlertDialogTitle>
             <AlertDialogDescription>
@@ -170,7 +170,7 @@ export function ProviderConfigTab({ providerId }: ProviderConfigTabProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogClose render={<Button variant="secondary" />}>Cancel</AlertDialogClose>
+            <AlertDialogCancel variant="secondary">Cancel</AlertDialogCancel>
             <Button
               variant="destructive"
               onClick={handleDeleteConfirm}
@@ -179,7 +179,7 @@ export function ProviderConfigTab({ providerId }: ProviderConfigTabProps) {
               Delete Provider
             </Button>
           </AlertDialogFooter>
-        </AlertDialogPopup>
+        </AlertDialogContent>
       </AlertDialog>
     </Card>
   );

@@ -7,7 +7,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { chatsApi } from "@/api/chats";
 import { Button } from "@/components/ui/button";
 import { Menu, MenuPopup, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "@/components/ui/menu";
-import { Tooltip, TooltipPopup, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { InputGroup, InputGroupAddon, InputGroupTextarea } from "@/components/ui/input-group";
 import {
   useChatCanStop,
@@ -321,7 +321,7 @@ function ActiveChatContent() {
                         )
                       }
                     />
-                    <TooltipPopup>{canStop ? "Stop" : "Send"}</TooltipPopup>
+                    <TooltipContent>{canStop ? "Stop" : "Send"}</TooltipContent>
                   </Tooltip>
                 </InputGroupAddon>
               </InputGroup>
@@ -389,7 +389,7 @@ function ModelSelector() {
             </span>
           </span>
         </TooltipTrigger>
-        <TooltipPopup>Select model</TooltipPopup>
+        <TooltipContent>Select model</TooltipContent>
       </Tooltip>
       <MenuPopup align="start">
         <MenuRadioGroup value={modelId ?? ""} onValueChange={(value) => setModelId(value || null)}>

@@ -134,7 +134,7 @@ export function ChatGraphPage() {
   if (errorMessage) {
     return (
       <div className="flex h-full min-h-0 flex-col p-4">
-        <Alert className="max-w-3xl" variant="error">
+        <Alert className="max-w-3xl" variant="destructive">
           <AlertTitle>Failed to load the chat graph</AlertTitle>
           <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>

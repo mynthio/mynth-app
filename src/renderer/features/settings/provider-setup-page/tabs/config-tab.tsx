@@ -3,7 +3,7 @@ import type { SupportedProviderDefinition } from "@shared/providers/catalog";
 import { Link } from "@tanstack/react-router";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardPanel, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
@@ -42,7 +42,7 @@ export function ProviderSetupConfigTab({
         <CardTitle>Config</CardTitle>
         <CardDescription>Configure the required fields for {provider.name}.</CardDescription>
       </CardHeader>
-      <CardPanel className="space-y-4">
+      <CardContent className="space-y-4">
         {Object.entries(provider.configFields).map(([key, field]) => {
           switch (field.type) {
             case "secret":
@@ -114,7 +114,7 @@ export function ProviderSetupConfigTab({
         })}
 
         {!provider.supportsCredentialTest ? (
-          <Alert variant="info">
+          <Alert variant="default">
             <AlertTitle>Credential test unavailable</AlertTitle>
             <AlertDescription>
               This provider does not expose a supported validation endpoint yet.
@@ -123,21 +123,21 @@ export function ProviderSetupConfigTab({
         ) : null}
 
         {testError ? (
-          <Alert variant="error">
+          <Alert variant="destructive">
             <AlertTitle>Test request failed</AlertTitle>
             <AlertDescription>{testError}</AlertDescription>
           </Alert>
         ) : null}
 
         {testResult ? (
-          <Alert variant={testResult.ok ? "success" : "error"}>
+          <Alert variant={testResult.ok ? "default" : "destructive"}>
             <AlertTitle>{testResult.ok ? "Credentials valid" : "Credentials rejected"}</AlertTitle>
             <AlertDescription>{testResult.message}</AlertDescription>
           </Alert>
         ) : null}
 
         {saveError ? (
-          <Alert variant="error">
+          <Alert variant="destructive">
             <AlertTitle>Failed to save provider</AlertTitle>
             <AlertDescription>{saveError}</AlertDescription>
           </Alert>
@@ -158,7 +158,7 @@ export function ProviderSetupConfigTab({
             <span>{isSaving ? "Saving..." : "Save"}</span>
           </Button>
         </div>
-      </CardPanel>
+      </CardContent>
     </Card>
   );
 }

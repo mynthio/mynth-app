@@ -18,13 +18,9 @@ export function ChatGraphNodeView({ data }: NodeProps<ChatGraphNode>) {
       >
         <CardHeader className="gap-3 border-b border-border px-5 py-4">
           <div className="flex items-center justify-between gap-3">
-            <Badge size="sm" variant={getRoleBadgeVariant(data.role)}>
-              {data.role}
-            </Badge>
+            <Badge variant={getRoleBadgeVariant(data.role)}>{data.role}</Badge>
             {data.hasMultipleChildren ? (
-              <Badge size="sm" variant="outline">
-                {data.childCount} branches
-              </Badge>
+              <Badge variant="outline">{data.childCount} branches</Badge>
             ) : null}
           </div>
 
@@ -48,11 +44,9 @@ export function ChatGraphNodeView({ data }: NodeProps<ChatGraphNode>) {
   );
 }
 
-function getRoleBadgeVariant(
-  role: ChatGraphNode["data"]["role"],
-): "info" | "secondary" | "outline" {
+function getRoleBadgeVariant(role: ChatGraphNode["data"]["role"]): "secondary" | "outline" {
   if (role === "assistant") {
-    return "info";
+    return "secondary";
   }
 
   if (role === "user") {

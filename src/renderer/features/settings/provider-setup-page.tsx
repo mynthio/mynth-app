@@ -11,7 +11,7 @@ import { BotIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { providerApi } from "@/api/providers";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardPanel, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { queryKeys } from "@/queries/keys";
 import { ProviderSetupConfigTab, ProviderSetupModelsTab } from "./provider-setup-page/tabs";
@@ -40,11 +40,11 @@ export function ProviderSetupPage({ providerId }: ProviderSetupPageProps) {
             <CardTitle>Unknown Provider</CardTitle>
             <CardDescription>Pick a supported provider to continue setup.</CardDescription>
           </CardHeader>
-          <CardPanel className="pt-0">
+          <CardContent className="pt-0">
             <Button variant="outline" render={<Link to="/settings/providers/new" />}>
               <span>Back</span>
             </Button>
-          </CardPanel>
+          </CardContent>
         </Card>
       </div>
     );
@@ -141,7 +141,7 @@ function ProviderConfigSetup({ provider }: ProviderConfigSetupProps) {
       </div>
 
       <Tabs defaultValue="models" className="gap-4">
-        <TabsList variant="underline">
+        <TabsList variant="line">
           <TabsTrigger value="models">Models</TabsTrigger>
           <TabsTrigger value="config">Config</TabsTrigger>
         </TabsList>

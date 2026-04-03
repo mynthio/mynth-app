@@ -2,7 +2,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardPanel, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { ChatEmptyPage } from "@/features/chat/chat-empty-page";
@@ -90,7 +90,7 @@ export function ChatSettingsPage() {
             Sent with every request in this chat to guide the assistant.
           </CardDescription>
         </CardHeader>
-        <CardPanel className="space-y-4">
+        <CardContent className="space-y-4">
           <Field>
             <FieldLabel htmlFor="system-prompt">Prompt</FieldLabel>
             <Textarea
@@ -122,7 +122,7 @@ export function ChatSettingsPage() {
               <p className="text-destructive-foreground text-xs">{submitError}</p>
             ) : null}
           </div>
-        </CardPanel>
+        </CardContent>
       </Card>
     </div>
   );
